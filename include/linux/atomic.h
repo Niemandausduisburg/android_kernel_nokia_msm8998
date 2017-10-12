@@ -416,6 +416,29 @@ static inline int atomic_dec_if_positive(atomic_t *v)
 }
 #endif
 
+/**
+ * atomic_fetch_or - perform *p |= mask and return old value of *p
+ * @mask: mask to OR on the atomic_t
+ * @p: pointer to atomic_t
+ */
+#ifndef atomic_fetch_or
+static inline int atomic_fetch_or(int mask, atomic_t *p)
+{
+	int old, val = atomic_read(p);
+
+	for (;;) {
+		old = atomic_cmpxchg(p, val, val | mask);
+		if (old == val)
+			break;
+		val = old;
+	}
+
+	return old;
+}
+#endif
+
+#define atomic_cond_read_acquire(v, c)	smp_cond_load_acquire(&(v)->counter, (c))
+
 #ifdef CONFIG_GENERIC_ATOMIC64
 #include <asm-generic/atomic64.h>
 #endif
@@ -600,6 +623,8 @@ static inline void atomic64_andnot(long long i, atomic64_t *v)
 	atomic64_and(~i, v);
 }
 #endif
+
+#define atomic64_cond_read_acquire(v, c)	smp_cond_load_acquire(&(v)->counter, (c))
 
 #include <asm-generic/atomic-long.h>
 
