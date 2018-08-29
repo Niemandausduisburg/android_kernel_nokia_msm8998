@@ -1587,11 +1587,8 @@ int wlan_hdd_set_powersave(struct hdd_adapter *adapter,
 
 		if (status != QDF_STATUS_SUCCESS)
 			goto end;
-
-		if (hdd_ctx->config && hdd_ctx->config->is_ps_enabled)
-			status = sme_ps_enable_disable(mac_handle,
-						       adapter->session_id,
-						       SME_PS_DISABLE);
+		status = sme_ps_enable_disable(mac_handle, adapter->session_id,
+					       SME_PS_DISABLE);
 	}
 
 end:
