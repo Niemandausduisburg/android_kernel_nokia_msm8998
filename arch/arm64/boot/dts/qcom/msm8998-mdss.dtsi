@@ -519,14 +519,11 @@
 			 <&clock_mmss MMSS_MDSS_DP_CRYPTO_CLK>,
 			 <&clock_mmss MMSS_MDSS_DP_PIXEL_CLK>,
 			 <&mdss_dp_pll DP_VCO_DIVIDED_CLK_SRC_MUX>,
-			 <&mdss_dp_pll DP_VCO_DIVIDED_TWO_CLK_SRC>,
-			 <&mdss_dp_pll DP_VCO_DIVIDED_FOUR_CLK_SRC>;
 		clock-names = "core_mnoc_clk", "core_iface_clk", "core_bus_clk",
 			"core_mdp_core_clk", "core_alt_iface_clk",
 			"core_aux_clk", "core_ref_clk_src", "core_ref_clk",
 			"ctrl_link_clk", "ctrl_link_iface_clk",
-			"ctrl_crypto_clk", "ctrl_pixel_clk", "pixel_parent",
-			"pixel_clk_two_div", "pixel_clk_four_div";
+			"ctrl_crypto_clk", "ctrl_pixel_clk", "pixel_parent";
 
 		qcom,dp-usbpd-detection = <&pmi8998_pdphy>;
 
@@ -555,6 +552,7 @@
 				qcom,supply-max-voltage = <0>;
 				qcom,supply-enable-load = <0>;
 				qcom,supply-disable-load = <0>;
+				qcom,supply-lp-mode-disable-allowed;
 			};
 		};
 
@@ -583,6 +581,7 @@
 				qcom,supply-max-voltage = <880000>;
 				qcom,supply-enable-load = <73400>;
 				qcom,supply-disable-load = <32>;
+				qcom,supply-lp-mode-disable-allowed;
 			};
 		};
 	};
