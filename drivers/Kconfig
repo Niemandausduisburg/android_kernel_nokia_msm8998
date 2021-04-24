@@ -215,6 +215,7 @@ source "drivers/fsi/Kconfig"
 
 source "drivers/tee/Kconfig"
 
+<<<<<<< HEAD
 source "drivers/mux/Kconfig"
 
 source "drivers/sensors/Kconfig"
@@ -222,5 +223,7 @@ source "drivers/sensors/Kconfig"
 source "drivers/esoc/Kconfig"
 
 source "drivers/cpuquiet/Kconfig"
+
+source "drivers/fih/Kconfig"
 
 endmenu
