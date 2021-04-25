@@ -456,6 +456,10 @@ static inline bool mmc_enable_qca9377_settings(const struct mmc_card *c)
 	return c->quirks & MMC_QUIRK_QCA9377_SETTINGS;
 }
 
+#define mmc_card_name(c)	((c)->cid.prod_name)
+#define mmc_card_manfid(c)	((c)->cid.manfid)
+#define mmc_card_id(c)		(dev_name(&(c)->dev))
+
 #define mmc_dev_to_card(d)	container_of(d, struct mmc_card, dev)
 #define mmc_get_drvdata(c)	dev_get_drvdata(&(c)->dev)
 #define mmc_set_drvdata(c, d)	dev_set_drvdata(&(c)->dev, d)

@@ -107,6 +107,10 @@ struct synaptics_dsx_board_data {
 	unsigned int addr_delay_us;
 	const char *pwr_reg_name;
 	const char *bus_reg_name;
+	//SW8-DH-Double_Tap-00+[
+	const char *ibb_reg_name;
+	const char *lab_reg_name;
+	//SW8-DH-Double_Tap-00+]
 	struct synaptics_dsx_button_map *cap_button_map;
 	struct synaptics_dsx_button_map *vir_button_map;
 };
