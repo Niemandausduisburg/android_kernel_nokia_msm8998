@@ -165,13 +165,6 @@ static irqreturn_t goldfish_tty_interrupt(int irq, void *dev_id)
 	goldfish_tty_rw(qtty, buf, count, 0);
 
 	tty_schedule_flip(&qtty->port);
-	spin_lock_irqsave(&qtty->lock, irq_flags);
-	gf_write_ptr(buf, base + GOLDFISH_TTY_DATA_PTR,
-				base + GOLDFISH_TTY_DATA_PTR_HIGH);
-	writel(count, base + GOLDFISH_TTY_DATA_LEN);
-	writel(GOLDFISH_TTY_CMD_READ_BUFFER, base + GOLDFISH_TTY_CMD);
-	spin_unlock_irqrestore(&qtty->lock, irq_flags);
-	tty_flip_buffer_push(&qtty->port);
 	return IRQ_HANDLED;
 }
 

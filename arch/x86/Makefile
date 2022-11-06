@@ -227,10 +227,9 @@ KBUILD_AFLAGS += $(mflags-y)
 # Avoid indirect branches in kernel to deal with Spectre
 ifdef CONFIG_RETPOLINE
     RETPOLINE_CFLAGS += $(call cc-option,-mindirect-branch=thunk-extern -mindirect-branch-register)
-    ifeq ($(RETPOLINE_CFLAGS),)
-      $(error You are building kernel with non-retpoline compiler, please update your compiler.)
+    ifneq ($(RETPOLINE_CFLAGS),)
+        KBUILD_CFLAGS += $(RETPOLINE_CFLAGS) -DRETPOLINE
     endif
-    KBUILD_CFLAGS += $(RETPOLINE_CFLAGS)
 endif
 
 archscripts: scripts_basic

@@ -271,7 +271,7 @@ static int i8k_get_fan_nominal_speed(int fan, int speed)
 }
 
 /*
- * Set the fan speed (off, low, high, ...).
+ * Set the fan speed (off, low, high). Returns the new fan status.
  */
 static int i8k_set_fan(int fan, int speed)
 {
@@ -280,7 +280,7 @@ static int i8k_set_fan(int fan, int speed)
 	speed = (speed < 0) ? 0 : ((speed > i8k_fan_max) ? i8k_fan_max : speed);
 	regs.ebx = (fan & 0xff) | (speed << 8);
 
-	return i8k_smm(&regs);
+	return i8k_smm(&regs) ? : i8k_get_fan_status(fan);
 }
 
 static int i8k_get_temp_type(int sensor)
@@ -394,7 +394,7 @@ static int
 i8k_ioctl_unlocked(struct file *fp, unsigned int cmd, unsigned long arg)
 {
 	int val = 0;
-	int speed, err;
+	int speed;
 	unsigned char buff[16];
 	int __user *argp = (int __user *)arg;
 
@@ -451,11 +451,7 @@ i8k_ioctl_unlocked(struct file *fp, unsigned int cmd, unsigned long arg)
 		if (copy_from_user(&speed, argp + 1, sizeof(int)))
 			return -EFAULT;
 
-		err = i8k_set_fan(val, speed);
-		if (err < 0)
-			return err;
-
-		val = i8k_get_fan_status(val);
+		val = i8k_set_fan(val, speed);
 		break;
 
 	default:

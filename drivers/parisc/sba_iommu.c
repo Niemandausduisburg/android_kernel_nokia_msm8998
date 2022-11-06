@@ -1051,7 +1051,7 @@ sba_unmap_sg(struct device *dev, struct scatterlist *sglist, int nents,
 	spin_unlock_irqrestore(&ioc->res_lock, flags);
 #endif
 
-	while (nents && sg_dma_len(sglist)) {
+	while (sg_dma_len(sglist) && nents--) {
 
 		sba_unmap_single(dev, sg_dma_address(sglist), sg_dma_len(sglist), direction);
 #ifdef SBA_COLLECT_STATS
@@ -1059,7 +1059,6 @@ sba_unmap_sg(struct device *dev, struct scatterlist *sglist, int nents,
 		ioc->usingle_calls--;	/* kluge since call is unmap_sg() */
 #endif
 		++sglist;
-		nents--;
 	}
 
 	DBG_RUN_SG("%s() DONE (nents %d)\n", __func__,  nents);
