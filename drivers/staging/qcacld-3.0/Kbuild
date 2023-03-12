@@ -1960,6 +1960,7 @@ endif
 KBUILD_CPPFLAGS += $(CDEFINES)
 
 ccflags-y += -Wmissing-prototypes
+ccflags-y += -Wframe-larger-than=4096
 
 ifeq ($(call cc-option-yn, -Wheader-guard),y)
 EXTRA_CFLAGS += -Wheader-guard
