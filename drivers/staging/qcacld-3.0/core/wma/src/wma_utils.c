@@ -1616,8 +1616,6 @@ static int wma_unified_radio_tx_power_level_stats_event_handler(void *handle,
 		qdf_mem_malloc(sizeof(uint32_t) *
 			       rs_results->total_num_tx_power_levels);
 	if (!rs_results->tx_time_per_power_level) {
-		WMA_LOGA("%s: Mem alloc fail for tx power level stats",
-			 __func__);
 		/* In error case, atleast send the radio stats without
 		 * tx_power_level stats
 		 */
