@@ -6047,7 +6047,7 @@ enum hdd_link_speed_rpt_type {
  */
 
 #define CFG_ENABLE_CONCURRENT_STA           "gEnableConcurrentSTA"
-#define CFG_ENABLE_CONCURRENT_STA_DEFAULT   ""
+#define CFG_ENABLE_CONCURRENT_STA_DEFAULT   "wlan1"
 
 /*
  * <ini>
