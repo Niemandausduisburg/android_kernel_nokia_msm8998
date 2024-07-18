@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1438,10 +1438,8 @@ lim_update_short_preamble(tpAniSirGlobal mac_ctx, tSirMacAddr peer_mac_addr,
 	}
 
 	if (i >= LIM_PROT_STA_CACHE_SIZE) {
-#ifdef WLAN_DEBUG
 		tLimNoShortParams *lim_params =
 				&psession_entry->gLimNoShortParams;
-#endif
 		if (LIM_IS_AP_ROLE(psession_entry)) {
 			pe_err("No space in Short cache active: %d sta: %d for sta",
 				i, lim_params->numNonShortPreambleSta);
@@ -2103,16 +2101,21 @@ void lim_process_channel_switch_timeout(tpAniSirGlobal pMac)
 		}
 
 		/*
-		 * The channel switch request received from AP is carrying
-		 * invalid channel. It's ok to ignore this channel switch
-		 * request as it might be from spoof AP. If it's from genuine
-		 * AP, it may lead to heart beat failure and result in
-		 * disconnection. DUT can go ahead and reconnect to it/any
-		 * other AP once it disconnects.
+		 * If the channel-list that AP is asking us to switch is invalid
+		 * then we cannot switch the channel. Just disassociate from AP.
+		 * We will find a better AP !!!
 		 */
-		pe_err("Invalid channel freq %u Ignore CSA request",
-		       channel);
-		return;
+		if ((psessionEntry->limMlmState ==
+		   eLIM_MLM_LINK_ESTABLISHED_STATE) &&
+		   (psessionEntry->limSmeState != eLIM_SME_WT_DISASSOC_STATE) &&
+		   (psessionEntry->limSmeState != eLIM_SME_WT_DEAUTH_STATE)) {
+			pe_err("Invalid channel! Disconnect");
+			lim_tear_down_link_with_ap(pMac,
+					   pMac->lim.limTimers.
+					   gLimChannelSwitchTimer.sessionId,
+					   eSIR_MAC_UNSPEC_FAILURE_REASON);
+			return;
+		}
 	}
 	lim_covert_channel_scan_type(pMac, psessionEntry->currentOperChannel,
 				     false);
@@ -6547,7 +6550,7 @@ tSirRetStatus lim_strip_ie(tpAniSirGlobal mac_ctx,
 	int left = *addn_ielen;
 	uint8_t *ptr = addn_ie;
 	uint8_t elem_id;
-	uint16_t elem_len, ie_len, extracted_ie_len = 0;
+	uint16_t elem_len;
 
 	if (NULL == addn_ie) {
 		pe_err("NULL addn_ie pointer");
@@ -6559,10 +6562,6 @@ tSirRetStatus lim_strip_ie(tpAniSirGlobal mac_ctx,
 		pe_err("Unable to allocate memory");
 		return eSIR_MEM_ALLOC_FAILED;
 	}
-
-	if (extracted_ie)
-		qdf_mem_set(extracted_ie, eid_max_len + size_of_len_field + 1,
-			    0);
 
 	while (left >= 2) {
 		elem_id  = ptr[0];
@@ -6594,13 +6593,12 @@ tSirRetStatus lim_strip_ie(tpAniSirGlobal mac_ctx,
 			 * take oui IE and store in provided buffer.
 			 */
 			if (NULL != extracted_ie) {
-				ie_len = elem_len + size_of_len_field + 1;
-				if (ie_len <= eid_max_len - extracted_ie_len) {
-					qdf_mem_copy(
-					extracted_ie + extracted_ie_len,
-					&ptr[0], ie_len);
-					extracted_ie_len += ie_len;
-				}
+				qdf_mem_set(extracted_ie,
+					    eid_max_len + size_of_len_field + 1,
+					    0);
+				if (elem_len <= eid_max_len)
+					qdf_mem_copy(extracted_ie, &ptr[0],
+					elem_len + size_of_len_field + 1);
 			}
 		}
 		left -= elem_len;

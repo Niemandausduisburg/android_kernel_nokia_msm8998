@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1840,8 +1840,8 @@ enum hdd_dot11_mode {
  * <ini>
  * gForce1x1Exception - force 1x1 when connecting to certain peer
  * @Min: 0
- * @Max: 2
- * @Default: 1
+ * @Max: 1
+ * @Default: 0
  *
  * This INI when enabled will force 1x1 connection with certain peer.
  *
@@ -1856,7 +1856,7 @@ enum hdd_dot11_mode {
  */
 #define CFG_FORCE_1X1_NAME      "gForce1x1Exception"
 #define CFG_FORCE_1X1_MIN       (0)
-#define CFG_FORCE_1X1_MAX       (2)
+#define CFG_FORCE_1X1_MAX       (1)
 #define CFG_FORCE_1X1_DEFAULT   (1)
 
 /*
@@ -12721,32 +12721,6 @@ enum hw_filter_mode {
 #define CFG_ACTION_OUI_CONNECT_1X1_WITH_1_CHAIN_NAME    "gActionOUIConnect1x1with1TxRxChain"
 #define CFG_ACTION_OUI_CONNECT_1X1_WITH_1_CHAIN_DEFAULT "001018 06 02FFF0040000 BC 21 40 001018 06 02FFF0050000 BC 21 40 001018 06 02FFF4050000 BC 21 40"
 
-/*
- * <ini>
- * gActionOUIDisableAggressiveEDCA - Used to specify action OUIs to control
- * EDCA configuration when join the candidate AP
- *
- * This ini is used to specify AP OUIs. The station's EDCA should follow the
- * APs' when connecting to those AP, even if the gEnableEdcaParams is set.
- * For example, it follows the AP's EDCA whose OUI is 0050F2 with the
- * following setting:
- *     gActionOUIDisableAggressiveEDCA=0050F2 00 01
- *          Explain: 0050F2: OUI
- *                   00: data length is 0
- *                   01: info mask, only OUI present in Info mask
- * Refer to gEnableActionOUI for more detail about the format.
- *
- * Related: gEnableEdcaParams, gEnableActionOUI
- *
- * Supported Feature: Action OUIs
- *
- * Usage: External
- *
- * </ini>
- */
-#define CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA "gActionOUIDisableAggressiveEDCA"
-#define CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA_DEFAULT ""
-
  /* End of action oui inis */
 
 /*
@@ -13478,29 +13452,6 @@ enum hw_filter_mode {
 #define CFG_IS_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAE_ENABLED_MAX     (1)
-
-/*
- * <ini>
- * enable_sae_for_sap - Enable/Disable SAE support in driver for SAP
- * @Min: 0
- * @Max: 1
- * @Default: 1
- *
- * This ini is used to enable/disable SAE support in driver for SAP mode
- * Driver will process/drop the SAE authentication frames based on this config.
- *
- * Related: None
- *
- * Supported Feature: SAE
- * Usage: External
- *
- * </ini>
- */
-
-#define CFG_ENABLE_SAE_FOR_SAP_NAME    "enable_sae_for_sap"
-#define CFG_ENABLE_SAE_FOR_SAP_DEFAULT (1)
-#define CFG_ENABLE_SAE_FOR_SAP_MIN     (0)
-#define CFG_ENABLE_SAE_FOR_SAP_MAX     (1)
 
 /*
  * <ini>
@@ -15583,28 +15534,6 @@ enum hw_filter_mode {
 #define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT   (0)
 
 /*
- * <ini>
- * nb_commands_interval - Used to rate limit nb commands from userspace
- *
- * @Min: 0
- * @Max: 10
- * Default: 3
- *
- * This ini is used to specify the duration in which any supp. nb command from
- * userspace will not be processed completely in driver. For ex, the default
- * value of 3 seconds signifies that consecutive commands within that
- * time will not be processed fully.
- *
- * Usage: Internal
- *
- * </ini>
- */
-#define CFG_NB_COMMANDS_RATE_LIMIT          "nb_commands_interval"
-#define CFG_NB_COMMANDS_RATE_LIMIT_MIN      (0)
-#define CFG_NB_COMMANDS_RATE_LIMIT_MAX      (10)
-#define CFG_NB_COMMANDS_RATE_LIMIT_DEFAULT  (3)
-
-/*
  * Type declarations
  */
 
@@ -16440,7 +16369,7 @@ struct hdd_config {
 	uint32_t mawc_nlo_exp_backoff_ratio;
 	uint32_t mawc_nlo_init_scan_interval;
 	uint32_t mawc_nlo_max_scan_interval;
-	uint8_t is_force_1x1;
+	bool is_force_1x1;
 	uint16_t num_11b_tx_chains;
 	uint16_t num_11ag_tx_chains;
 	/* LCA(Last connected AP) disallow configs */
@@ -16471,7 +16400,6 @@ struct hdd_config {
 	uint8_t action_oui_ito_alternate[MAX_ACTION_OUI_STRING_LEN];
 	uint8_t action_oui_switch_to_11n[MAX_ACTION_OUI_STRING_LEN];
 	uint8_t action_oui_connect_1x1_with_1_chain[MAX_ACTION_OUI_STRING_LEN];
-	uint8_t action_oui_disable_aggressive_edca[MAX_ACTION_OUI_STRING_LEN];
 	uint8_t rssi_weightage;
 	uint8_t ht_caps_weightage;
 	uint8_t vht_caps_weightage;
@@ -16535,7 +16463,6 @@ struct hdd_config {
 	uint8_t enable_tx_sch_delay;
 #ifdef WLAN_FEATURE_SAE
 	bool is_sae_enabled;
-	bool enable_sae_for_sap;
 #endif
 	bool enable_rtt_mac_randomization;
 	bool enable_ftopen;
@@ -16572,9 +16499,6 @@ struct hdd_config {
 	uint16_t thermal_throt_dc;
 #endif
 	bool disable_4way_hs_offload;
-	bool ShortGI80MhzEnable;
-	bool ShortGI160MhzEnable;
-	uint8_t nb_commands_interval;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

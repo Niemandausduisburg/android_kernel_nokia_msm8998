@@ -38,7 +38,6 @@
 #include <net/cfg80211.h>
 #include <net/ieee80211_radiotap.h>
 #include "sap_api.h"
-#include "sme_power_save_api.h"
 #include "wlan_hdd_wmm.h"
 #include "wlan_hdd_tdls.h"
 #include <wlan_hdd_ipa.h>
@@ -345,7 +344,6 @@ static inline struct sk_buff *hdd_skb_orphan(hdd_adapter_t *pAdapter,
  *
  * Return: None
  */
-#ifdef FEATURE_WLAN_DIAG_SUPPORT
 void hdd_event_eapol_log(struct sk_buff *skb, enum qdf_proto_dir dir)
 {
 	int16_t eapol_key_info;
@@ -379,7 +377,6 @@ void hdd_event_eapol_log(struct sk_buff *skb, enum qdf_proto_dir dir)
 
 	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_EAPOL);
 }
-#endif
 
 
 /**
@@ -1577,11 +1574,9 @@ static inline void hdd_resolve_rx_ol_mode(hdd_context_t *hdd_ctx)
 {
 	if (!(hdd_ctx->config->lro_enable ^
 	    hdd_ctx->config->gro_enable)) {
-		if (hdd_ctx->config->lro_enable && hdd_ctx->config->gro_enable) {
-			hdd_err("Can't enable both LRO and GRO, disabling Rx offload");
-		} else {
-			hdd_debug("LRO and GRO both are disabled");
-		}
+		hdd_ctx->config->lro_enable && hdd_ctx->config->gro_enable ?
+		hdd_err("Can't enable both LRO and GRO, disabling Rx offload") :
+		hdd_debug("LRO and GRO both are disabled");
 		hdd_ctx->ol_enable = 0;
 	} else if (hdd_ctx->config->lro_enable) {
 		hdd_debug("Rx offload LRO is enabled");

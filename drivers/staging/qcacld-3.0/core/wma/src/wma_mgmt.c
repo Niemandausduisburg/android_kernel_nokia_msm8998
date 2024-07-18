@@ -918,6 +918,45 @@ static inline uint8_t wma_parse_mpdudensity(uint8_t mpdudensity)
 		return 0;
 }
 
+#if defined(CONFIG_HL_SUPPORT) && defined(FEATURE_WLAN_TDLS)
+
+/**
+ * wma_unified_peer_state_update() - update peer state
+ * @pdev: pdev handle
+ * @sta_mac: pointer to sta mac addr
+ * @bss_addr: bss address
+ * @sta_type: sta entry type
+ *
+ *
+ * Return: None
+ */
+static void
+wma_unified_peer_state_update(
+	struct ol_txrx_pdev_t *pdev,
+	uint8_t *sta_mac,
+	uint8_t *bss_addr,
+	uint8_t sta_type)
+{
+	if (STA_ENTRY_TDLS_PEER == sta_type)
+		ol_txrx_peer_state_update(pdev, sta_mac,
+					  OL_TXRX_PEER_STATE_AUTH);
+	else
+		ol_txrx_peer_state_update(pdev, bss_addr,
+					  OL_TXRX_PEER_STATE_AUTH);
+}
+#else
+
+static inline void
+wma_unified_peer_state_update(
+	struct ol_txrx_pdev_t *pdev,
+	uint8_t *sta_mac,
+	uint8_t *bss_addr,
+	uint8_t sta_type)
+{
+	ol_txrx_peer_state_update(pdev, bss_addr, OL_TXRX_PEER_STATE_AUTH);
+}
+#endif
+
 #define CFG_CTRL_MASK              0xFF00
 #define CFG_DATA_MASK              0x00FF
 
@@ -1207,6 +1246,9 @@ QDF_STATUS wma_send_peer_assoc(tp_wma_handle wma,
 	}
 	if (params->wpa_rsn >> 1)
 		cmd->peer_flags |= WMI_PEER_NEED_GTK_2_WAY;
+
+	wma_unified_peer_state_update(pdev, params->staMac,
+				      params->bssId, params->staType);
 
 #ifdef FEATURE_WLAN_WAPI
 	if (params->encryptType == eSIR_ED_WPI) {
@@ -2734,7 +2776,6 @@ void wma_beacon_miss_handler(tp_wma_handle wma, uint32_t vdev_id, int32_t rssi)
  *
  * Return: converted string of tx status
  */
-#ifdef WLAN_DEBUG
 static const char *wma_get_status_str(uint32_t status)
 {
 	switch (status) {
@@ -2747,7 +2788,6 @@ static const char *wma_get_status_str(uint32_t status)
 	CASE_RETURN_STRING(WMI_MGMT_TX_COMP_TYPE_MAX);
 	}
 }
-#endif
 
 #define RATE_LIMIT 16
 #define RESERVE_BYTES   100

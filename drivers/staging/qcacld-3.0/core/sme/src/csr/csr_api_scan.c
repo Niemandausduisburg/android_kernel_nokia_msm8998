@@ -4305,7 +4305,6 @@ QDF_STATUS csr_set_country_code(tpAniSirGlobal pMac, uint8_t *pCountry)
 /* caller allocated memory for pNumChn and pChnPowerInfo */
 /* As input, *pNumChn has the size of the array of pChnPowerInfo */
 /* Upon return, *pNumChn has the number of channels assigned. */
-#ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 static void csr_get_channel_power_info(tpAniSirGlobal pMac, tDblLinkList *list,
 				       uint32_t *num_ch,
 				       struct channel_power *chn_pwr_info)
@@ -4331,6 +4330,7 @@ static void csr_get_channel_power_info(tpAniSirGlobal pMac, tDblLinkList *list,
 
 }
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 static void csr_diag_apply_country_info(tpAniSirGlobal mac_ctx)
 {
 	host_log_802_11d_pkt_type *p11dLog;
@@ -5877,8 +5877,8 @@ static void csr_populate_ie_whitelist_attrs(tSirSmeScanReq *msg,
 	qdf_mem_copy(msg->probe_req_ie_bitmap, scan_req->probe_req_ie_bitmap,
 		     PROBE_REQ_BITMAP_LEN * sizeof(uint32_t));
 	msg->oui_field_len = scan_req->num_vendor_oui * sizeof(*scan_req->voui);
-	msg->oui_field_offset = sizeof(tSirSmeScanReq) +
-				 scan_req->ChannelInfo.numOfChannels +
+	msg->oui_field_offset = (sizeof(tSirSmeScanReq) +
+				 (scan_req->ChannelInfo.numOfChannels)) +
 				 scan_req->uIEFieldLen;
 
 	if (scan_req->num_vendor_oui != 0)
@@ -6139,7 +6139,7 @@ static void csr_diag_scan_channels(tpAniSirGlobal pMac, tSmeCmd *pCommand)
 	WLAN_HOST_DIAG_LOG_REPORT(pScanLog);
 }
 #else
-#define csr_diag_scan_channels(pMac, pCommand) (0)
+#define csr_diag_scan_channels(tpAniSirGlobal pMac, tSmeCmd *pCommand) (void)0;
 #endif /* #ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR */
 
 static QDF_STATUS csr_scan_channels(tpAniSirGlobal pMac, tSmeCmd *pCommand)
@@ -6843,9 +6843,7 @@ bool csr_scan_remove_fresh_scan_command(tpAniSirGlobal pMac, uint8_t sessionId)
 void csr_release_scan_command(tpAniSirGlobal pMac, tSmeCmd *pCommand,
 			      eCsrScanStatus scanStatus)
 {
-#ifdef WLAN_DEBUG
 	eCsrScanReason reason = pCommand->u.scanCmd.reason;
-#endif
 	bool status;
 	tDblLinkList *cmd_list = NULL;
 

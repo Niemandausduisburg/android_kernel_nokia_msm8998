@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -730,27 +730,6 @@ error:
 	return qdf_status;
 }
 
-static inline wmi_host_channel_width
-wma_map_phy_ch_bw_to_wmi_channel_width(enum phy_ch_width ch_width)
-{
-	switch (ch_width) {
-	case CH_WIDTH_20MHZ:
-		return WMI_HOST_CHAN_WIDTH_20;
-	case CH_WIDTH_40MHZ:
-		return WMI_HOST_CHAN_WIDTH_40;
-	case CH_WIDTH_80MHZ:
-		return WMI_HOST_CHAN_WIDTH_80;
-	case CH_WIDTH_160MHZ:
-		return WMI_HOST_CHAN_WIDTH_160;
-	case CH_WIDTH_5MHZ:
-		return WMI_HOST_CHAN_WIDTH_5;
-	case CH_WIDTH_10MHZ:
-		return WMI_HOST_CHAN_WIDTH_10;
-	default:
-		return WMI_HOST_CHAN_WIDTH_20;
-	}
-}
-
 /**
  * wma_update_channel_list() - update channel list
  * @handle: wma handle
@@ -768,7 +747,6 @@ QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 	int i;
 	struct scan_chan_list_params scan_ch_param = {0};
 	wmi_channel_param *tchan_info;
-	struct ch_params_s ch_params = {0};
 
 	scan_ch_param.chan_info = qdf_mem_malloc(sizeof(wmi_channel) *
 				 chan_list->numChan);
@@ -781,7 +759,6 @@ QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 	WMA_LOGD("no of channels = %d", chan_list->numChan);
 	tchan_info = scan_ch_param.chan_info;
 	scan_ch_param.num_scan_chans = chan_list->numChan;
-	scan_ch_param.max_bw_support_present = true;
 	wma_handle->saved_chan.num_channels = chan_list->numChan;
 	WMA_LOGD("ht %d, vht %d, vht_24 %d", chan_list->ht_en,
 			chan_list->vht_en, chan_list->vht_24_en);
@@ -836,14 +813,6 @@ QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 
 		WMI_SET_CHANNEL_REG_POWER(tchan_info,
 					  chan_list->chanParam[i].pwr);
-		ch_params.ch_width = CH_WIDTH_160MHZ;
-		cds_set_channel_params(chan_list->chanParam[i].chanId, 0,
-				       &ch_params);
-
-		WMI_SET_CHANNEL_MAX_BANDWIDTH(tchan_info,
-				wma_map_phy_ch_bw_to_wmi_channel_width(
-							ch_params.ch_width));
-
 		tchan_info++;
 	}
 
@@ -1200,7 +1169,7 @@ QDF_STATUS wma_roam_scan_offload_rssi_thresh(tp_wma_handle wma_handle,
 	return status;
 }
 
-#ifdef WLAN_DEBUG
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static const char *wma_roam_reason_to_string(uint32_t roam_reason)
 {
 	switch (roam_reason) {
@@ -1222,6 +1191,7 @@ static const char *wma_roam_reason_to_string(uint32_t roam_reason)
 		return "unknown";
 	}
 }
+#endif
 
 static const char *wma_roam_event_to_string(uint32_t roam_reason)
 {
@@ -1257,7 +1227,6 @@ static const char *wma_roam_notif_to_string(uint32_t notif)
 		return "unknown";
 	}
 }
-#endif
 
 /**
  * wma_roam_scan_offload_scan_period() - set roam offload scan period
@@ -3296,14 +3265,9 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 	 * firmware assert.
 	 */
 	channel = cds_freq_to_chan(wma->interfaces[synch_event->vdev_id].mhz);
-	if (param_buf->chan) {
-		wma->interfaces[synch_event->vdev_id].chanmode =
-				WMI_GET_CHANNEL_MODE(param_buf->chan);
-	} else {
-		wma_get_phy_mode(channel,
-				 wma->interfaces[synch_event->vdev_id].chan_width,
-				 &wma->interfaces[synch_event->vdev_id].chanmode);
-	}
+	wma_get_phy_mode(channel,
+			 wma->interfaces[synch_event->vdev_id].chan_width,
+			 &wma->interfaces[synch_event->vdev_id].chanmode);
 
 	wma->csr_roam_synch_cb(wma->mac_context, roam_synch_ind_ptr,
 			       bss_desc_ptr, SIR_ROAM_SYNCH_COMPLETE);
@@ -5140,7 +5104,7 @@ int wma_extscan_hotlist_match_event_handler(void *handle,
 		return -ENOMEM;
 	}
 	dest_ap = &dest_hotlist->ap[0];
-	dest_hotlist->numOfAps = numap;
+	dest_hotlist->numOfAps = event->total_entries;
 	dest_hotlist->requestId = event->config_request_id;
 
 	if (event->first_entry_index +
