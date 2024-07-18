@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
 struct hif_softc;
 
 void hif_dummy_bus_prevent_linkdown(struct hif_softc *scn, bool flag);
@@ -43,7 +51,7 @@ int hif_dummy_dump_registers(struct hif_softc *hif_sc);
 void hif_dummy_dump_target_memory(struct hif_softc *hif_sc, void *ramdump_base,
 				  uint32_t address, uint32_t size);
 void hif_dummy_ipa_get_ce_resource(struct hif_softc *hif_sc,
-				   qdf_shared_mem_t **ce_sr,
+				   qdf_dma_addr_t *sr_base_paddr,
 				   uint32_t *sr_ring_size,
 				   qdf_dma_addr_t *reg_paddr);
 void hif_dummy_mask_interrupt_call(struct hif_softc *hif_sc);

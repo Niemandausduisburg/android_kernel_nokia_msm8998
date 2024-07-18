@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -86,7 +95,7 @@ static A_STATUS pktlog_wma_post_msg(WMI_PKTLOG_EVENT event_types,
 	msg.bodyptr = param;
 	msg.bodyval = 0;
 
-	status = cds_mq_post_message(QDF_MODULE_ID_WMA, &msg);
+	status = cds_mq_post_message(CDS_MQ_ID_WMA, &msg);
 
 	if (status != QDF_STATUS_SUCCESS) {
 		qdf_mem_free(param);
@@ -342,7 +351,6 @@ void pktlog_init(struct hif_opaque_softc *scn)
 {
 	struct ath_pktlog_info *pl_info;
 	ol_txrx_pdev_handle pdev_txrx_handle;
-
 	pdev_txrx_handle = cds_get_context(QDF_MODULE_ID_TXRX);
 
 	if (pdev_txrx_handle == NULL ||
@@ -380,7 +388,7 @@ void pktlog_init(struct hif_opaque_softc *scn)
 	PKTLOG_SW_EVENT_SUBSCRIBER.callback = pktlog_callback;
 }
 
-int __pktlog_enable(struct hif_opaque_softc *scn, int32_t log_state,
+static int __pktlog_enable(struct hif_opaque_softc *scn, int32_t log_state,
 		 bool ini_triggered, uint8_t user_triggered,
 		 uint32_t is_iwpriv_command)
 {
@@ -390,21 +398,21 @@ int __pktlog_enable(struct hif_opaque_softc *scn, int32_t log_state,
 	int error;
 
 	if (!scn) {
-		qdf_print("%s: Invalid scn context\n", __func__);
+		printk("%s: Invalid scn context\n", __func__);
 		ASSERT(0);
 		return -1;
 	}
 
 	txrx_pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 	if (!txrx_pdev) {
-		qdf_print("%s: Invalid txrx_pdev context\n", __func__);
+		printk("%s: Invalid txrx_pdev context\n", __func__);
 		ASSERT(0);
 		return -1;
 	}
 
 	pl_dev = txrx_pdev->pl_dev;
 	if (!pl_dev) {
-		qdf_print("%s: Invalid pktlog context\n", __func__);
+		printk("%s: Invalid pktlog context\n", __func__);
 		ASSERT(0);
 		return -1;
 	}
@@ -442,8 +450,8 @@ int __pktlog_enable(struct hif_opaque_softc *scn, int32_t log_state,
 			if (!pl_info->buf) {
 				pl_info->curr_pkt_state =
 					PKTLOG_OPR_NOT_IN_PROGRESS;
-				qdf_print("%s: pktlog buf alloc failed\n",
-					  __func__);
+				printk("%s: pktlog buf alloc failed\n",
+				       __func__);
 				ASSERT(0);
 				return -1;
 			}
@@ -469,31 +477,20 @@ int __pktlog_enable(struct hif_opaque_softc *scn, int32_t log_state,
 
 	if (log_state != 0) {
 		/* WDI subscribe */
-		if (!pl_dev->is_pktlog_cb_subscribed) {
-			error = wdi_pktlog_subscribe(txrx_pdev, log_state);
-			if (error) {
-				pl_info->curr_pkt_state =
-					PKTLOG_OPR_NOT_IN_PROGRESS;
-				qdf_print("Unable to subscribe to the WDI %s\n",
-					  __func__);
-				return -EINVAL;
-			}
-		} else {
-			pl_info->curr_pkt_state =
-				PKTLOG_OPR_NOT_IN_PROGRESS;
-			qdf_print("Already subscribed %s\n",
-				  __func__);
-			return -EINVAL;
+		if ((!pl_dev->is_pktlog_cb_subscribed) &&
+			wdi_pktlog_subscribe(txrx_pdev, log_state)) {
+			pl_info->curr_pkt_state = PKTLOG_OPR_NOT_IN_PROGRESS;
+			printk("Unable to subscribe to the WDI %s\n", __func__);
+			return -1;
 		}
-
+		pl_dev->is_pktlog_cb_subscribed = true;
 		/* WMI command to enable pktlog on the firmware */
 		if (pktlog_enable_tgt(scn, log_state, ini_triggered,
 				user_triggered)) {
 			pl_info->curr_pkt_state = PKTLOG_OPR_NOT_IN_PROGRESS;
-			qdf_print("Device cannot be enabled, %s\n", __func__);
+			printk("Device cannot be enabled, %s\n", __func__);
 			return -1;
 		}
-		pl_dev->is_pktlog_cb_subscribed = true;
 
 		if (is_iwpriv_command == 0)
 			pl_dev->vendor_cmd_send = true;
@@ -519,21 +516,21 @@ int pktlog_enable(struct hif_opaque_softc *scn, int32_t log_state,
 	int error;
 
 	if (!scn) {
-		printk("%s: Invalid scn context\n", __func__);
+		pr_err("%s: Invalid scn context\n", __func__);
 		ASSERT(0);
 		return -EINVAL;
 	}
 
 	txrx_pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 	if (!txrx_pdev) {
-		printk("%s: Invalid txrx_pdev context\n", __func__);
+		pr_err("%s: Invalid txrx_pdev context\n", __func__);
 		ASSERT(0);
 		return -EINVAL;
 	}
 
 	pl_dev = txrx_pdev->pl_dev;
 	if (!pl_dev) {
-		printk("%s: Invalid pktlog context\n", __func__);
+		pr_err("%s: Invalid pktlog context\n", __func__);
 		ASSERT(0);
 		return -EINVAL;
 	}
@@ -753,17 +750,6 @@ void pktlog_process_fw_msg(uint32_t *buff, uint32_t len)
 }
 
 #if defined(QCA_WIFI_3_0_ADRASTEA)
-static inline int pktlog_nbuf_check_sanity(qdf_nbuf_t nbuf)
-{
-	int rc = 0; /* sane */
-
-	if ((!nbuf) ||
-	    (nbuf->data < nbuf->head) ||
-	    ((nbuf->data + skb_headlen(nbuf)) > skb_end_pointer(nbuf)))
-		rc = -EINVAL;
-
-	return rc;
-}
 /**
  * pktlog_t2h_msg_handler() - Target to host message handler
  * @context: pdev context
@@ -778,18 +764,9 @@ static void pktlog_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 	uint32_t *msg_word;
 	uint32_t msg_len;
 
-	/* check for sanity of the packet, have seen corrupted pkts */
-	if (pktlog_nbuf_check_sanity(pktlog_t2h_msg)) {
-		qdf_print("%s: packet %pK corrupted? Leaking...",
-			  __func__, pktlog_t2h_msg);
-		/* do not free; may crash! */
-		QDF_ASSERT(0);
-		return;
-	}
-
 	/* check for successful message reception */
-	if (pkt->Status != QDF_STATUS_SUCCESS) {
-		if (pkt->Status != QDF_STATUS_E_CANCELED)
+	if (pkt->Status != A_OK) {
+		if (pkt->Status != A_ECANCELED)
 			pdev->htc_err_cnt++;
 		qdf_nbuf_free(pktlog_t2h_msg);
 		return;
@@ -837,7 +814,7 @@ static void pktlog_h2t_send_complete(void *context, HTC_PACKET *htc_pkt)
  *
  * Return: HTC action
  */
-static enum htc_send_full_action pktlog_h2t_full(void *context, HTC_PACKET *pkt)
+static HTC_SEND_FULL_ACTION pktlog_h2t_full(void *context, HTC_PACKET *pkt)
 {
 	return HTC_SEND_FULL_KEEP;
 }
@@ -850,9 +827,9 @@ static enum htc_send_full_action pktlog_h2t_full(void *context, HTC_PACKET *pkt)
  */
 static int pktlog_htc_connect_service(struct ol_pktlog_dev_t *pdev)
 {
-	struct htc_service_connect_req connect;
-	struct htc_service_connect_resp response;
-	QDF_STATUS status;
+	HTC_SERVICE_CONNECT_REQ connect;
+	HTC_SERVICE_CONNECT_RESP response;
+	A_STATUS status;
 
 	qdf_mem_set(&connect, sizeof(connect), 0);
 	qdf_mem_set(&response, sizeof(response), 0);
@@ -885,9 +862,8 @@ static int pktlog_htc_connect_service(struct ol_pktlog_dev_t *pdev)
 
 	status = htc_connect_service(pdev->htc_pdev, &connect, &response);
 
-	if (status != QDF_STATUS_SUCCESS) {
+	if (status != A_OK) {
 		pdev->mt_pktlog_enabled = false;
-
 		if (!cds_is_fw_down())
 			QDF_BUG(0);
 

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /**
  *  DOC: wlan_hdd_lpass.c
  *
@@ -28,41 +37,6 @@
 #include "wlan_hdd_lpass.h"
 #include <cds_utils.h>
 #include "qwlan_version.h"
-
-/**
- * wlan_hdd_get_channel_info() - Get channel info
- * @hdd_ctx: HDD context
- * @chan_info: Pointer to the structure that stores channel info
- * @chan_id: Channel ID
- *
- * Fill in the channel info to chan_info structure.
- */
-static void wlan_hdd_get_channel_info(hdd_context_t *hdd_ctx,
-				      struct channel_info *chan_info,
-				      uint32_t chan_id)
-{
-	uint32_t reg_info_1;
-	uint32_t reg_info_2;
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-
-	status = sme_get_reg_info(hdd_ctx->hHal, chan_id,
-				  &reg_info_1, &reg_info_2);
-	if (status != QDF_STATUS_SUCCESS)
-		return;
-
-	chan_info->mhz = cds_chan_to_freq(chan_id);
-	chan_info->band_center_freq1 = chan_info->mhz;
-	chan_info->band_center_freq2 = 0;
-	chan_info->info = 0;
-	if (cds_get_channel_state(chan_id) ==
-	    CHANNEL_STATE_DFS)
-		WMI_SET_CHANNEL_FLAG(chan_info,
-				     WMI_CHAN_FLAG_DFS);
-	hdd_update_channel_bw_info(hdd_ctx, chan_id,
-				   chan_info);
-	chan_info->reg_info_1 = reg_info_1;
-	chan_info->reg_info_2 = reg_info_2;
-}
 
 /**
  * wlan_hdd_gen_wlan_status_pack() - Create lpass adapter status package
@@ -84,9 +58,6 @@ static int wlan_hdd_gen_wlan_status_pack(struct wlan_status_data *data,
 {
 	hdd_context_t *hdd_ctx = NULL;
 	uint8_t buflen = WLAN_SVC_COUNTRY_CODE_LEN;
-	int i;
-	uint32_t chan_id;
-	struct channel_info *chan_info;
 
 	if (!data) {
 		hdd_err("invalid data pointer");
@@ -116,14 +87,6 @@ static int wlan_hdd_gen_wlan_status_pack(struct wlan_status_data *data,
 	data->numChannels = WLAN_SVC_MAX_NUM_CHAN;
 	sme_get_cfg_valid_channels(hdd_ctx->hHal, data->channel_list,
 				   &data->numChannels);
-
-	for (i = 0; i < data->numChannels; i++) {
-		chan_info = &data->channel_info[i];
-		chan_id = data->channel_list[i];
-		chan_info->chan_id = chan_id;
-		wlan_hdd_get_channel_info(hdd_ctx, chan_info, chan_id);
-	}
-
 	sme_get_country_code(hdd_ctx->hHal, data->country_code, &buflen);
 	data->is_on = is_on;
 	data->vdev_id = adapter->sessionId;
@@ -201,7 +164,7 @@ static void wlan_hdd_send_status_pkg(struct hdd_adapter_s *adapter,
 				     uint8_t is_on, uint8_t is_connected)
 {
 	int ret = 0;
-	struct wlan_status_data *data = NULL;
+	struct wlan_status_data data;
 	hdd_context_t *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 
 	if (!hdd_ctx)
@@ -210,19 +173,15 @@ static void wlan_hdd_send_status_pkg(struct hdd_adapter_s *adapter,
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam())
 		return;
 
-	data = kzalloc(sizeof(*data), GFP_KERNEL);
-	if (!data)
-		return;
-
+	memset(&data, 0, sizeof(struct wlan_status_data));
 	if (is_on)
-		ret = wlan_hdd_gen_wlan_status_pack(data, adapter, sta_ctx,
+		ret = wlan_hdd_gen_wlan_status_pack(&data, adapter, sta_ctx,
 						    is_on, is_connected);
 
 	if (!ret)
 		wlan_hdd_send_svc_nlink_msg(hdd_ctx->radio_index,
-					    WLAN_SVC_WLAN_STATUS_IND,
-					    data, sizeof(*data));
-	kfree(data);
+					WLAN_SVC_WLAN_STATUS_IND,
+					    &data, sizeof(data));
 }
 
 /**
@@ -260,28 +219,45 @@ static void wlan_hdd_send_version_pkg(uint32_t fw_version,
 }
 
 /**
- * wlan_hdd_send_scan_intf_info() - report scan interfaces to lpass
+ * wlan_hdd_send_all_scan_intf_info() - report scan interfaces to lpass
  * @hdd_ctx: The global HDD context
- * @adapter: Adapter that supports scanning.
  *
- * This function indicates adapter that supports scanning to lpass.
+ * This function iterates through all of the interfaces registered
+ * with HDD and indicates to lpass all that support scanning.
+ * If no interfaces support scanning then that fact is also indicated.
  *
  * Return: none
  */
-static void wlan_hdd_send_scan_intf_info(struct hdd_context_s *hdd_ctx,
-					 struct hdd_adapter_s *adapter)
+static void wlan_hdd_send_all_scan_intf_info(struct hdd_context_s *hdd_ctx)
 {
+	hdd_adapter_t *adapter = NULL;
+	hdd_adapter_list_node_t *node = NULL, *next = NULL;
+	bool scan_intf_found = false;
+	QDF_STATUS status;
+
 	if (!hdd_ctx) {
 		hdd_err("NULL pointer for hdd_ctx");
 		return;
 	}
 
-	if (!adapter) {
-		hdd_err("Adapter is Null");
-		return;
+	status = hdd_get_front_adapter(hdd_ctx, &node);
+	while (NULL != node && QDF_STATUS_SUCCESS == status) {
+		adapter = node->pAdapter;
+		if (adapter) {
+			if (adapter->device_mode == QDF_STA_MODE
+			    || adapter->device_mode == QDF_P2P_CLIENT_MODE
+			    || adapter->device_mode ==
+			    QDF_P2P_DEVICE_MODE) {
+				scan_intf_found = true;
+				wlan_hdd_send_status_pkg(adapter, NULL, 1, 0);
+			}
+		}
+		status = hdd_get_next_adapter(hdd_ctx, node, &next);
+		node = next;
 	}
 
-	wlan_hdd_send_status_pkg(adapter, NULL, 1, 0);
+	if (!scan_intf_found)
+		wlan_hdd_send_status_pkg(adapter, NULL, 1, 0);
 }
 
 /*
@@ -350,36 +326,19 @@ void hdd_lpass_notify_mode_change(struct hdd_adapter_s *adapter)
 	struct hdd_context_s *hdd_ctx;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	wlan_hdd_send_scan_intf_info(hdd_ctx, adapter);
+	wlan_hdd_send_all_scan_intf_info(hdd_ctx);
 }
 
-/*
- * hdd_lpass_notify_wlan_version() - Notify LPASS WLAN Host/FW version
- *
- * implementation note: Notify LPASS for the WLAN host/firmware version.
- */
-void hdd_lpass_notify_wlan_version(struct hdd_context_s *hdd_ctx)
-{
-	ENTER();
-
-	wlan_hdd_send_version_pkg(hdd_ctx->target_fw_version,
-				  hdd_ctx->target_hw_version,
-				  hdd_ctx->target_hw_name);
-
-	EXIT();
-}
 /*
  * hdd_lpass_notify_start() - Notify LPASS of driver start
  * (public function documented in wlan_hdd_lpass.h)
  */
-void hdd_lpass_notify_start(struct hdd_context_s *hdd_ctx,
-			   hdd_adapter_t  *adapter)
+void hdd_lpass_notify_start(struct hdd_context_s *hdd_ctx)
 {
-	ENTER();
-
-	wlan_hdd_send_scan_intf_info(hdd_ctx, adapter);
-
-	EXIT();
+	wlan_hdd_send_all_scan_intf_info(hdd_ctx);
+	wlan_hdd_send_version_pkg(hdd_ctx->target_fw_version,
+				  hdd_ctx->target_hw_version,
+				  hdd_ctx->target_hw_name);
 }
 
 /*

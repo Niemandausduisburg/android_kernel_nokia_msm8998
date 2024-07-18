@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -73,7 +82,6 @@
 #define SET_LIM_PROCESS_DEFD_MESGS(pMac, val) \
 		pMac->lim.gLimProcessDefdMsgs = val; \
 		pe_debug("%s Defer LIM messages - value %d", __func__, val);
-
 /* LIM exported function templates */
 #define LIM_MIN_BCN_PR_LENGTH  12
 #define LIM_BCN_PR_CAPABILITY_OFFSET 10
@@ -101,7 +109,6 @@ typedef enum eMgmtFrmDropReason {
 	eMGMT_DROP_NON_SCAN_MODE_FRAME,
 	eMGMT_DROP_INVALID_SIZE,
 	eMGMT_DROP_SPURIOUS_FRAME,
-	eMGMT_DROP_DUPLICATE_AUTH_FRAME,
 } tMgmtFrmDropReason;
 
 /**
@@ -206,11 +213,11 @@ tMgmtFrmDropReason lim_is_pkt_candidate_for_drop(tpAniSirGlobal pMac,
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 QDF_STATUS pe_roam_synch_callback(tpAniSirGlobal mac_ctx,
 	struct sSirSmeRoamOffloadSynchInd *roam_sync_ind_ptr,
-	tpSirBssDescription  bss_desc_ptr, enum sir_roam_op_code reason);
+	tpSirBssDescription  bss_desc_ptr);
 #else
 static inline QDF_STATUS pe_roam_synch_callback(tpAniSirGlobal mac_ctx,
 	struct sSirSmeRoamOffloadSynchInd *roam_sync_ind_ptr,
-	tpSirBssDescription  bss_desc_ptr, enum sir_roam_op_code reason)
+	tpSirBssDescription  bss_desc_ptr)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
@@ -322,14 +329,7 @@ static inline void lim_fill_join_rsp_ht_caps(tpPESession session,
 #endif
 QDF_STATUS lim_update_ext_cap_ie(tpAniSirGlobal mac_ctx,
 	uint8_t *ie_data, uint8_t *local_ie_buf, uint16_t *local_ie_len);
-
-/**
- * lim_translate_rsn_oui_to_akm_type() - translate RSN OUI to AKM type
- * @auth_suite: auth suite
- *
- * Return: AKM type
- */
-enum ani_akm_type lim_translate_rsn_oui_to_akm_type(uint8_t auth_suite[4]);
-
+QDF_STATUS lim_add_qcn_ie(tpAniSirGlobal mac_ctx, uint8_t *ie_data,
+							uint16_t *ie_len);
 /************************************************************/
 #endif /* __LIM_API_H */

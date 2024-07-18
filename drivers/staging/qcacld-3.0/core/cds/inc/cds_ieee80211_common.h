@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011, 2014-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011,2014-2015 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifndef EXTERNAL_USE_ONLY
@@ -226,7 +235,7 @@ struct ieee80211_ctlframe_addr2 {
 #define IEEE80211_SEQ_SEQ_SHIFT             4
 #define IEEE80211_SEQ_MAX                   4096
 
-#define IEEE80211_SEQ_LEQ(a, b)  ((int)((a)-(b)) <= 0)
+#define IEEE80211_SEQ_LEQ(a,b)  ((int)((a)-(b)) <= 0)
 
 #define IEEE80211_QOS_TXOP                  0x00ff
 
@@ -455,8 +464,8 @@ struct ieee80211_wme_param {
 #define WME_CAPINFO_UAPSD_MAXSP_MASK            0x3
 #define WME_CAPINFO_IE_OFFSET                   8
 #define WME_UAPSD_MAXSP(_qosinfo) (((_qosinfo) >> WME_CAPINFO_UAPSD_MAXSP_SHIFT) & WME_CAPINFO_UAPSD_MAXSP_MASK)
-#define WME_UAPSD_AC_ENABLED(_ac, _qosinfo) ((1<<(3 - (_ac))) &   \
-					      (((_qosinfo) >> WME_CAPINFO_UAPSD_ACFLAGS_SHIFT) & WME_CAPINFO_UAPSD_ACFLAGS_MASK))
+#define WME_UAPSD_AC_ENABLED(_ac, _qosinfo) ( (1<<(3 - (_ac))) &   \
+					      (((_qosinfo) >> WME_CAPINFO_UAPSD_ACFLAGS_SHIFT) & WME_CAPINFO_UAPSD_ACFLAGS_MASK) )
 
 /* Mask used to determined whether all queues are UAPSD-enabled */
 #define WME_CAPINFO_UAPSD_ALL                   (WME_CAPINFO_UAPSD_VO |	\
@@ -1631,7 +1640,6 @@ enum {
 #define AKM_SUITE_TYPE_FT_PSK           0x04
 #define AKM_SUITE_TYPE_SHA256_IEEE8021X 0x05
 #define AKM_SUITE_TYPE_SHA256_PSK       0x06
-#define AKM_SUITE_TYPE_SAE              0x08
 
 #define RSN_CAP_PREAUTH                 0x01
 #define RSN_CAP_PTKSA_REPLAYCOUNTER    0x0c
@@ -1686,25 +1694,6 @@ enum {
 #define CCKM_SEL(x)         (((x)<<24)|CCKM_OUI)
 
 #define IEEE80211_RV(v)     ((v) & IEEE80211_RATE_VAL)
-
-#define LE_READ_2(p) \
-	((uint16_t)\
-	((((const uint8_t *)(p))[0]) |\
-	(((const uint8_t *)(p))[1] <<  8)))
-
-#define LE_READ_4(p) \
-	((uint32_t)\
-	((((const uint8_t *)(p))[0]) |\
-	(((const uint8_t *)(p))[1] <<  8) |  \
-	(((const uint8_t *)(p))[2] << 16) |\
-	(((const uint8_t *)(p))[3] << 24)))
-
-#define BE_READ_4(p) \
-	((uint32_t)\
-	((((const uint8_t *)(p))[0] << 24) |\
-	(((const uint8_t *)(p))[1] << 16) |\
-	(((const uint8_t *)(p))[2] <<  8) |\
-	(((const uint8_t *)(p))[3])))
 
 /*
  * AUTH management packets
@@ -1826,8 +1815,6 @@ enum {
 
 #define IEEE80211_CCMP_HEADERLEN    8
 #define IEEE80211_CCMP_MICLEN       8
-#define WLAN_IEEE80211_GCMP_HEADERLEN    8
-#define WLAN_IEEE80211_GCMP_MICLEN      16
 
 /*
  * 802.11w defines a MMIE chunk to be attached at the end of
@@ -1900,7 +1887,7 @@ enum {
 #define IEEE80211_AID_MAX       2007
 #define IEEE80211_AID_DEF       128
 
-#define IEEE80211_AID(b)    ((b) & ~0xc000)
+#define IEEE80211_AID(b)    ((b) &~0xc000)
 
 /*
  * RTS frame length parameters.  The default is specified in

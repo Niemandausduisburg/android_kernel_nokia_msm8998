@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifndef __WMA_OCB_H
@@ -113,7 +122,7 @@ static inline int wma_ocb_get_tsf_timer(tp_wma_handle wma_handle,
 static inline int wma_dcc_get_stats(tp_wma_handle wma_handle,
 		struct sir_dcc_get_stats *get_stats_param)
 {
-	return 0;
+	return 0 ;
 }
 
 static inline int wma_dcc_clear_stats(tp_wma_handle wma_handle,

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2015, 2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -17,6 +20,12 @@
  */
 
 /*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+/*
  *
  * This file lim_security_utils.h contains the utility definitions
  * related to WEP encryption/decryption etc.
@@ -30,8 +39,7 @@
 #define __LIM_SECURITY_UTILS_H
 #include "sir_mac_prot_def.h"      /* for tSirMacAuthFrameBody */
 
-#define LIM_ENCR_AUTH_BODY_LEN  (SIR_MAC_AUTH_FRAME_INFO_LEN + \
-				 SIR_MAC_AUTH_CHALLENGE_BODY_LEN + \
+#define LIM_ENCR_AUTH_BODY_LEN  (sizeof(tSirMacAuthFrameBody) +	\
 				 SIR_MAC_WEP_IV_LENGTH + \
 				 SIR_MAC_WEP_ICV_LENGTH)
 

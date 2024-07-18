@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,7 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+ /**
  * @file cdp_txrx_ctrl.h
  * @brief Define the host data path control API functions
  * called by the host control SW and the OS interface module
@@ -38,8 +46,8 @@
 #endif /* QCA_OL_TX_PDEV_LOCK */
 
 #if QCA_OL_TX_PDEV_LOCK
-void ol_ll_pdev_tx_lock(void *pdev);
-void ol_ll_pdev_tx_unlock(void *pdev);
+void ol_ll_pdev_tx_lock(void *);
+void ol_ll_pdev_tx_unlock(void *);
 #define OL_TX_LOCK(_x)  ol_ll_pdev_tx_lock(_x)
 #define OL_TX_UNLOCK(_x) ol_ll_pdev_tx_unlock(_x)
 

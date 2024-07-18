@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #define ATH_MODULE_NAME hif
@@ -33,23 +42,23 @@
 				((x & FW_RAMDUMP_PATTERN_MASK) ==  \
 						FW_RAMDUMP_PATTERN)) ? 1 : 0)
 
-static void usb_hif_post_recv_transfers(struct HIF_USB_PIPE *recv_pipe,
+static void usb_hif_post_recv_transfers(HIF_USB_PIPE *recv_pipe,
 					int buffer_length);
 static void usb_hif_post_recv_bundle_transfers
-						(struct HIF_USB_PIPE *recv_pipe,
+						(HIF_USB_PIPE *recv_pipe,
 						int buffer_length);
-static void usb_hif_cleanup_recv_urb(struct HIF_URB_CONTEXT *urb_context);
+static void usb_hif_cleanup_recv_urb(HIF_URB_CONTEXT *urb_context);
 
 
 /**
  * usb_hif_free_urb_to_pipe() - add urb back to urb list of a pipe
- * @pipe: pointer to struct HIF_USB_PIPE
- * @urb_context: pointer to struct HIF_URB_CONTEXT
+ * @pipe: pointer to HIF_USB_PIPE
+ * @urb_context: pointer to HIF_URB_CONTEXT
  *
  * Return: none
  */
-static void usb_hif_free_urb_to_pipe(struct HIF_USB_PIPE *pipe,
-					struct HIF_URB_CONTEXT *urb_context)
+static void usb_hif_free_urb_to_pipe(HIF_USB_PIPE *pipe,
+						HIF_URB_CONTEXT *urb_context)
 {
 	qdf_spin_lock_irqsave(&pipe->device->cs_lock);
 	pipe->urb_cnt++;
@@ -59,20 +68,19 @@ static void usb_hif_free_urb_to_pipe(struct HIF_USB_PIPE *pipe,
 
 /**
  * usb_hif_alloc_urb_from_pipe() - remove urb back from urb list of a pipe
- * @pipe: pointer to struct HIF_USB_PIPE
+ * @pipe: pointer to HIF_USB_PIPE
  *
- * Return: struct HIF_URB_CONTEXT urb context removed from the urb list
+ * Return: HIF_URB_CONTEXT urb context removed from the urb list
  */
-struct HIF_URB_CONTEXT *usb_hif_alloc_urb_from_pipe(struct HIF_USB_PIPE *pipe)
+HIF_URB_CONTEXT *usb_hif_alloc_urb_from_pipe(HIF_USB_PIPE *pipe)
 {
-	struct HIF_URB_CONTEXT *urb_context = NULL;
+	HIF_URB_CONTEXT *urb_context = NULL;
 	DL_LIST *item;
 
 	qdf_spin_lock_irqsave(&pipe->device->cs_lock);
 	item = dl_list_remove_item_from_head(&pipe->urb_list_head);
 	if (item != NULL) {
-		urb_context = A_CONTAINING_STRUCT(item, struct HIF_URB_CONTEXT,
-						  link);
+		urb_context = A_CONTAINING_STRUCT(item, HIF_URB_CONTEXT, link);
 		pipe->urb_cnt--;
 	}
 	qdf_spin_unlock_irqrestore(&pipe->device->cs_lock);
@@ -82,21 +90,20 @@ struct HIF_URB_CONTEXT *usb_hif_alloc_urb_from_pipe(struct HIF_USB_PIPE *pipe)
 
 /**
  * usb_hif_dequeue_pending_transfer() - remove urb from pending xfer list
- * @pipe: pointer to struct HIF_USB_PIPE
+ * @pipe: pointer to HIF_USB_PIPE
  *
- * Return: struct HIF_URB_CONTEXT urb context removed from the pending xfer list
+ * Return: HIF_URB_CONTEXT urb context removed from the pending xfer list
  */
-static struct HIF_URB_CONTEXT *usb_hif_dequeue_pending_transfer
-						(struct HIF_USB_PIPE *pipe)
+static HIF_URB_CONTEXT *usb_hif_dequeue_pending_transfer
+							(HIF_USB_PIPE *pipe)
 {
-	struct HIF_URB_CONTEXT *urb_context = NULL;
+	HIF_URB_CONTEXT *urb_context = NULL;
 	DL_LIST *item;
 
 	qdf_spin_lock_irqsave(&pipe->device->cs_lock);
 	item = dl_list_remove_item_from_head(&pipe->urb_pending_list);
 	if (item != NULL)
-		urb_context = A_CONTAINING_STRUCT(item, struct HIF_URB_CONTEXT,
-						  link);
+		urb_context = A_CONTAINING_STRUCT(item, HIF_URB_CONTEXT, link);
 	qdf_spin_unlock_irqrestore(&pipe->device->cs_lock);
 
 	return urb_context;
@@ -104,13 +111,13 @@ static struct HIF_URB_CONTEXT *usb_hif_dequeue_pending_transfer
 
 /**
  * usb_hif_enqueue_pending_transfer() - add urb to pending xfer list
- * @pipe: pointer to struct HIF_USB_PIPE
- * @urb_context: pointer to struct HIF_URB_CONTEXT to be added to the xfer list
+ * @pipe: pointer to HIF_USB_PIPE
+ * @urb_context: pointer to HIF_URB_CONTEXT to be added to the xfer list
  *
  * Return: none
  */
-void usb_hif_enqueue_pending_transfer(struct HIF_USB_PIPE *pipe,
-					struct HIF_URB_CONTEXT *urb_context)
+void usb_hif_enqueue_pending_transfer(HIF_USB_PIPE *pipe,
+						HIF_URB_CONTEXT *urb_context)
 {
 	qdf_spin_lock_irqsave(&pipe->device->cs_lock);
 	dl_list_insert_tail(&pipe->urb_pending_list, &urb_context->link);
@@ -120,12 +127,12 @@ void usb_hif_enqueue_pending_transfer(struct HIF_USB_PIPE *pipe,
 
 /**
  * usb_hif_remove_pending_transfer() - remove urb from its own list
- * @urb_context: pointer to struct HIF_URB_CONTEXT to be removed
+ * @urb_context: pointer to HIF_URB_CONTEXT to be removed
  *
  * Return: none
  */
 void
-usb_hif_remove_pending_transfer(struct HIF_URB_CONTEXT *urb_context)
+usb_hif_remove_pending_transfer(HIF_URB_CONTEXT *urb_context)
 {
 	qdf_spin_lock_irqsave(&urb_context->pipe->device->cs_lock);
 	dl_list_remove(&urb_context->link);
@@ -134,17 +141,17 @@ usb_hif_remove_pending_transfer(struct HIF_URB_CONTEXT *urb_context)
 
 /**
  * usb_hif_alloc_pipe_resources() - allocate urb_cnt urbs to a HIF pipe
- * @pipe: pointer to struct HIF_USB_PIPE to which resources will be allocated
+ * @pipe: pointer to HIF_USB_PIPE to which resources will be allocated
  * @urb_cnt: number of urbs to be added to the HIF pipe
  *
  * Return: QDF_STATUS_SUCCESS if success else an appropriate QDF_STATUS error
  */
 static QDF_STATUS usb_hif_alloc_pipe_resources
-					(struct HIF_USB_PIPE *pipe, int urb_cnt)
+					(HIF_USB_PIPE *pipe, int urb_cnt)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	int i;
-	struct HIF_URB_CONTEXT *urb_context;
+	HIF_URB_CONTEXT *urb_context;
 
 	DL_LIST_INIT(&pipe->urb_list_head);
 	DL_LIST_INIT(&pipe->urb_pending_list);
@@ -184,13 +191,13 @@ static QDF_STATUS usb_hif_alloc_pipe_resources
 
 /**
  * usb_hif_free_pipe_resources() - free urb resources allocated to a HIF pipe
- * @pipe: pointer to struct HIF_USB_PIPE
+ * @pipe: pointer to HIF_USB_PIPE
  *
  * Return: none
  */
-static void usb_hif_free_pipe_resources(struct HIF_USB_PIPE *pipe)
+static void usb_hif_free_pipe_resources(HIF_USB_PIPE *pipe)
 {
-	struct HIF_URB_CONTEXT *urb_context;
+	HIF_URB_CONTEXT *urb_context;
 
 	if (NULL == pipe->device) {
 		/* nothing allocated for this pipe */
@@ -297,7 +304,7 @@ QDF_STATUS usb_hif_setup_pipe_resources(HIF_DEVICE_USB *device)
 	int i;
 	int urbcount;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct HIF_USB_PIPE *pipe;
+	HIF_USB_PIPE *pipe;
 	uint8_t pipe_num;
 
 	/* walk decriptors and setup pipes */
@@ -305,7 +312,7 @@ QDF_STATUS usb_hif_setup_pipe_resources(HIF_DEVICE_USB *device)
 		endpoint = &iface_desc->endpoint[i].desc;
 
 		if (IS_BULK_EP(endpoint->bmAttributes)) {
-			HIF_DBG("%s Bulk Ep:0x%2.2X maxpktsz:%d",
+			HIF_DBG("%s Bulk Ep:0x%2.2X " "maxpktsz:%d",
 				IS_DIR_IN(endpoint->bEndpointAddress) ?
 								"RX" : "TX",
 				endpoint->bEndpointAddress,
@@ -410,13 +417,13 @@ void usb_hif_cleanup_pipe_resources(HIF_DEVICE_USB *device)
 
 /**
  * usb_hif_flush_pending_transfers() - kill pending urbs for a pipe
- * @pipe: pointer to struct HIF_USB_PIPE structure
+ * @pipe: pointer to HIF_USB_PIPE structure
  *
  * Return: none
  */
-static void usb_hif_flush_pending_transfers(struct HIF_USB_PIPE *pipe)
+static void usb_hif_flush_pending_transfers(HIF_USB_PIPE *pipe)
 {
-	struct HIF_URB_CONTEXT *urb_context;
+	HIF_URB_CONTEXT *urb_context;
 
 	HIF_TRACE("+%s pipe : %d", __func__, pipe->logical_pipe_num);
 
@@ -447,8 +454,7 @@ static void usb_hif_flush_pending_transfers(struct HIF_USB_PIPE *pipe)
 void usb_hif_flush_all(HIF_DEVICE_USB *device)
 {
 	int i;
-	struct HIF_USB_PIPE *pipe;
-
+	HIF_USB_PIPE *pipe;
 	HIF_TRACE("+%s", __func__);
 
 	for (i = 0; i < HIF_USB_PIPE_MAX; i++) {
@@ -465,11 +471,11 @@ void usb_hif_flush_all(HIF_DEVICE_USB *device)
 
 /**
  * usb_hif_cleanup_recv_urb() - cleanup recv urb
- * @urb_context: pointer to struct HIF_URB_CONTEXT structure
+ * @urb_context: pointer to HIF_URB_CONTEXT structure
  *
  * Return: none
  */
-static void usb_hif_cleanup_recv_urb(struct HIF_URB_CONTEXT *urb_context)
+static void usb_hif_cleanup_recv_urb(HIF_URB_CONTEXT *urb_context)
 {
 	HIF_TRACE("+%s", __func__);
 
@@ -484,11 +490,11 @@ static void usb_hif_cleanup_recv_urb(struct HIF_URB_CONTEXT *urb_context)
 
 /**
  * usb_hif_cleanup_transmit_urb() - cleanup transmit urb
- * @urb_context: pointer to struct HIF_URB_CONTEXT structure
+ * @urb_context: pointer to HIF_URB_CONTEXT structure
  *
  * Return: none
  */
-void usb_hif_cleanup_transmit_urb(struct HIF_URB_CONTEXT *urb_context)
+void usb_hif_cleanup_transmit_urb(HIF_URB_CONTEXT *urb_context)
 {
 	usb_hif_free_urb_to_pipe(urb_context->pipe, urb_context);
 }
@@ -502,11 +508,10 @@ void usb_hif_cleanup_transmit_urb(struct HIF_URB_CONTEXT *urb_context)
 static void usb_hif_usb_recv_prestart_complete
 							(struct urb *urb)
 {
-	struct HIF_URB_CONTEXT *urb_context =
-					(struct HIF_URB_CONTEXT *) urb->context;
+	HIF_URB_CONTEXT *urb_context = (HIF_URB_CONTEXT *) urb->context;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	qdf_nbuf_t buf = NULL;
-	struct HIF_USB_PIPE *pipe = urb_context->pipe;
+	HIF_USB_PIPE *pipe = urb_context->pipe;
 
 	HIF_DBG("+%s: recv pipe: %d, stat:%d,len:%d urb:0x%pK",
 		__func__,
@@ -516,6 +521,7 @@ static void usb_hif_usb_recv_prestart_complete
 
 	/* this urb is not pending anymore */
 	usb_hif_remove_pending_transfer(urb_context);
+
 	do {
 		if (urb->status != 0) {
 			status = A_ECOMM;
@@ -539,8 +545,10 @@ static void usb_hif_usb_recv_prestart_complete
 			}
 			break;
 		}
+
 		if (urb->actual_length == 0)
 			break;
+
 		buf = urb_context->buf;
 		/* we are going to pass it up */
 		urb_context->buf = NULL;
@@ -549,7 +557,6 @@ static void usb_hif_usb_recv_prestart_complete
 		if (AR_DEBUG_LVL_CHECK(USB_HIF_DEBUG_DUMP_DATA)) {
 			uint8_t *data;
 			uint32_t len;
-
 			qdf_nbuf_peek_header(buf, &data, &len);
 			debug_dump_bytes(data, len, "hif recv data");
 		}
@@ -576,11 +583,10 @@ static void usb_hif_usb_recv_prestart_complete
  */
 static void usb_hif_usb_recv_complete(struct urb *urb)
 {
-	struct HIF_URB_CONTEXT *urb_context =
-					(struct HIF_URB_CONTEXT *) urb->context;
+	HIF_URB_CONTEXT *urb_context = (HIF_URB_CONTEXT *) urb->context;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	qdf_nbuf_t buf = NULL;
-	struct HIF_USB_PIPE *pipe = urb_context->pipe;
+	HIF_USB_PIPE *pipe = urb_context->pipe;
 	struct hif_usb_softc *sc = HIF_GET_USB_SOFTC(pipe->device);
 
 	HIF_DBG("+%s: recv pipe: %d, stat:%d,len:%d urb:0x%pK",
@@ -622,8 +628,10 @@ static void usb_hif_usb_recv_complete(struct urb *urb)
 			}
 			break;
 		}
+
 		if (urb->actual_length == 0)
 			break;
+
 		buf = urb_context->buf;
 		/* we are going to pass it up */
 		urb_context->buf = NULL;
@@ -631,10 +639,10 @@ static void usb_hif_usb_recv_complete(struct urb *urb)
 		if (AR_DEBUG_LVL_CHECK(USB_HIF_DEBUG_DUMP_DATA)) {
 			uint8_t *data;
 			uint32_t len;
-
 			qdf_nbuf_peek_header(buf, &data, &len);
 			debug_dump_bytes(data, len, "hif recv data");
 		}
+
 		/* note: queue implements a lock */
 		skb_queue_tail(&pipe->io_comp_queue, buf);
 		HIF_USB_SCHEDULE_WORK(pipe);
@@ -643,7 +651,7 @@ static void usb_hif_usb_recv_complete(struct urb *urb)
 	usb_hif_cleanup_recv_urb(urb_context);
 
 	/* Only re-submit URB when STATUS is success and HIF is not at the
-	 * suspend state.
+	   suspend state.
 	 */
 	if (QDF_IS_STATUS_SUCCESS(status) && !sc->suspend_state) {
 		if (pipe->urb_cnt >= pipe->urb_cnt_thresh) {
@@ -670,11 +678,10 @@ static void usb_hif_usb_recv_complete(struct urb *urb)
  */
 static void usb_hif_usb_recv_bundle_complete(struct urb *urb)
 {
-	struct HIF_URB_CONTEXT *urb_context =
-					(struct HIF_URB_CONTEXT *) urb->context;
+	HIF_URB_CONTEXT *urb_context = (HIF_URB_CONTEXT *) urb->context;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	qdf_nbuf_t buf = NULL;
-	struct HIF_USB_PIPE *pipe = urb_context->pipe;
+	HIF_USB_PIPE *pipe = urb_context->pipe;
 	uint8_t *netdata, *netdata_new;
 	uint32_t netlen, netlen_new;
 	HTC_FRAME_HDR *HtcHdr;
@@ -714,13 +721,15 @@ static void usb_hif_usb_recv_bundle_complete(struct urb *urb)
 			}
 			break;
 		}
+
 		if (urb->actual_length == 0)
 			break;
+
 		buf = urb_context->buf;
+
 		if (AR_DEBUG_LVL_CHECK(USB_HIF_DEBUG_DUMP_DATA)) {
 			uint8_t *data;
 			uint32_t len;
-
 			qdf_nbuf_peek_header(buf, &data, &len);
 			debug_dump_bytes(data, len, "hif recv data");
 		}
@@ -804,10 +813,11 @@ static void usb_hif_usb_recv_bundle_complete(struct urb *urb)
  *
  * Return: none
  */
-static void usb_hif_post_recv_prestart_transfers(struct HIF_USB_PIPE *recv_pipe,
+static void usb_hif_post_recv_prestart_transfers
+						(HIF_USB_PIPE *recv_pipe,
 						int prestart_urb)
 {
-	struct HIF_URB_CONTEXT *urb_context;
+	HIF_URB_CONTEXT *urb_context;
 	uint8_t *data;
 	uint32_t len;
 	struct urb *urb;
@@ -855,8 +865,9 @@ static void usb_hif_post_recv_prestart_transfers(struct HIF_USB_PIPE *recv_pipe,
 			usb_hif_remove_pending_transfer(urb_context);
 			usb_hif_cleanup_recv_urb(urb_context);
 			break;
-		}
-		recv_pipe->urb_prestart_cnt++;
+		} else
+			recv_pipe->urb_prestart_cnt++;
+
 	}
 
 	HIF_TRACE("-%s", __func__);
@@ -869,10 +880,10 @@ static void usb_hif_post_recv_prestart_transfers(struct HIF_USB_PIPE *recv_pipe,
  *
  * Return: none
  */
-static void usb_hif_post_recv_transfers(struct HIF_USB_PIPE *recv_pipe,
+static void usb_hif_post_recv_transfers(HIF_USB_PIPE *recv_pipe,
 							int buffer_length)
 {
-	struct HIF_URB_CONTEXT *urb_context;
+	HIF_URB_CONTEXT *urb_context;
 	uint8_t *data;
 	uint32_t len;
 	struct urb *urb;
@@ -934,10 +945,11 @@ static void usb_hif_post_recv_transfers(struct HIF_USB_PIPE *recv_pipe,
  *
  * Return: none
  */
-static void usb_hif_post_recv_bundle_transfers(struct HIF_USB_PIPE *recv_pipe,
+static void usb_hif_post_recv_bundle_transfers
+						(HIF_USB_PIPE *recv_pipe,
 						int buffer_length)
 {
-	struct HIF_URB_CONTEXT *urb_context;
+	HIF_URB_CONTEXT *urb_context;
 	uint8_t *data;
 	uint32_t len;
 	struct urb *urb;
@@ -1004,7 +1016,7 @@ static void usb_hif_post_recv_bundle_transfers(struct HIF_USB_PIPE *recv_pipe,
  */
 void usb_hif_prestart_recv_pipes(HIF_DEVICE_USB *device)
 {
-	struct HIF_USB_PIPE *pipe = &device->pipes[HIF_RX_DATA_PIPE];
+	HIF_USB_PIPE *pipe = &device->pipes[HIF_RX_DATA_PIPE];
 
 	/*
 	 * USB driver learn to support bundle or not until the firmware
@@ -1025,7 +1037,7 @@ void usb_hif_prestart_recv_pipes(HIF_DEVICE_USB *device)
  */
 void usb_hif_start_recv_pipes(HIF_DEVICE_USB *device)
 {
-	struct HIF_USB_PIPE *pipe;
+	HIF_USB_PIPE *pipe;
 	uint32_t buf_len;
 
 	HIF_ENTER();
@@ -1172,11 +1184,11 @@ QDF_STATUS usb_hif_submit_ctrl_in(HIF_DEVICE_USB *device,
 
 /**
  * usb_hif_io_complete() - transmit call back for tx urb
- * @pipe: pointer to struct HIF_USB_PIPE
+ * @pipe: pointer to HIF_USB_PIPE
  *
  * Return: none
  */
-void usb_hif_io_complete(struct HIF_USB_PIPE *pipe)
+void usb_hif_io_complete(HIF_USB_PIPE *pipe)
 {
 	qdf_nbuf_t buf;
 	HIF_DEVICE_USB *device;
@@ -1184,12 +1196,13 @@ void usb_hif_io_complete(struct HIF_USB_PIPE *pipe)
 	uint8_t *data;
 	uint32_t len;
 	struct hif_usb_softc *sc = HIF_GET_USB_SOFTC(pipe->device);
-
 	device = pipe->device;
+
 	HIF_ENTER();
+
 	while ((buf = skb_dequeue(&pipe->io_comp_queue))) {
 		if (pipe->flags & HIF_USB_PIPE_FLAG_TX) {
-			HIF_DBG("+athusb xmit callback buf:0x%pK", buf);
+			HIF_DBG("+athusb xmit callback " "buf:0x%pK", buf);
 			HtcHdr = (HTC_FRAME_HDR *)
 					qdf_nbuf_get_frag_vaddr(buf, 0);
 
@@ -1204,7 +1217,7 @@ void usb_hif_io_complete(struct HIF_USB_PIPE *pipe)
 #endif
 			HIF_DBG("-athusb xmit callback");
 		} else {
-			HIF_DBG("+athusb recv callback buf: 0x%pK", buf);
+			HIF_DBG("+athusb recv callback buf:" "0x%pK", buf);
 			qdf_nbuf_peek_header(buf, &data, &len);
 
 			if (IS_FW_CRASH_DUMP(*((uint32_t *) data))) {
@@ -1233,10 +1246,9 @@ void usb_hif_io_complete(struct HIF_USB_PIPE *pipe)
  *
  * Return: none
  */
-void usb_hif_io_comp_tasklet(unsigned long context)
+void usb_hif_io_comp_tasklet(long unsigned int context)
 {
-	struct HIF_USB_PIPE *pipe = (struct HIF_USB_PIPE *) context;
-
+	HIF_USB_PIPE *pipe = (HIF_USB_PIPE *) context;
 	usb_hif_io_complete(pipe);
 }
 
@@ -1249,9 +1261,7 @@ void usb_hif_io_comp_tasklet(unsigned long context)
  */
 void usb_hif_io_comp_work(struct work_struct *work)
 {
-	struct HIF_USB_PIPE *pipe = container_of(work, struct HIF_USB_PIPE,
-						 io_complete_work);
-
+	HIF_USB_PIPE *pipe = container_of(work, HIF_USB_PIPE, io_complete_work);
 	usb_hif_io_complete(pipe);
 }
 #endif

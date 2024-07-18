@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,7 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+ /**
  * @file cdp_txrx_lro.h
  * @brief Define the host data path Large Receive Offload API
  * functions
@@ -24,8 +32,8 @@
 #ifndef _CDP_TXRX_LRO_H_
 #define _CDP_TXRX_LRO_H_
 
-void ol_register_offld_flush_cb(void (*offld_flush_cb)(void *data),
-				void *(offld_init_cb)(void));
-void ol_deregister_offld_flush_cb(void (*offld_deinit_cb)(void *data));
+void ol_register_lro_flush_cb(void (lro_flush_cb)(void *),
+				void *(lro_init_cb)(void));
+void ol_deregister_lro_flush_cb(void (lro_deinit_cb)(void *));
 
 #endif /* _CDP_TXRX_LRO_H_ */

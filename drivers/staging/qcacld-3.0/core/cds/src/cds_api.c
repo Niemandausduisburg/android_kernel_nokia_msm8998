@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -35,7 +44,6 @@
 #include "cds_reg_service.h"
 #include "wma_types.h"
 #include "wlan_hdd_main.h"
-#include "wlan_hdd_tsf.h"
 #include <linux/vmalloc.h>
 
 #include "pld_common.h"
@@ -52,13 +60,6 @@
 #include "ol_txrx.h"
 #include "pktlog_ac.h"
 #include "wlan_hdd_ipa.h"
-#include "qdf_cpuhp.h"
-
-#ifdef ENABLE_SMMU_S1_TRANSLATION
-#include "pld_common.h"
-#include <asm/dma-iommu.h>
-#include <linux/iommu.h>
-#endif
 /* Preprocessor Definitions and Constants */
 
 /* Maximum number of cds message queue get wrapper failures to cause panic */
@@ -120,17 +121,11 @@ static void cds_recovery_work_deinit(void)
  */
 v_CONTEXT_t cds_init(void)
 {
-	QDF_STATUS ret;
-
-	ret = qdf_debugfs_init();
-	if (ret != QDF_STATUS_SUCCESS)
-		cds_err("Failed to init debugfs");
-
+	qdf_debugfs_init();
 	qdf_lock_stats_init();
 	qdf_mem_init();
 	qdf_mc_timer_manager_init();
 	qdf_event_list_init();
-	qdf_cpuhp_init();
 
 	gp_cds_context = &g_cds_context;
 
@@ -146,23 +141,9 @@ v_CONTEXT_t cds_init(void)
 
 	cds_ssr_protect_init();
 
-	ret = cds_recovery_work_init();
-	if (ret != QDF_STATUS_SUCCESS) {
-		cds_err("Failed to init recovery work");
-		goto deinit;
-	}
+	cds_recovery_work_init();
 
 	return gp_cds_context;
-deinit:
-	qdf_mc_timer_manager_exit();
-	qdf_mem_exit();
-	qdf_lock_stats_deinit();
-	qdf_debugfs_exit();
-	gp_cds_context->qdf_ctx = NULL;
-	gp_cds_context = NULL;
-	qdf_mem_zero(&g_cds_context, sizeof(g_cds_context));
-
-	return NULL;
 }
 
 /**
@@ -176,7 +157,6 @@ void cds_deinit(void)
 		return;
 
 	cds_recovery_work_deinit();
-	qdf_cpuhp_deinit();
 	qdf_mc_timer_manager_exit();
 	qdf_mem_exit();
 	qdf_lock_stats_deinit();
@@ -305,12 +285,12 @@ static void cds_set_ac_specs_params(struct cds_config_info *cds_cfg,
  */
 QDF_STATUS cds_open(void)
 {
-	QDF_STATUS status;
+	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 	int iter = 0;
 	tSirRetStatus sirStatus = eSIR_SUCCESS;
 	struct cds_config_info *cds_cfg;
 	qdf_device_t qdf_ctx;
-	struct htc_init_info htcInfo;
+	HTC_INIT_INFO htcInfo;
 	struct ol_context *ol_ctx;
 	struct hif_opaque_softc *scn;
 	void *HTCHandle;
@@ -335,16 +315,14 @@ QDF_STATUS cds_open(void)
 	cds_init_log_completion();
 
 	/* Initialize the probe event */
-	status = qdf_event_create(&gp_cds_context->ProbeEvent);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	if (qdf_event_create(&gp_cds_context->ProbeEvent) != QDF_STATUS_SUCCESS) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Unable to init probeEvent", __func__);
 		QDF_ASSERT(0);
-		return status;
+		return QDF_STATUS_E_FAILURE;
 	}
-
-	status = qdf_event_create(&gp_cds_context->wmaCompleteEvent);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	if (qdf_event_create(&(gp_cds_context->wmaCompleteEvent)) !=
+	    QDF_STATUS_SUCCESS) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Unable to init wmaCompleteEvent", __func__);
 		QDF_ASSERT(0);
@@ -352,8 +330,8 @@ QDF_STATUS cds_open(void)
 	}
 
 	/* Initialize the free message queue */
-	status = cds_mq_init(&gp_cds_context->freeVosMq);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	qdf_status = cds_mq_init(&gp_cds_context->freeVosMq);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		/* Critical Error ...  Cannot proceed further */
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Failed to initialize CDS free message queue",
@@ -371,39 +349,41 @@ QDF_STATUS cds_open(void)
 	}
 
 	pHddCtx = (hdd_context_t *) (gp_cds_context->pHDDContext);
-	if (!pHddCtx || !pHddCtx->config) {
+	if ((NULL == pHddCtx) || (NULL == pHddCtx->config)) {
 		/* Critical Error ...  Cannot proceed further */
 		cds_err("Hdd Context is Null");
 		QDF_ASSERT(0);
-
-		status = QDF_STATUS_E_FAILURE;
 		goto err_msg_queue;
 	}
 
-	status = qdf_mutex_create(&cds_ctx->qdf_conc_list_lock);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	if (!QDF_IS_STATUS_SUCCESS(qdf_mutex_create(
+				&cds_ctx->qdf_conc_list_lock))) {
 		cds_err("Failed to init qdf_conc_list_lock");
 		QDF_ASSERT(0);
 		goto err_msg_queue;
 	}
 
 	/* Now Open the CDS Scheduler */
-	status = cds_sched_open(gp_cds_context,
-				&gp_cds_context->qdf_sched,
-				sizeof(cds_sched_context));
-	if (QDF_IS_STATUS_ERROR(status)) {
-		/* Critical Error ...  Cannot proceed further */
-		cds_alert("Failed to open CDS Scheduler");
-		QDF_ASSERT(0);
-		goto err_concurrency_lock;
+
+	if (pHddCtx->driver_status == DRIVER_MODULES_UNINITIALIZED ||
+	    cds_is_driver_recovering()) {
+		qdf_status = cds_sched_open(gp_cds_context,
+					    &gp_cds_context->qdf_sched,
+					    sizeof(cds_sched_context));
+
+		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+			/* Critical Error ...  Cannot proceed further */
+			QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
+				  "%s: Failed to open CDS Scheduler", __func__);
+			QDF_ASSERT(0);
+			goto err_concurrency_lock;
+		}
 	}
 
 	scn = cds_get_context(QDF_MODULE_ID_HIF);
 	if (!scn) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: scn is null!", __func__);
-
-		status = QDF_STATUS_E_FAILURE;
 		goto err_sched_close;
 	}
 
@@ -411,25 +391,19 @@ QDF_STATUS cds_open(void)
 	if (!cds_cfg) {
 		cds_err("Cds config is NULL");
 		QDF_ASSERT(0);
-
-		status = QDF_STATUS_E_FAILURE;
 		goto err_sched_close;
 	}
-
 	hdd_enable_fastpath(pHddCtx->config, scn);
-
-	/* Initialize BMI and Download firmware */
-	ol_ctx = cds_get_context(QDF_MODULE_ID_BMI);
-	/* Initialize BMI and Download firmware */
-	status = bmi_download_firmware(ol_ctx);
-	if (status != QDF_STATUS_SUCCESS) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
-			  "BMI FIALED status:%d", status);
-		goto err_bmi_close;
-	}
-
 	hdd_wlan_update_target_info(pHddCtx, scn);
 
+	ol_ctx = cds_get_context(QDF_MODULE_ID_BMI);
+	/* Initialize BMI and Download firmware */
+	qdf_status = bmi_download_firmware(ol_ctx);
+	if (qdf_status != QDF_STATUS_SUCCESS) {
+		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
+			  "BMI FIALED status:%d", qdf_status);
+		goto err_bmi_close;
+	}
 	htcInfo.pContext = ol_ctx;
 	htcInfo.TargetFailure = ol_target_failure;
 	htcInfo.TargetSendSuspendComplete = wma_target_suspend_acknowledge;
@@ -442,13 +416,10 @@ QDF_STATUS cds_open(void)
 	if (!gp_cds_context->htc_ctx) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Failed to Create HTC", __func__);
-
-		status = QDF_STATUS_E_FAILURE;
 		goto err_bmi_close;
 	}
 
-	status = bmi_done(ol_ctx);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	if (bmi_done(ol_ctx)) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Failed to complete BMI phase", __func__);
 		goto err_htc_close;
@@ -457,10 +428,11 @@ QDF_STATUS cds_open(void)
 	cds_set_ac_specs_params(cds_cfg, pHddCtx);
 
 	/*Open the WMA module */
-	status = wma_open(gp_cds_context,
-			  hdd_update_tgt_cfg,
-			  hdd_dfs_indicate_radar, cds_cfg);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	qdf_status = wma_open(gp_cds_context,
+			      hdd_update_tgt_cfg,
+			      hdd_dfs_indicate_radar, cds_cfg);
+
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		/* Critical Error ...  Cannot proceed further */
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Failed to open WMA module", __func__);
@@ -477,23 +449,23 @@ QDF_STATUS cds_open(void)
 	 * into hdd context config entry, leads to pe_open() to fail, if
 	 * con_mode change happens from FTM mode to any other mode.
 	 */
-	if (QDF_DRIVER_TYPE_PRODUCTION == cds_cfg->driver_type)
+	if (DRIVER_TYPE_PRODUCTION == cds_cfg->driver_type)
 		pHddCtx->config->maxNumberOfPeers = cds_cfg->max_station;
 
 	HTCHandle = cds_get_context(QDF_MODULE_ID_HTC);
 	if (!HTCHandle) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: HTCHandle is null!", __func__);
-
-		status = QDF_STATUS_E_FAILURE;
 		goto err_wma_close;
 	}
 
-	status = htc_wait_target(HTCHandle);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		cds_alert("Failed to complete BMI phase. status: %d", status);
+	qdf_status = htc_wait_target(HTCHandle);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
+			  "%s: Failed to complete BMI phase", __func__);
 
-		if (status != QDF_STATUS_E_NOMEM && !cds_is_fw_down())
+		if (qdf_status != QDF_STATUS_E_NOMEM
+				&& !cds_is_fw_down())
 			QDF_BUG(0);
 
 		goto err_wma_close;
@@ -510,14 +482,12 @@ QDF_STATUS cds_open(void)
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Failed to open MAC", __func__);
 		QDF_ASSERT(0);
-
-		status = QDF_STATUS_E_FAILURE;
 		goto err_wma_close;
 	}
 
 	/* Now proceed to open the SME */
-	status = sme_open(gp_cds_context->pMACContext);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	qdf_status = sme_open(gp_cds_context->pMACContext);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		/* Critical Error ...  Cannot proceed further */
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Failed to open SME", __func__);
@@ -534,10 +504,10 @@ QDF_STATUS cds_open(void)
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "%s: Failed to open TXRX", __func__);
 		QDF_ASSERT(0);
-
-		status = QDF_STATUS_E_FAILURE;
 		goto err_sme_close;
 	}
+
+	hdd_lro_create();
 
 	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO_HIGH,
 		  "%s: CDS successfully Opened", __func__);
@@ -566,9 +536,13 @@ err_bmi_close:
 	bmi_cleanup(ol_ctx);
 
 err_sched_close:
-	if (QDF_IS_STATUS_ERROR(cds_sched_close(gp_cds_context))) {
-		cds_err("Failed to close CDS Scheduler");
-		QDF_ASSERT(false);
+	if (pHddCtx->driver_status == DRIVER_MODULES_UNINITIALIZED ||
+	    cds_is_driver_recovering()) {
+		qdf_status = cds_sched_close(gp_cds_context);
+		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+			hdd_err("Failed to close CDS Scheduler");
+			QDF_ASSERT(false);
+		}
 	}
 
 err_concurrency_lock:
@@ -583,47 +557,8 @@ err_wma_complete_event:
 err_probe_event:
 	qdf_event_destroy(&gp_cds_context->ProbeEvent);
 
-	return status;
-} /* cds_open() */
-
-static QDF_STATUS cds_pktlog_enable(void *pdev_txrx_ctx, void *scn)
-{
-	int errno;
-
-	switch (cds_get_conparam()) {
-	case QDF_GLOBAL_FTM_MODE:
-	case QDF_GLOBAL_EPPING_MODE:
-		return QDF_STATUS_SUCCESS;
-	default:
-		break;
-	}
-
-	htt_pkt_log_init(pdev_txrx_ctx, scn);
-
-	errno = pktlog_htc_attach();
-	if (errno)
-		goto pktlog_deinit;
-
-	return QDF_STATUS_SUCCESS;
-
-pktlog_deinit:
-	htt_pktlogmod_exit(pdev_txrx_ctx, scn);
-
 	return QDF_STATUS_E_FAILURE;
-}
-
-static void cds_pktlog_disable(void *pdev_txrx_ctx, void *scn)
-{
-	switch (cds_get_conparam()) {
-	case QDF_GLOBAL_FTM_MODE:
-	case QDF_GLOBAL_EPPING_MODE:
-		return;
-	default:
-		break;
-	}
-
-	htt_pktlogmod_exit(pdev_txrx_ctx, scn);
-}
+} /* cds_open() */
 
 /**
  * cds_pre_enable() - pre enable cds
@@ -636,8 +571,7 @@ QDF_STATUS cds_pre_enable(v_CONTEXT_t cds_context)
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 	p_cds_contextType p_cds_context = (p_cds_contextType) cds_context;
 	void *scn;
-
-	QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_DEBUG, "cds prestart");
+	QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_INFO, "cds prestart");
 
 	if (gp_cds_context != p_cds_context) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
@@ -668,9 +602,12 @@ QDF_STATUS cds_pre_enable(v_CONTEXT_t cds_context)
 	}
 
 	/* call Packetlog connect service */
-	qdf_status = cds_pktlog_enable(gp_cds_context->pdev_txrx_ctx, scn);
-	if (QDF_IS_STATUS_ERROR(qdf_status))
-		return qdf_status;
+	if (QDF_GLOBAL_FTM_MODE != cds_get_conparam() &&
+	    QDF_GLOBAL_EPPING_MODE != cds_get_conparam()) {
+		htt_pkt_log_init(gp_cds_context->pdev_txrx_ctx, scn);
+		if (pktlog_htc_attach())
+			return QDF_STATUS_E_FAILURE;
+	}
 
 	/* Reset wma wait event */
 	qdf_event_reset(&gp_cds_context->wmaCompleteEvent);
@@ -681,7 +618,7 @@ QDF_STATUS cds_pre_enable(v_CONTEXT_t cds_context)
 		QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_FATAL,
 			  "Failed to WMA prestart");
 		QDF_ASSERT(0);
-		goto pktlog_disable;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	/* Need to update time out of complete */
@@ -704,7 +641,7 @@ QDF_STATUS cds_pre_enable(v_CONTEXT_t cds_context)
 		wlan_sys_probe();
 
 		QDF_ASSERT(0);
-		goto pktlog_disable;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	qdf_status = htc_start(gp_cds_context->htc_ctx);
@@ -712,42 +649,33 @@ QDF_STATUS cds_pre_enable(v_CONTEXT_t cds_context)
 		QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_FATAL,
 			  "Failed to Start HTC");
 		QDF_ASSERT(0);
-		goto pktlog_disable;
+		return QDF_STATUS_E_FAILURE;
 	}
 	qdf_status = wma_wait_for_ready_event(gp_cds_context->pWMAContext);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			  "Failed to get ready event from target firmware");
-
 		/*
 		 * Panic when the failure is not because the FW is down,
 		 * fail gracefully if FW is down allowing re-probing from
 		 * from the platform driver
 		 */
-		if ((!cds_is_fw_down()) && (!cds_is_self_recovery_enabled()))
+		if (!cds_is_fw_down())
 			QDF_BUG(0);
 
-		wma_wmi_stop();
 		htc_stop(gp_cds_context->htc_ctx);
-		goto pktlog_disable;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (ol_txrx_pdev_post_attach(gp_cds_context->pdev_txrx_ctx)) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
 			"Failed to attach pdev");
-		wma_wmi_stop();
 		htc_stop(gp_cds_context->htc_ctx);
 		QDF_ASSERT(0);
-		qdf_status = QDF_STATUS_E_FAILURE;
-		goto pktlog_disable;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	return QDF_STATUS_SUCCESS;
-
-pktlog_disable:
-	cds_pktlog_disable(gp_cds_context->pdev_txrx_ctx, scn);
-
-	return qdf_status;
 }
 
 /**
@@ -758,11 +686,13 @@ pktlog_disable:
  */
 QDF_STATUS cds_enable(v_CONTEXT_t cds_context)
 {
-	QDF_STATUS qdf_status;
+	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 	tSirRetStatus sirStatus = eSIR_SUCCESS;
 	p_cds_contextType p_cds_context = (p_cds_contextType) cds_context;
 	tHalMacStartParameters halStartParams;
-	int errno;
+
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
+		  "%s: Starting Libra SW", __func__);
 
 	/* We support only one instance for now ... */
 	if (gp_cds_context != p_cds_context) {
@@ -771,46 +701,68 @@ QDF_STATUS cds_enable(v_CONTEXT_t cds_context)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (!p_cds_context->pWMAContext) {
-		cds_err("WMA NULL context");
-		return QDF_STATUS_E_FAILURE;
-	}
+	if ((p_cds_context->pWMAContext == NULL) ||
+	    (p_cds_context->pMACContext == NULL)) {
+		if (p_cds_context->pWMAContext == NULL)
+			QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
+				  "%s: WMA NULL context", __func__);
+		else
+			QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
+				  "%s: MAC NULL context", __func__);
 
-	if (!p_cds_context->pMACContext) {
-		cds_err("MAC NULL context");
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	/* Start the wma */
 	qdf_status = wma_start(p_cds_context);
 	if (qdf_status != QDF_STATUS_SUCCESS) {
-		cds_err("Failed to start wma; status:%d", qdf_status);
+		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
+			  "%s: Failed to start wma", __func__);
 		return QDF_STATUS_E_FAILURE;
 	}
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
+		  "%s: wma correctly started", __func__);
 
 	/* Start the MAC */
-	qdf_mem_zero(&halStartParams, sizeof(tHalMacStartParameters));
+	qdf_mem_zero(&halStartParams,
+		     sizeof(tHalMacStartParameters));
 
 	/* Start the MAC */
-	sirStatus = mac_start(p_cds_context->pMACContext, &halStartParams);
+	sirStatus =
+		mac_start(p_cds_context->pMACContext, &halStartParams);
 
 	if (eSIR_SUCCESS != sirStatus) {
-		cds_err("Failed to start MAC; status:%d", sirStatus);
+		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
+			  "%s: Failed to start MAC", __func__);
 		goto err_wma_stop;
 	}
 
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
+		  "%s: MAC correctly started", __func__);
+
 	/* START SME */
 	qdf_status = sme_start(p_cds_context->pMACContext);
+
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		cds_err("Failed to start SME; status:%d", qdf_status);
+		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
+			  "%s: Failed to start SME", __func__);
 		goto err_mac_stop;
 	}
 
-	errno = ol_txrx_pdev_attach_target(p_cds_context->pdev_txrx_ctx);
-	if (errno) {
-		cds_err("Failed to attach pdev target; errno:%d", errno);
-		goto err_sme_stop;
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
+		  "%s: SME correctly started", __func__);
+
+	if (ol_txrx_pdev_attach_target
+		       (p_cds_context->pdev_txrx_ctx)) {
+	   QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_FATAL,
+				"%s: Failed attach target", __func__);
+	   goto err_sme_stop;
 	}
+
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
+		  "TL correctly started");
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
+		  "%s: CDS Start is successful!!", __func__);
 
 	return QDF_STATUS_SUCCESS;
 
@@ -864,9 +816,6 @@ QDF_STATUS cds_disable(v_CONTEXT_t cds_context)
 	QDF_STATUS qdf_status;
 	void *handle;
 
-	if (gp_cds_sched_context)
-		cds_sched_flush_mc_mqs(gp_cds_sched_context);
-
 	qdf_status = wma_stop(cds_context, HAL_STOP_TYPE_RF_KILL);
 
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
@@ -880,8 +829,17 @@ QDF_STATUS cds_disable(v_CONTEXT_t cds_context)
 		cds_err("Invalid PE context return!");
 		return QDF_STATUS_E_INVAL;
 	}
+	qdf_status = sme_stop(handle, HAL_STOP_TYPE_SYS_DEEP_SLEEP);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		cds_err("Failed to stop SME: %d", qdf_status);
+		QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
+	}
+	qdf_status = mac_stop(handle, HAL_STOP_TYPE_SYS_DEEP_SLEEP);
 
-	umac_stop(cds_context);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		cds_err("Failed to stop MAC");
+		QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
+	}
 
 	return qdf_status;
 }
@@ -916,7 +874,6 @@ QDF_STATUS cds_post_disable(void)
 	tp_wma_handle wma_handle;
 	struct hif_opaque_softc *hif_ctx;
 	ol_txrx_pdev_handle txrx_pdev;
-	QDF_STATUS qdf_status;
 
 	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
 	if (!wma_handle) {
@@ -936,10 +893,6 @@ QDF_STATUS cds_post_disable(void)
 		return QDF_STATUS_E_INVAL;
 	}
 
-	/* Clean up all MC thread message queues */
-	if (gp_cds_sched_context)
-		cds_sched_flush_mc_mqs(gp_cds_sched_context);
-
 	/*
 	 * With new state machine changes cds_close can be invoked without
 	 * cds_disable. So, send the following clean up prerequisites to fw,
@@ -949,30 +902,11 @@ QDF_STATUS cds_post_disable(void)
 	 * - Clean up CE tasklets.
 	 */
 
-	cds_info("send deinit sequence to firmware");
-	if (!(cds_is_driver_recovering() || cds_is_driver_in_bad_state()))
+	cds_info("send denint sequence to firmware");
+	if (!cds_is_driver_recovering())
 		cds_suspend_target(wma_handle);
 	hif_disable_isr(hif_ctx);
 	hif_reset_soc(hif_ctx);
-
-	if (gp_cds_context->htc_ctx) {
-		wma_wmi_stop();
-		htc_stop(gp_cds_context->htc_ctx);
-	}
-
-	qdf_status = cds_close_rx_thread(gp_cds_context);
-	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		cds_err("Failed to close RX thread!");
-		return QDF_STATUS_E_INVAL;
-	}
-
-	if (cds_get_pktcap_mode_enable()) {
-		qdf_status = cds_close_mon_thread(gp_cds_context);
-		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-			cds_err("Failed to close MON thread!");
-			return QDF_STATUS_E_INVAL;
-		}
-	}
 
 	ol_txrx_pdev_pre_detach(txrx_pdev, 1);
 
@@ -992,11 +926,6 @@ QDF_STATUS cds_close(v_CONTEXT_t cds_context)
 {
 	QDF_STATUS qdf_status;
 
-	qdf_status = cds_sched_close(cds_context);
-	QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
-	if (QDF_IS_STATUS_ERROR(qdf_status))
-		cds_err("Failed to close CDS Scheduler");
-
 	qdf_status = wma_wmi_work_close(cds_context);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
@@ -1005,9 +934,9 @@ QDF_STATUS cds_close(v_CONTEXT_t cds_context)
 	}
 
 	hdd_lro_destroy();
-	hdd_gro_destroy();
 
 	if (gp_cds_context->htc_ctx) {
+		htc_stop(gp_cds_context->htc_ctx);
 		htc_destroy(gp_cds_context->htc_ctx);
 		gp_cds_context->htc_ctx = NULL;
 	}
@@ -1180,7 +1109,7 @@ void *cds_get_context(QDF_MODULE_ID moduleId)
 	}
 
 	if (pModContext == NULL) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_DEBUG,
+		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
 			  "%s: Module ID %i context is Null", __func__,
 			  moduleId);
 	}
@@ -1544,7 +1473,7 @@ QDF_STATUS cds_free_context(void *p_cds_context, QDF_MODULE_ID moduleID,
  *         QDF_STATUS_E_FAILURE on failure
  *         QDF_STATUS_E_RESOURCES on resource allocation failure
  */
-QDF_STATUS cds_mq_post_message_by_priority(QDF_MODULE_ID msgQueueId,
+QDF_STATUS cds_mq_post_message_by_priority(CDS_MQ_ID msgQueueId,
 					   cds_msg_t *pMsg,
 					   int is_high_priority)
 {
@@ -1574,28 +1503,28 @@ QDF_STATUS cds_mq_post_message_by_priority(QDF_MODULE_ID msgQueueId,
 
 	switch (msgQueueId) {
 	/* Message Queue ID for messages bound for SME */
-	case QDF_MODULE_ID_SME:
+	case CDS_MQ_ID_SME:
 	{
 		pTargetMq = &(gp_cds_context->qdf_sched.smeMcMq);
 		break;
 	}
 
 	/* Message Queue ID for messages bound for PE */
-	case QDF_MODULE_ID_PE:
+	case CDS_MQ_ID_PE:
 	{
 		pTargetMq = &(gp_cds_context->qdf_sched.peMcMq);
 		break;
 	}
 
 	/* Message Queue ID for messages bound for wma */
-	case QDF_MODULE_ID_WMA:
+	case CDS_MQ_ID_WMA:
 	{
 		pTargetMq = &(gp_cds_context->qdf_sched.wmaMcMq);
 		break;
 	}
 
 	/* Message Queue ID for messages bound for the SYS module */
-	case QDF_MODULE_ID_SYS:
+	case CDS_MQ_ID_SYS:
 	{
 		pTargetMq = &(gp_cds_context->qdf_sched.sysMcMq);
 		break;
@@ -1857,9 +1786,7 @@ static QDF_STATUS cds_force_assert_target(qdf_device_t qdf_ctx)
 		  "Self Recovery not supported via Platform driver assert");
 
 	cds_set_recovery_in_progress(false);
-
-	if (!cds_is_fw_down())
-		QDF_BUG(0);
+	QDF_BUG(0);
 
 	return QDF_STATUS_E_INVAL;
 }
@@ -1916,22 +1843,6 @@ static void cds_trigger_recovery_work(void *param)
 
 	if (cds_is_driver_recovering()) {
 		cds_err("Recovery in progress; ignoring recovery trigger");
-		return;
-	}
-
-	if (cds_is_driver_in_bad_state()) {
-		cds_err("Driver is in bad state; ignoring recovery trigger");
-		return;
-	}
-
-	if (cds_is_fw_down()) {
-		cds_err("firmware is down; ignoring recovery trigger");
-		return;
-	}
-
-	if (!cds_is_self_recovery_enabled()) {
-		cds_err("Recovery is not enabled");
-		QDF_BUG(0);
 		return;
 	}
 
@@ -2252,9 +2163,6 @@ QDF_STATUS cds_set_log_completion(uint32_t is_fatal,
 	p_cds_context->log_complete.recovery_needed = recovery_needed;
 	p_cds_context->log_complete.is_report_in_progress = true;
 	qdf_spinlock_release(&p_cds_context->bug_report_lock);
-	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_DEBUG,
-		  "%s: is_fatal %d ind %d reasn_code %d recovery needed %d",
-		   __func__, is_fatal, indicator, reason_code, recovery_needed);
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -2333,52 +2241,6 @@ bool cds_is_fatal_event_enabled(void)
 	return p_cds_context->enable_fatal_event;
 }
 
-#ifdef WLAN_FEATURE_TSF_PLUS
-bool cds_is_ptp_rx_opt_enabled(void)
-{
-	hdd_context_t *hdd_ctx;
-	p_cds_contextType p_cds_context;
-
-	p_cds_context = cds_get_global_context();
-	if (!p_cds_context) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s: cds context is Invalid", __func__);
-		return false;
-	}
-
-	hdd_ctx = (hdd_context_t *)(p_cds_context->pHDDContext);
-	if ((NULL == hdd_ctx) || (NULL == hdd_ctx->config)) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s: Hdd Context is Null", __func__);
-		return false;
-	}
-
-	return HDD_TSF_IS_RX_SET(hdd_ctx);
-}
-
-bool cds_is_ptp_tx_opt_enabled(void)
-{
-	hdd_context_t *hdd_ctx;
-	p_cds_contextType p_cds_context;
-
-	p_cds_context = cds_get_global_context();
-	if (!p_cds_context) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s: cds context is Invalid", __func__);
-		return false;
-	}
-
-	hdd_ctx = (hdd_context_t *)(p_cds_context->pHDDContext);
-	if ((NULL == hdd_ctx) || (NULL == hdd_ctx->config)) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s: Hdd Context is Null", __func__);
-		return false;
-	}
-
-	return HDD_TSF_IS_TX_SET(hdd_ctx);
-}
-#endif
-
 /**
  * cds_get_log_indicator() - Get the log flush indicator
  *
@@ -2399,7 +2261,7 @@ uint32_t cds_get_log_indicator(void)
 	}
 
 	if (cds_is_load_or_unload_in_progress() ||
-	    cds_is_driver_recovering() || cds_is_driver_in_bad_state()) {
+	    cds_is_driver_recovering()) {
 		return WLAN_LOG_INDICATOR_UNUSED;
 	}
 
@@ -2460,7 +2322,7 @@ QDF_STATUS cds_flush_logs(uint32_t is_fatal,
 		return QDF_STATUS_E_FAILURE;
 	}
 	if (cds_is_load_or_unload_in_progress() ||
-	    cds_is_driver_recovering() || cds_is_driver_in_bad_state()) {
+	    cds_is_driver_recovering()) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
 				"%s: un/Load/SSR in progress", __func__);
 		return QDF_STATUS_E_FAILURE;
@@ -2481,7 +2343,7 @@ QDF_STATUS cds_flush_logs(uint32_t is_fatal,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
+	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
 			"%s: Triggering bug report: type:%d, indicator=%d reason_code=%d",
 			__func__, is_fatal, indicator, reason_code);
 
@@ -2777,7 +2639,6 @@ QDF_STATUS cds_register_dp_cb(struct cds_dp_cbacks *dp_cbs)
 	cds_ctx->hdd_en_lro_in_cc_cb = dp_cbs->hdd_en_lro_in_cc_cb;
 	cds_ctx->hdd_disable_lro_in_cc_cb = dp_cbs->hdd_disble_lro_in_cc_cb;
 	cds_ctx->hdd_set_rx_mode_rps_cb = dp_cbs->hdd_set_rx_mode_rps_cb;
-	cds_ctx->hdd_ipa_set_mcc_mode_cb = dp_cbs->hdd_ipa_set_mcc_mode_cb;
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -2802,26 +2663,8 @@ QDF_STATUS cds_deregister_dp_cb(void)
 	cds_ctx->hdd_en_lro_in_cc_cb = NULL;
 	cds_ctx->hdd_disable_lro_in_cc_cb = NULL;
 	cds_ctx->hdd_set_rx_mode_rps_cb = NULL;
-	cds_ctx->hdd_ipa_set_mcc_mode_cb = NULL;
 
 	return QDF_STATUS_SUCCESS;
-}
-
-uint32_t cds_get_connectivity_stats_pkt_bitmap(void *context)
-{
-	hdd_adapter_t *adapter = NULL;
-
-	if (!context)
-		return 0;
-
-	adapter = (hdd_adapter_t *)context;
-	if (unlikely(adapter->magic != WLAN_HDD_ADAPTER_MAGIC)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Magic cookie(%x) for adapter sanity verification is invalid",
-			  adapter->magic);
-		return 0;
-	}
-	return adapter->pkt_type_bitmap;
 }
 
 /**
@@ -2829,23 +2672,17 @@ uint32_t cds_get_connectivity_stats_pkt_bitmap(void *context)
  *
  * Return: ARP stats IP to track
  */
-uint32_t cds_get_arp_stats_gw_ip(void *context)
+uint32_t cds_get_arp_stats_gw_ip(void)
 {
-	hdd_adapter_t *adapter = NULL;
+	hdd_context_t *hdd_ctx;
 
-	if (!context)
-		return 0;
-
-	adapter = (hdd_adapter_t *)context;
-
-	if (unlikely(adapter->magic != WLAN_HDD_ADAPTER_MAGIC)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Magic cookie(%x) for adapter sanity verification is invalid",
-			  adapter->magic);
+	hdd_ctx = (hdd_context_t *) (gp_cds_context->pHDDContext);
+	if (!hdd_ctx) {
+		cds_err("Hdd Context is Null");
 		return 0;
 	}
 
-	return adapter->track_arp_ip;
+	return hdd_ctx->track_arp_ip;
 }
 
 /**
@@ -2914,178 +2751,4 @@ void cds_incr_arp_stats_tx_tgt_acked(void)
 
 	if (adapter)
 		adapter->hdd_stats.hdd_arp_stats.tx_ack_cnt++;
-}
-
-#ifdef WMI_INTERFACE_EVENT_LOGGING
-inline void
-cds_print_htc_credit_history(uint32_t count, qdf_abstract_print *print,
-			     void *print_priv)
-{
-	htc_print_credit_history(gp_cds_context->htc_ctx, count,
-				 print, print_priv);
-}
-#endif
-
-#ifdef ENABLE_SMMU_S1_TRANSLATION
-QDF_STATUS cds_smmu_mem_map_setup(qdf_device_t osdev, bool ipa_present)
-{
-	int attr = 0;
-	bool ipa_smmu_enable = false;
-	struct dma_iommu_mapping *mapping = pld_smmu_get_mapping(osdev->dev);
-
-	osdev->smmu_s1_enabled = false;
-
-	if (ipa_present) {
-		ipa_smmu_enable = qdf_get_ipa_smmu_status();
-		if (ipa_smmu_enable)
-			cds_info("SMMU enabled from IPA side");
-		else
-			cds_info("SMMU not enabled from IPA side");
-	}
-
-	if (mapping && ((iommu_domain_get_attr(mapping->domain,
-			 DOMAIN_ATTR_S1_BYPASS, &attr) == 0) &&
-			 !attr)) {
-		cds_info("SMMU enabled from WLAN side");
-
-		if (ipa_present) {
-			if (ipa_smmu_enable) {
-				cds_info("SMMU enabled from both IPA and WLAN side");
-				osdev->smmu_s1_enabled = true;
-			} else {
-				cds_err("SMMU mismatch: IPA: disable, WLAN: enable");
-				return QDF_STATUS_E_FAILURE;
-			}
-		} else {
-			osdev->smmu_s1_enabled = true;
-		}
-
-	} else {
-		cds_info("No SMMU mapping present or SMMU disabled from WLAN side");
-
-		if (ipa_present) {
-			if (ipa_smmu_enable) {
-				cds_err("SMMU mismatch: IPA: enable, WLAN: disable");
-				return QDF_STATUS_E_FAILURE;
-			} else {
-				cds_info("SMMU diabled from both IPA and WLAN side");
-			}
-		}
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
-#ifdef IPA_OFFLOAD
-int cds_smmu_map_unmap(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr)
-{
-	return hdd_ipa_uc_smmu_map(map, num_buf, buf_arr);
-}
-#else
-int cds_smmu_map_unmap(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr)
-{
-	return 0;
-}
-#endif
-
-#else
-QDF_STATUS cds_smmu_mem_map_setup(qdf_device_t osdev, bool ipa_present)
-{
-	osdev->smmu_s1_enabled = false;
-	return QDF_STATUS_SUCCESS;
-}
-
-int cds_smmu_map_unmap(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr)
-{
-	return 0;
-}
-#endif
-
-uint32_t cds_get_mcc_to_scc_switch_mode(void)
-{
-	hdd_context_t *hdd_ctx;
-
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (!hdd_ctx) {
-		cds_err("HDD context is NULL");
-		return false;
-	}
-
-	return hdd_ctx->config->WlanMccToSccSwitchMode;
-}
-
-bool cds_is_sta_sap_scc_allowed_on_dfs_channel(void)
-{
-	hdd_context_t *hdd_ctx;
-	bool ret = false;
-
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-
-	if (!hdd_ctx) {
-		cds_err("HDD context is NULL");
-		return false;
-	}
-
-	if ((hdd_ctx->config->WlanMccToSccSwitchMode !=
-				QDF_MCC_TO_SCC_SWITCH_DISABLE) &&
-			(hdd_ctx->config->sta_sap_scc_on_dfs_chan))
-		ret = true;
-
-	return ret;
-}
-
-QDF_STATUS cds_register_mode_change_cb(send_mode_change_event_cb callback)
-{
-	p_cds_contextType cds_ctx;
-
-	cds_ctx = cds_get_global_context();
-	if (!cds_ctx) {
-		cds_err("Invalid CDS context");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	cds_ctx->mode_change_cb = callback;
-
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS cds_deregister_mode_change_cb(void)
-{
-	p_cds_contextType cds_ctx;
-
-	cds_ctx = cds_get_global_context();
-	if (!cds_ctx) {
-		cds_err("Invalid CDS context");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	cds_ctx->mode_change_cb = NULL;
-
-	return QDF_STATUS_SUCCESS;
-}
-
-bool cds_get_pktcap_mode_enable(void)
-{
-	hdd_context_t *hdd_ctx;
-
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (!hdd_ctx) {
-		cds_err("HDD context is NULL");
-		return false;
-	}
-
-	return hdd_ctx->config->pktcap_mode_enable;
-}
-
-uint8_t cds_get_pktcapture_mode(void)
-{
-	hdd_context_t *hdd_ctx;
-
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (!hdd_ctx) {
-		cds_err("HDD context is NULL");
-		return 0;
-	}
-
-	return hdd_ctx->pktcapture_mode;
 }

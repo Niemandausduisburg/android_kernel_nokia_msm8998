@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -50,8 +59,8 @@ void limPostDummyToTmRing(tpAniSirGlobal, tpDphHashNode);
 void limPostPacketToTdRing(tpAniSirGlobal, tpDphHashNode, uint8_t);
 tSirRetStatus lim_cleanup_rx_path(tpAniSirGlobal, tpDphHashNode, tpPESession);
 void lim_reject_association(tpAniSirGlobal, tSirMacAddr, uint8_t,
-			    uint8_t, tAniAuthType, uint16_t, uint8_t,
-			    enum eSirMacStatusCodes, tpPESession);
+			    uint8_t, tAniAuthType,
+			    uint16_t, uint8_t, tSirResultCodes, tpPESession);
 
 tSirRetStatus lim_populate_peer_rate_set(tpAniSirGlobal pMac,
 					 tpSirSupportedRates pRates,

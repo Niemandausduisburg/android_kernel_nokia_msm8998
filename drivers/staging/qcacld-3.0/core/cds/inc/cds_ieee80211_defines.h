@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011, 2014-2015, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2015 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifndef CDS_IEEE80211_DEFINES_H_
@@ -129,7 +138,7 @@ typedef struct ieee80211_rx_status {
 	int rs_rateieee;
 	int rs_ratephy;
 
-#define IEEE80211_MAX_ANTENNA       4   /* Keep the same as ATH_MAX_ANTENNA */
+#define IEEE80211_MAX_ANTENNA       3   /* Keep the same as ATH_MAX_ANTENNA */
 	uint8_t rs_rssictl[IEEE80211_MAX_ANTENNA];      /* RSSI (noise floor ajusted) */
 	uint8_t rs_rssiextn[IEEE80211_MAX_ANTENNA];     /* RSSI (noise floor ajusted) */
 	uint8_t rs_isvalidrssi; /* rs_rssi is valid or not */
@@ -1362,19 +1371,4 @@ enum {
 	IEEE80211_MACCMD_POLICY_RADIUS = 5,     /* set policy: RADIUS managed ACLs */
 };
 
-/*
- * MBO transition reason codes
- */
-enum {
-	MBO_TRANSITION_REASON_UNSPECIFIED,
-	MBO_TRANSITION_REASON_EXCESSIVE_FRAME_LOSS_RATE,
-	MBO_TRANSITION_REASON_EXCESSIVE_DELAY_FOR_CURRENT_TRAFFIC,
-	MBO_TRANSITION_REASON_INSUFFICIENT_BANDWIDTH_FOR_CURRENT_TRAFFIC,
-	MBO_TRANSITION_REASON_LOAD_BALANCING,
-	MBO_TRANSITION_REASON_LOW_RSSI,
-	MBO_TRANSITION_REASON_RECEIVED_EXCESSIVE_RETRANSMISSIONS,
-	MBO_TRANSITION_REASON_HIGH_INTERFERENCE,
-	MBO_TRANSITION_REASON_GRAY_ZONE,
-	MBO_TRANSITION_REASON_TRANSITIONING_TO_PREMIUM_AP,
-};
 #endif

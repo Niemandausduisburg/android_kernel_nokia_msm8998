@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**=========================================================================
@@ -43,13 +52,14 @@
 #include "rrm_global.h"
 #include "rrm_api.h"
 
+#define MAX_RRM_TX_PWR_CAP 22
+
 uint8_t
 rrm_get_min_of_max_tx_power(tpAniSirGlobal pMac,
 			    int8_t regMax, int8_t apTxPower)
 {
 	uint8_t maxTxPower = 0;
 	uint8_t txPower = QDF_MIN(regMax, (apTxPower));
-
 	if ((txPower >= RRM_MIN_TX_PWR_CAP) && (txPower <= RRM_MAX_TX_PWR_CAP))
 		maxTxPower = txPower;
 	else if (txPower < RRM_MIN_TX_PWR_CAP)
@@ -57,8 +67,9 @@ rrm_get_min_of_max_tx_power(tpAniSirGlobal pMac,
 	else
 		maxTxPower = RRM_MAX_TX_PWR_CAP;
 
-	pe_debug("regulatoryMax: %d, apTxPwr: %d, maxTxpwr: %d",
-		regMax, apTxPower, maxTxPower);
+	lim_log(pMac, LOG3,
+		"%s: regulatoryMax = %d, apTxPwr = %d, maxTxpwr = %d",
+		__func__, regMax, apTxPower, maxTxPower);
 	return maxTxPower;
 }
 
@@ -81,11 +92,12 @@ void
 rrm_cache_mgmt_tx_power(tpAniSirGlobal pMac, int8_t txPower,
 			tpPESession pSessionEntry)
 {
-	pe_debug("Cache Mgmt Tx Power: %d", txPower);
+	lim_log(pMac, LOG1, "Cache Mgmt Tx Power = %d", txPower);
 
-	if (pSessionEntry == NULL)
+	if (pSessionEntry == NULL) {
+		lim_log(pMac, LOG3, "%s: pSessionEntry is NULL", __func__);
 		pMac->rrm.rrmPEContext.txMgmtPower = txPower;
-	else
+	} else
 		pSessionEntry->txMgmtPower = txPower;
 }
 
@@ -106,10 +118,13 @@ rrm_cache_mgmt_tx_power(tpAniSirGlobal pMac, int8_t txPower,
  */
 int8_t rrm_get_mgmt_tx_power(tpAniSirGlobal pMac, tpPESession pSessionEntry)
 {
-	if (pSessionEntry == NULL)
+	if (pSessionEntry == NULL) {
+		lim_log(pMac, LOG3, "%s: txpower from rrmPEContext: %d",
+			__func__, pMac->rrm.rrmPEContext.txMgmtPower);
 		return pMac->rrm.rrmPEContext.txMgmtPower;
+	}
 
-	pe_debug("tx mgmt pwr %d", pSessionEntry->txMgmtPower);
+	lim_log(pMac, LOG1, FL("tx mgmt pwr %d"), pSessionEntry->txMgmtPower);
 
 	return pSessionEntry->txMgmtPower;
 }
@@ -139,12 +154,13 @@ rrm_send_set_max_tx_power_req(tpAniSirGlobal pMac, int8_t txPower,
 	tSirMsgQ msgQ;
 
 	if (pSessionEntry == NULL) {
-		pe_err("Invalid parameters");
+		PELOGE(lim_log(pMac, LOGE, FL("Invalid parameters"));)
 		return eSIR_FAILURE;
 	}
 	pMaxTxParams = qdf_mem_malloc(sizeof(tMaxTxPowerParams));
 	if (NULL == pMaxTxParams) {
-		pe_err("Unable to allocate memory for pMaxTxParams");
+		lim_log(pMac, LOGP,
+			FL("Unable to allocate memory for pMaxTxParams "));
 		return eSIR_MEM_ALLOC_FAILED;
 
 	}
@@ -161,13 +177,16 @@ rrm_send_set_max_tx_power_req(tpAniSirGlobal pMac, int8_t txPower,
 	msgQ.bodyptr = pMaxTxParams;
 	msgQ.bodyval = 0;
 
-	pe_debug("Sending WMA_SET_MAX_TX_POWER_REQ with power(%d) to HAL",
+	lim_log(pMac, LOG3,
+		FL("Sending WMA_SET_MAX_TX_POWER_REQ with power(%d) to HAL"),
 		txPower);
 
 	MTRACE(mac_trace_msg_tx(pMac, pSessionEntry->peSessionId, msgQ.type));
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
-		pe_err("Posting WMA_SET_MAX_TX_POWER_REQ to HAL failed, reason=%X",
+		lim_log(pMac, LOGP,
+			FL
+				("Posting WMA_SET_MAX_TX_POWER_REQ to HAL failed, reason=%X"),
 			retCode);
 		qdf_mem_free(pMaxTxParams);
 		return retCode;
@@ -200,7 +219,7 @@ tSirRetStatus rrm_set_max_tx_power_rsp(tpAniSirGlobal pMac, tpSirMsgQ limMsgQ)
 
 	if (qdf_is_macaddr_broadcast(&pMaxTxParams->bssId)) {
 		for (i = 0; i < pMac->lim.maxBssId; i++) {
-			if (pMac->lim.gpSession[i].valid == true) {
+			if ((pMac->lim.gpSession[i].valid == true)) {
 				pSessionEntry = &pMac->lim.gpSession[i];
 				rrm_cache_mgmt_tx_power(pMac, pMaxTxParams->power,
 							pSessionEntry);
@@ -211,6 +230,9 @@ tSirRetStatus rrm_set_max_tx_power_rsp(tpAniSirGlobal pMac, tpSirMsgQ limMsgQ)
 							 pMaxTxParams->bssId.bytes,
 							 &sessionId);
 		if (pSessionEntry == NULL) {
+			PELOGE(lim_log
+				       (pMac, LOGE, FL("Unable to find session:"));
+			       )
 			retCode = eSIR_FAILURE;
 		} else {
 			rrm_cache_mgmt_tx_power(pMac, pMaxTxParams->power,
@@ -250,16 +272,19 @@ rrm_process_link_measurement_request(tpAniSirGlobal pMac,
 	tpSirMacMgmtHdr pHdr;
 	int8_t currentRSSI = 0;
 
-	pe_debug("Received Link measurement request");
+	lim_log(pMac, LOG3, "Received Link measurement request");
 
 	if (pRxPacketInfo == NULL || pLinkReq == NULL || pSessionEntry == NULL) {
-		pe_err("Invalid parameters - Ignoring the request");
+		PELOGE(lim_log(pMac, LOGE,
+			       "%s Invalid parameters - Ignoring the request",
+			       __func__);
+		       )
 		return eSIR_FAILURE;
 	}
 	pHdr = WMA_GET_RX_MAC_HEADER(pRxPacketInfo);
 
-	LinkReport.txPower = lim_get_max_tx_power(pSessionEntry->def_max_tx_pwr,
-						pLinkReq->MaxTxPower.maxTxPower,
+	LinkReport.txPower = lim_get_max_tx_power(pLinkReq->MaxTxPower.maxTxPower,
+						  MAX_RRM_TX_PWR_CAP,
 						  pMac->roam.configParam.
 						  nTxPowerCap);
 
@@ -267,12 +292,15 @@ rrm_process_link_measurement_request(tpAniSirGlobal pMac,
 	    (eSIR_SUCCESS == rrm_send_set_max_tx_power_req(pMac,
 							   LinkReport.txPower,
 							   pSessionEntry))) {
-		pe_warn("maxTx power in link report is not same as local..."
-			" Local: %d Link Request TxPower: %d"
-			" Link Report TxPower: %d",
-			pSessionEntry->maxTxPower, LinkReport.txPower,
-			pLinkReq->MaxTxPower.maxTxPower);
-		pSessionEntry->maxTxPower =
+		PELOGW(lim_log
+			       (pMac, LOGW,
+			       FL(" maxTx power in link report is not same as local..."
+				  " Local = %d Link Request TxPower = %d"
+				  " Link Report TxPower = %d"),
+			       pSessionEntry->maxTxPower, LinkReport.txPower,
+			       pLinkReq->MaxTxPower.maxTxPower);
+		       )
+			pSessionEntry->maxTxPower =
 			LinkReport.txPower;
 	}
 
@@ -281,7 +309,7 @@ rrm_process_link_measurement_request(tpAniSirGlobal pMac,
 	LinkReport.txAntenna = 0;
 	currentRSSI = WMA_GET_RX_RSSI_RAW(pRxPacketInfo);
 
-	pe_debug("Received Link report frame with %d", currentRSSI);
+	lim_log(pMac, LOG1, "Received Link report frame with %d", currentRSSI);
 
 	/* 2008 11k spec reference: 18.4.8.5 RCPI Measurement */
 	if ((currentRSSI) <= RCPI_LOW_RSSI_VALUE)
@@ -293,7 +321,7 @@ rrm_process_link_measurement_request(tpAniSirGlobal pMac,
 
 	LinkReport.rsni = WMA_GET_RX_SNR(pRxPacketInfo);
 
-	pe_debug("Sending Link report frame");
+	lim_log(pMac, LOG3, "Sending Link report frame");
 
 	return lim_send_link_report_action_frame(pMac, &LinkReport, pHdr->sa,
 						 pSessionEntry);
@@ -327,26 +355,28 @@ rrm_process_neighbor_report_response(tpAniSirGlobal pMac,
 	tSirMsgQ mmhMsg;
 
 	if (pNeighborRep == NULL || pSessionEntry == NULL) {
-		pe_err("Invalid parameters");
+		PELOGE(lim_log(pMac, LOGE, FL(" Invalid parameters"));)
 		return status;
 	}
 
-	pe_debug("Neighbor report response received");
+	lim_log(pMac, LOG3, FL("Neighbor report response received "));
 
 	/* Dialog token */
 	if (pMac->rrm.rrmPEContext.DialogToken !=
 	    pNeighborRep->DialogToken.token) {
-		pe_err("Dialog token mismatch in the received Neighbor report");
+		PELOGE(lim_log
+			       (pMac, LOGE,
+			       "Dialog token mismatch in the received Neighbor report");
+		       )
 		return eSIR_FAILURE;
 	}
 	if (pNeighborRep->num_NeighborReport == 0) {
-		pe_err("No neighbor report in the frame...Dropping it");
+		PELOGE(lim_log
+			       (pMac, LOGE,
+			       "No neighbor report in the frame...Dropping it");
+		       )
 		return eSIR_FAILURE;
 	}
-	pe_debug("RRM:received num neighbor reports: %d",
-			pNeighborRep->num_NeighborReport);
-	if (pNeighborRep->num_NeighborReport > MAX_SUPPORTED_NEIGHBOR_RPT)
-		pNeighborRep->num_NeighborReport = MAX_SUPPORTED_NEIGHBOR_RPT;
 	length = (sizeof(tSirNeighborReportInd)) +
 		 (sizeof(tSirNeighborBssDescription) *
 		  (pNeighborRep->num_NeighborReport - 1));
@@ -354,8 +384,9 @@ rrm_process_neighbor_report_response(tpAniSirGlobal pMac,
 	/* Prepare the request to send to SME. */
 	pSmeNeighborRpt = qdf_mem_malloc(length);
 	if (NULL == pSmeNeighborRpt) {
-		pe_err("Unable to allocate memory");
+		PELOGE(lim_log(pMac, LOGP, FL("Unable to allocate memory"));)
 		return eSIR_MEM_ALLOC_FAILED;
+
 	}
 
 	/* Allocated memory for pSmeNeighborRpt...will be freed by other module */
@@ -444,17 +475,20 @@ rrm_process_neighbor_report_req(tpAniSirGlobal pMac,
 	uint8_t sessionId;
 
 	if (pNeighborReq == NULL) {
-		pe_err("NeighborReq is NULL");
+		PELOGE(lim_log(pMac, LOGE, "NeighborReq is NULL");)
 		return eSIR_FAILURE;
 	}
 	pSessionEntry = pe_find_session_by_bssid(pMac, pNeighborReq->bssId,
 						 &sessionId);
 	if (pSessionEntry == NULL) {
-		pe_err("session does not exist for given bssId");
+		PELOGE(lim_log
+			       (pMac, LOGE,
+			       FL("session does not exist for given bssId"));
+		       )
 		return eSIR_FAILURE;
 	}
 
-	pe_debug("SSID present: %d", pNeighborReq->noSSID);
+	lim_log(pMac, LOG1, FL("SSID present = %d "), pNeighborReq->noSSID);
 
 	qdf_mem_set(&NeighborReportReq, sizeof(tSirMacNeighborReportReq), 0);
 
@@ -463,10 +497,11 @@ rrm_process_neighbor_report_req(tpAniSirGlobal pMac,
 	if (NeighborReportReq.ssid_present) {
 		qdf_mem_copy(&NeighborReportReq.ssid, &pNeighborReq->ucSSID,
 			     sizeof(tSirMacSSid));
-		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE,
-				   QDF_TRACE_LEVEL_DEBUG,
-				   (uint8_t *) NeighborReportReq.ssid.ssId,
-				   NeighborReportReq.ssid.length);
+		PELOGE(sir_dump_buf
+			       (pMac, SIR_LIM_MODULE_ID, LOGE,
+			       (uint8_t *) NeighborReportReq.ssid.ssId,
+			       NeighborReportReq.ssid.length);
+		       )
 	}
 
 	status =
@@ -516,7 +551,10 @@ rrm_process_beacon_report_req(tpAniSirGlobal pMac,
 		/* Beacon reporting should not be included in request if number of repetitons is zero. */
 		/* IEEE Std 802.11k-2008 Table 7-29g and section 11.10.8.1 */
 
-		pe_err("Dropping the request: Reporting condition included in beacon report request and it is not zero");
+		PELOGE(lim_log
+			       (pMac, LOGE,
+			       "Dropping the request: Reporting condition included in beacon report request and it is not zero");
+		       )
 		return eRRM_INCAPABLE;
 	}
 
@@ -542,12 +580,16 @@ rrm_process_beacon_report_req(tpAniSirGlobal pMac,
 
 	measDuration = pBeaconReq->measurement_request.Beacon.meas_duration;
 
-	pe_debug("maxDuration = %d sign = %d maxMeasduration = %d measDuration = %d",
+	lim_log(pMac, LOG1,
+		"maxDuration = %d sign = %d maxMeasduration = %d measDuration = %d",
 		maxDuration, sign, maxMeasduration, measDuration);
 
 	if (maxMeasduration < measDuration) {
 		if (pBeaconReq->durationMandatory) {
-			pe_err("Dropping the request: duration mandatory and maxduration > measduration");
+			PELOGE(lim_log
+				       (pMac, LOGE,
+				       "Dropping the request: duration mandatory and maxduration > measduration");
+			       )
 			return eRRM_REFUSED;
 		} else
 			measDuration = maxMeasduration;
@@ -558,33 +600,18 @@ rrm_process_beacon_report_req(tpAniSirGlobal pMac,
 		present ? pBeaconReq->measurement_request.Beacon.BcnReportingDetail.
 		reportingDetail : BEACON_REPORTING_DETAIL_ALL_FF_IE;
 
-	if (pBeaconReq->measurement_request.Beacon.
-	    last_beacon_report_indication.present) {
-		pCurrentReq->request.Beacon.last_beacon_report_indication =
-			pBeaconReq->measurement_request.Beacon.
-			last_beacon_report_indication.last_fragment;
-		pe_debug("Last Beacon Report in request = %d",
-			pCurrentReq->request.Beacon.
-			last_beacon_report_indication);
-	} else {
-		pCurrentReq->request.Beacon.last_beacon_report_indication = 0;
-		pe_debug("Last Beacon report not present in request");
-	}
-
 	if (pBeaconReq->measurement_request.Beacon.RequestedInfo.present) {
-		if (!pBeaconReq->measurement_request.Beacon.RequestedInfo.
-		    num_requested_eids) {
-			pe_debug("802.11k BCN RPT: Requested num of EID is 0");
-			return eRRM_FAILURE;
-		}
 		pCurrentReq->request.Beacon.reqIes.pElementIds =
 			qdf_mem_malloc(sizeof(uint8_t) *
 				       pBeaconReq->measurement_request.Beacon.
 				       RequestedInfo.num_requested_eids);
 		if (NULL == pCurrentReq->request.Beacon.reqIes.pElementIds) {
-			pe_err("Unable to allocate memory for request IEs buffer");
+			lim_log(pMac, LOGP,
+				FL
+					("Unable to allocate memory for request IEs buffer"));
 			return eRRM_FAILURE;
 		}
+		lim_log(pMac, LOG3, FL(" Allocated memory for pElementIds"));
 
 		pCurrentReq->request.Beacon.reqIes.num =
 			pBeaconReq->measurement_request.Beacon.RequestedInfo.
@@ -593,11 +620,6 @@ rrm_process_beacon_report_req(tpAniSirGlobal pMac,
 			     pBeaconReq->measurement_request.Beacon.
 			     RequestedInfo.requested_eids,
 			     pCurrentReq->request.Beacon.reqIes.num);
-		pe_debug("802.11k BCN RPT: Requested EIDs: num:[%d]",
-			 pCurrentReq->request.Beacon.reqIes.num);
-		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-				pCurrentReq->request.Beacon.reqIes.pElementIds,
-				pCurrentReq->request.Beacon.reqIes.num);
 	}
 
 	if (pBeaconReq->measurement_request.Beacon.num_APChannelReport) {
@@ -612,7 +634,10 @@ rrm_process_beacon_report_req(tpAniSirGlobal pMac,
 	/* Prepare the request to send to SME. */
 	pSmeBcnReportReq = qdf_mem_malloc(sizeof(tSirBeaconReportReqInd));
 	if (NULL == pSmeBcnReportReq) {
-		pe_err("Unable to allocate memory during Beacon Report Req Ind to SME");
+		lim_log(pMac, LOGP,
+			FL
+				("Unable to allocate memory during Beacon Report Req Ind to SME"));
+
 		return eRRM_FAILURE;
 
 	}
@@ -652,7 +677,6 @@ rrm_process_beacon_report_req(tpAniSirGlobal pMac,
 		uint8_t *ch_lst = pSmeBcnReportReq->channelList.channelNumber;
 		uint8_t len;
 		uint16_t ch_ctr = 0;
-
 		for (num_APChanReport = 0;
 		     num_APChanReport <
 		     pBeaconReq->measurement_request.Beacon.num_APChannelReport;
@@ -681,70 +705,58 @@ rrm_process_beacon_report_req(tpAniSirGlobal pMac,
 	return eRRM_SUCCESS;
 }
 
+/* -------------------------------------------------------------------- */
 /**
- * rrm_fill_beacon_ies() - Fills Fixed fields and Ies in bss description to an
- * array of uint8_t.
- * @pIes - pointer to the buffer that should be populated with ies.
- * @pNumIes - returns the num of ies filled in this param.
- * @pIesMaxSize - Max size of the buffer pIes.
- * @eids - pointer to array of eids. If NULL, all ies will be populated.
- * @numEids - number of elements in array eids.
- * @offset: Offset from where the IEs in the bss_desc should be parsed
- * @pBssDesc - pointer to Bss Description.
+ * rrm_fill_beacon_ies
  *
- * Return: Remaining length of IEs in current bss_desc which are not included
- *	   in pIes.
+ * FUNCTION:
+ *
+ * LOGIC: Fills Fixed fields and Ies in bss description to an array of uint8_t.
+ *
+ * ASSUMPTIONS:
+ *
+ * NOTE:
+ *
+ * @param pIes - pointer to the buffer that should be populated with ies.
+ * @param pNumIes - returns the num of ies filled in this param.
+ * @param pIesMaxSize - Max size of the buffer pIes.
+ * @param eids - pointer to array of eids. If NULL, all ies will be populated.
+ * @param numEids - number of elements in array eids.
+ * @param pBssDesc - pointer to Bss Description.
+ * @return None
  */
-static uint8_t
+static void
 rrm_fill_beacon_ies(tpAniSirGlobal pMac,
 		    uint8_t *pIes, uint8_t *pNumIes, uint8_t pIesMaxSize,
-		    uint8_t *eids, uint8_t numEids, uint8_t start_offset,
-		    tpSirBssDescription pBssDesc)
+		    uint8_t *eids, uint8_t numEids, tpSirBssDescription pBssDesc)
 {
-	uint8_t *pBcnIes, count = 0, i;
-	uint16_t BcnNumIes, total_ies_len, len;
-	uint8_t rem_len = 0;
+	uint8_t len, *pBcnIes, count = 0, i;
+	uint8_t BcnNumIes;
 
 	if ((pIes == NULL) || (pNumIes == NULL) || (pBssDesc == NULL)) {
-		pe_err("Invalid parameters");
-		return 0;
+		PELOGE(lim_log(pMac, LOGE, FL(" Invalid parameters"));)
+		return;
 	}
 	/* Make sure that if eid is null, numEids is set to zero. */
 	numEids = (eids == NULL) ? 0 : numEids;
 
-	total_ies_len = GET_IE_LEN_IN_BSS(pBssDesc->length);
-	BcnNumIes = total_ies_len;
-	if (start_offset > BcnNumIes) {
-		pe_err("Invalid start offset %d Bcn IE len %d",
-		       start_offset, total_ies_len);
-		return 0;
-	}
-
 	pBcnIes = (uint8_t *) &pBssDesc->ieFields[0];
-	pBcnIes += start_offset;
-	BcnNumIes = BcnNumIes - start_offset;
+	BcnNumIes = (uint8_t) GET_IE_LEN_IN_BSS(pBssDesc->length);
 
 	*pNumIes = 0;
 
-	/*
-	 * If start_offset is 0, this is the first fragment of the current
-	 * beacon. Include the Beacon Fixed Fields of length 12 bytes
-	 * (BEACON_FRAME_IES_OFFSET) in the first fragment.
-	 */
-	if (start_offset == 0) {
-		*((uint32_t *)pIes) = pBssDesc->timeStamp[0];
-		*pNumIes += sizeof(uint32_t);
-		pIes += sizeof(uint32_t);
-		*((uint32_t *)pIes) = pBssDesc->timeStamp[1];
-		*pNumIes += sizeof(uint32_t);
-		pIes += sizeof(uint32_t);
-		*((uint16_t *)pIes) = pBssDesc->beaconInterval;
-		*pNumIes += sizeof(uint16_t);
-		pIes += sizeof(uint16_t);
-		*((uint16_t *)pIes) = pBssDesc->capabilityInfo;
-		*pNumIes += sizeof(uint16_t);
-		pIes += sizeof(uint16_t);
-	}
+	*((uint32_t *) pIes) = pBssDesc->timeStamp[0];
+	*pNumIes += sizeof(uint32_t);
+	pIes += sizeof(uint32_t);
+	*((uint32_t *) pIes) = pBssDesc->timeStamp[1];
+	*pNumIes += sizeof(uint32_t);
+	pIes += sizeof(uint32_t);
+	*((uint16_t *) pIes) = pBssDesc->beaconInterval;
+	*pNumIes += sizeof(uint16_t);
+	pIes += sizeof(uint16_t);
+	*((uint16_t *) pIes) = pBssDesc->capabilityInfo;
+	*pNumIes += sizeof(uint16_t);
+	pIes += sizeof(uint16_t);
 
 	while (BcnNumIes >= 2) {
 		len = *(pBcnIes + 1);
@@ -765,44 +777,24 @@ rrm_fill_beacon_ies(tpAniSirGlobal pMac,
 
 		i = 0;
 		do {
-			if ((!eids) || (*pBcnIes == eids[i])) {
-				if (((*pNumIes) + len) < pIesMaxSize) {
-					pe_debug("Adding Eid %d, len=%d",
-						 *pBcnIes, len);
+			if (((eids == NULL) || (*pBcnIes == eids[i])) &&
+			    ((*pNumIes) + len) < pIesMaxSize) {
+				lim_log(pMac, LOG3, "Adding Eid %d, len=%d",
+					*pBcnIes, len);
 
-					qdf_mem_copy(pIes, pBcnIes, len);
-					pIes += len;
-					*pNumIes += len;
-					count++;
-				} else {
-					/*
-					 * If max size of fragment is reached,
-					 * calculate the remaining length and
-					 * break. For first fragment, account
-					 * for the fixed fields also.
-					 */
-					rem_len = total_ies_len - *pNumIes;
-					if (start_offset == 0)
-						rem_len = rem_len +
-						BEACON_FRAME_IES_OFFSET;
-					pe_debug("rem_len %d ies added %d",
-						 rem_len, *pNumIes);
-				}
+				qdf_mem_copy(pIes, pBcnIes, len);
+				pIes += len;
+				*pNumIes += len;
+				count++;
 				break;
 			}
 			i++;
 		} while (i < numEids);
 
-		if (rem_len)
-			break;
-
 		pBcnIes += len;
 		BcnNumIes -= len;
 	}
-	pe_debug("Total length of Ies added = %d rem_len %d",
-		 *pNumIes, rem_len);
-
-	return rem_len;
+	lim_log(pMac, LOG1, "Total length of Ies added = %d", *pNumIes);
 }
 
 /**
@@ -825,22 +817,19 @@ rrm_process_beacon_report_xmit(tpAniSirGlobal mac_ctx,
 	tpRRMReq curr_req = mac_ctx->rrm.rrmPEContext.pCurrentReq;
 	tpPESession session_entry;
 	uint8_t session_id, counter;
-	uint8_t i, j, offset = 0;
 	uint8_t bss_desc_count = 0;
-	uint8_t report_index = 0;
-	uint8_t rem_len = 0;
-	uint8_t frag_id = 0;
-	uint8_t num_frames, num_reports_in_frame;
 
-	pe_debug("Received beacon report xmit indication");
+	lim_log(mac_ctx, LOG1, FL("Received beacon report xmit indication"));
 
 	if (NULL == beacon_xmit_ind) {
-		pe_err("Received beacon_xmit_ind is NULL in PE");
+		lim_log(mac_ctx, LOGE,
+			FL("Received beacon_xmit_ind is NULL in PE"));
 		return eSIR_FAILURE;
 	}
 
 	if (NULL == curr_req) {
-		pe_err("Received report xmit while there is no request pending in PE");
+		lim_log(mac_ctx, LOGE,
+			FL("Received report xmit while there is no request pending in PE"));
 		status = eSIR_FAILURE;
 		goto end;
 	}
@@ -853,36 +842,38 @@ rrm_process_beacon_report_xmit(tpAniSirGlobal mac_ctx,
 		session_entry = pe_find_session_by_bssid(mac_ctx,
 				beacon_xmit_ind->bssId, &session_id);
 		if (NULL == session_entry) {
-			pe_err("session does not exist for given bssId");
+			lim_log(mac_ctx, LOGE,
+				FL("session does not exist for given bssId"));
 			status = eSIR_FAILURE;
 			goto end;
 		}
 
-		report = qdf_mem_malloc(MAX_BEACON_REPORTS * sizeof(*report));
+		report = qdf_mem_malloc(beacon_xmit_ind->numBssDesc *
+			 sizeof(*report));
 
 		if (NULL == report) {
-			pe_err("RRM Report is NULL, allocation failed");
+			lim_log(mac_ctx, LOGE,
+				FL("RRM Report is NULL, allocation failed"));
 			status = eSIR_MEM_ALLOC_FAILED;
 			goto end;
 		}
 
-		for (i = 0; i < MAX_BEACON_REPORTS &&
-		     bss_desc_count < beacon_xmit_ind->numBssDesc; i++) {
+		for (bss_desc_count = 0; bss_desc_count <
+		     beacon_xmit_ind->numBssDesc; bss_desc_count++) {
 			beacon_report =
-				&report[i].report.beaconReport;
+				&report[bss_desc_count].report.beaconReport;
 			/*
 			 * If the scan result is NULL then send report request
 			 * with option subelement as NULL.
 			 */
-			pe_debug("report %d bss %d", i, bss_desc_count);
 			bss_desc = beacon_xmit_ind->
 				   pBssDescription[bss_desc_count];
 			/* Prepare the beacon report and send it to the peer.*/
-			report[i].token =
+			report[bss_desc_count].token =
 				beacon_xmit_ind->uDialogToken;
-			report[i].refused = 0;
-			report[i].incapable = 0;
-			report[i].type = SIR_MAC_RRM_BEACON_TYPE;
+			report[bss_desc_count].refused = 0;
+			report[bss_desc_count].incapable = 0;
+			report[bss_desc_count].type = SIR_MAC_RRM_BEACON_TYPE;
 
 			/*
 			 * Valid response is included if the size of
@@ -911,95 +902,47 @@ rrm_process_beacon_report_xmit(tpAniSirGlobal mac_ctx,
 			switch (curr_req->request.Beacon.reportingDetail) {
 			case BEACON_REPORTING_DETAIL_NO_FF_IE:
 				/* 0: No need to include any elements. */
-				pe_debug("No reporting detail requested");
+				lim_log(mac_ctx, LOG3,
+					FL("No reporting detail requested"));
 				break;
 			case BEACON_REPORTING_DETAIL_ALL_FF_REQ_IE:
 				/* 1: Include all FFs and Requested Ies. */
-				pe_debug("Only requested IEs in reporting detail requested");
+				lim_log(mac_ctx, LOG3,
+					FL("Only requested IEs in reporting detail requested"));
 
-				if (!bss_desc)
-					break;
-
-				rem_len = rrm_fill_beacon_ies(mac_ctx,
-					    (uint8_t *)&beacon_report->Ies[0],
-					    (uint8_t *)&beacon_report->numIes,
+				if (bss_desc) {
+					rrm_fill_beacon_ies(mac_ctx,
+					    (uint8_t *) &beacon_report->Ies[0],
+					    (uint8_t *) &beacon_report->numIes,
 					    BEACON_REPORT_MAX_IES,
 					    curr_req->request.Beacon.reqIes.
 					    pElementIds,
 					    curr_req->request.Beacon.reqIes.num,
-					    offset, bss_desc);
+					    bss_desc);
+				}
 				break;
 			case BEACON_REPORTING_DETAIL_ALL_FF_IE:
 				/* 2: default - Include all FFs and all Ies. */
 			default:
-				pe_debug("Default all IEs and FFs");
-				if (!bss_desc)
-					break;
-
-				rem_len = rrm_fill_beacon_ies(mac_ctx,
+				lim_log(mac_ctx, LOG3, FL("Default all IEs and FFs"));
+				if (bss_desc) {
+					rrm_fill_beacon_ies(mac_ctx,
 					    (uint8_t *) &beacon_report->Ies[0],
 					    (uint8_t *) &beacon_report->numIes,
 					    BEACON_REPORT_MAX_IES,
 					    NULL,
 					    0,
-					    offset, bss_desc);
+					    bss_desc);
+				}
 				break;
 			}
-			beacon_report->frame_body_frag_id.id = bss_desc_count;
-			beacon_report->frame_body_frag_id.frag_id = frag_id;
-			/*
-			 * If remaining length is non-zero, the beacon needs to
-			 * be fragmented only if the current request supports
-			 * last beacon report indication.
-			 * If last beacon report indication is not supported,
-			 * truncate and move on to the next beacon.
-			 */
-			if (rem_len &&
-			    curr_req->request.Beacon.
-			    last_beacon_report_indication) {
-				offset = GET_IE_LEN_IN_BSS(
-						bss_desc->length) - rem_len;
-				pe_debug("offset %d ie_len %lu rem_len %d frag_id %d",
-					 offset,
-					 GET_IE_LEN_IN_BSS(bss_desc->length),
-					 rem_len, frag_id);
-				frag_id++;
-				beacon_report->frame_body_frag_id.more_frags =
-									true;
-			} else {
-				offset = 0;
-				beacon_report->frame_body_frag_id.more_frags =
-									false;
-				frag_id = 0;
-				bss_desc_count++;
-				pe_debug("No remaining IEs");
-			}
-
-			if (curr_req->request.Beacon.
-			    last_beacon_report_indication) {
-				pe_debug("Setting last beacon report support");
-				beacon_report->last_bcn_report_ind_support = 1;
-			}
 		}
+		pe_info("Sending Action frame with %d bss info",
+			bss_desc_count);
+		lim_send_radio_measure_report_action_frame(mac_ctx,
+			curr_req->dialog_token, bss_desc_count, report,
+			beacon_xmit_ind->bssId, session_entry);
 
-		pe_debug("Total reports filled %d", i);
-		num_frames = i / RADIO_REPORTS_MAX_IN_A_FRAME;
-		if (i % RADIO_REPORTS_MAX_IN_A_FRAME)
-			num_frames++;
-
-		for (j = 0; j < num_frames; j++) {
-			num_reports_in_frame = QDF_MIN((i - report_index),
-						RADIO_REPORTS_MAX_IN_A_FRAME);
-
-			pe_debug("Sending Action frame number %d",
-				 num_reports_in_frame);
-			lim_send_radio_measure_report_action_frame(mac_ctx,
-				curr_req->dialog_token, num_reports_in_frame,
-				(j == num_frames - 1) ? true : false,
-				&report[report_index],
-				beacon_xmit_ind->bssId, session_entry);
-			report_index += num_reports_in_frame;
-		}
 		curr_req->sendEmptyBcnRpt = false;
 	}
 
@@ -1008,7 +951,7 @@ end:
 		qdf_mem_free(beacon_xmit_ind->pBssDescription[counter]);
 
 	if (beacon_xmit_ind->fMeasureDone) {
-		pe_debug("Measurement done....cleanup the context");
+		lim_log(mac_ctx, LOG3, FL("Measurement done....cleanup the context"));
 		rrm_cleanup(mac_ctx);
 	}
 
@@ -1028,13 +971,16 @@ static void rrm_process_beacon_request_failure(tpAniSirGlobal pMac,
 
 	pReport = qdf_mem_malloc(sizeof(tSirMacRadioMeasureReport));
 	if (NULL == pReport) {
-		pe_err("Unable to allocate memory during RRM Req processing");
+		lim_log(pMac, LOGP,
+			FL
+				("Unable to allocate memory during RRM Req processing"));
 		return;
 	}
 	pReport->token = pCurrentReq->token;
 	pReport->type = SIR_MAC_RRM_BEACON_TYPE;
 
-	pe_debug("status %d token %d", status, pReport->token);
+	lim_log(pMac, LOG1,
+			FL("status %d token %d"), status, pReport->token);
 
 	switch (status) {
 	case eRRM_REFUSED:
@@ -1044,19 +990,20 @@ static void rrm_process_beacon_request_failure(tpAniSirGlobal pMac,
 		pReport->incapable = 1;
 		break;
 	default:
-		pe_err("Beacon request processing failed no report sent with status %d",
+		PELOGE(lim_log(pMac, LOGE,
+			       FL
+				       (" Beacon request processing failed no report sent with status %d "),
 			       status);
+		       );
 		qdf_mem_free(pReport);
 		return;
 	}
 
-	lim_send_radio_measure_report_action_frame(pMac,
-						   pCurrentReq->dialog_token,
-						   1, true,
-						   pReport, peer,
-						   pSessionEntry);
+	lim_send_radio_measure_report_action_frame(pMac, pCurrentReq->dialog_token, 1,
+						   pReport, peer, pSessionEntry);
 
 	qdf_mem_free(pReport);
+	lim_log(pMac, LOG3, FL(" Free memory for pReport"));
 	return;
 }
 
@@ -1066,7 +1013,7 @@ static void rrm_process_beacon_request_failure(tpAniSirGlobal pMac,
  * @peer: Macaddress of the peer requesting the radio measurement
  * @session_entry: session entry
  * @curr_req: Pointer to RRM request
- * @radiomes_report: Pointer to radio measurement report
+ * @report: Pointer to radio measurement report
  * @rrm_req: Array of Measurement request IEs
  * @num_report: No.of reports
  * @index: Index for Measurement request
@@ -1079,29 +1026,29 @@ static void rrm_process_beacon_request_failure(tpAniSirGlobal pMac,
 static
 tSirRetStatus rrm_process_beacon_req(tpAniSirGlobal mac_ctx, tSirMacAddr peer,
 			     tpPESession session_entry, tpRRMReq curr_req,
-			     tpSirMacRadioMeasureReport *radiomes_report,
+			     tpSirMacRadioMeasureReport report,
 			     tDot11fRadioMeasurementRequest *rrm_req,
 			     uint8_t *num_report, int index)
 {
 	tRrmRetStatus rrm_status = eRRM_SUCCESS;
-	tpSirMacRadioMeasureReport report;
 
 	if (curr_req) {
-		if (*radiomes_report == NULL) {
+		if (report == NULL) {
 			/*
 			 * Allocate memory to send reports for
 			 * any subsequent requests.
 			 */
-			*radiomes_report = qdf_mem_malloc(sizeof(*report) *
+			report = qdf_mem_malloc(sizeof(*report) *
 				(rrm_req->num_MeasurementRequest - index));
-			if (NULL == *radiomes_report) {
-				pe_err("Unable to allocate memory during RRM Req processing");
+			if (NULL == report) {
+				lim_log(mac_ctx, LOGP,
+					FL("Unable to allocate memory during RRM Req processing"));
 				return eSIR_MEM_ALLOC_FAILED;
 			}
-			pe_debug("rrm beacon type refused of %d report in beacon table",
+			lim_log(mac_ctx, LOG3,
+				FL("rrm beacon type refused of %d report in beacon table"),
 				*num_report);
 		}
-		report = *radiomes_report;
 		report[*num_report].refused = 1;
 		report[*num_report].type = SIR_MAC_RRM_BEACON_TYPE;
 		report[*num_report].token =
@@ -1111,11 +1058,12 @@ tSirRetStatus rrm_process_beacon_req(tpAniSirGlobal mac_ctx, tSirMacAddr peer,
 	} else {
 		curr_req = qdf_mem_malloc(sizeof(*curr_req));
 		if (NULL == curr_req) {
-			pe_err("Unable to allocate memory during RRM Req processing");
-				qdf_mem_free(*radiomes_report);
+			lim_log(mac_ctx, LOGP,
+				FL("Unable to allocate memory during RRM Req processing"));
+				qdf_mem_free(report);
 			return eSIR_MEM_ALLOC_FAILED;
 		}
-		pe_debug("Processing Beacon Report request");
+		lim_log(mac_ctx, LOG3, FL(" Processing Beacon Report request"));
 		curr_req->dialog_token = rrm_req->DialogToken.token;
 		curr_req->token = rrm_req->
 				  MeasurementRequest[index].measurement_token;
@@ -1146,30 +1094,28 @@ tSirRetStatus rrm_process_beacon_req(tpAniSirGlobal mac_ctx, tSirMacAddr peer,
  */
 static
 tSirRetStatus update_rrm_report(tpAniSirGlobal mac_ctx,
-				tpSirMacRadioMeasureReport *report,
+				tpSirMacRadioMeasureReport report,
 				tDot11fRadioMeasurementRequest *rrm_req,
 				uint8_t *num_report, int index)
 {
-	tpSirMacRadioMeasureReport rrm_report;
-
-	if (!*report) {
+	if (report == NULL) {
 		/*
 		 * Allocate memory to send reports for
 		 * any subsequent requests.
 		 */
-		*report = qdf_mem_malloc(sizeof(tSirMacRadioMeasureReport) *
+		report = qdf_mem_malloc(sizeof(*report) *
 			 (rrm_req->num_MeasurementRequest - index));
-		if (!*report) {
-			pe_err("Fail to alloc mem during RRM Req processing");
+		if (NULL == report) {
+			lim_log(mac_ctx, LOGP, FL("Unable to allocate memory during RRM Req processing"));
 			return eSIR_MEM_ALLOC_FAILED;
 		}
-		pe_debug("rrm beacon type incapable of %d report", *num_report);
+		lim_log(mac_ctx, LOG3, FL("rrm beacon type incapable of %d report "),
+			*num_report);
 	}
-	rrm_report = *report;
-	rrm_report[*num_report].incapable = 1;
-	rrm_report[*num_report].type =
+	report[*num_report].incapable = 1;
+	report[*num_report].type =
 		rrm_req->MeasurementRequest[index].measurement_type;
-	rrm_report[*num_report].token =
+	report[*num_report].token =
 		 rrm_req->MeasurementRequest[index].measurement_token;
 	(*num_report)++;
 	return eSIR_SUCCESS;
@@ -1202,21 +1148,21 @@ rrm_process_radio_measurement_request(tpAniSirGlobal mac_ctx,
 	if (!rrm_req->num_MeasurementRequest) {
 		report = qdf_mem_malloc(sizeof(tSirMacRadioMeasureReport));
 		if (NULL == report) {
-			pe_err("Unable to allocate memory during RRM Req processing");
+			lim_log(mac_ctx, LOGP, FL("Unable to allocate memory during RRM Req processing"));
 			return eSIR_MEM_ALLOC_FAILED;
 		}
-		pe_err("No requestIes in the measurement request, sending incapable report");
+		lim_log(mac_ctx, LOGE, FL("No requestIes in the measurement request, sending incapable report"));
 		report->incapable = 1;
 		num_report = 1;
 		lim_send_radio_measure_report_action_frame(mac_ctx,
-			rrm_req->DialogToken.token, num_report, true,
-			report, peer, session_entry);
+			rrm_req->DialogToken.token, num_report, report, peer,
+			session_entry);
 		qdf_mem_free(report);
 		return eSIR_FAILURE;
 	}
 	/* PF Fix */
 	if (rrm_req->NumOfRepetitions.repetitions > 0) {
-		pe_debug("number of repetitions %d",
+		lim_log(mac_ctx, LOG1, FL(" number of repetitions %d"),
 			rrm_req->NumOfRepetitions.repetitions);
 		/*
 		 * Send a report with incapable bit set.
@@ -1224,9 +1170,10 @@ rrm_process_radio_measurement_request(tpAniSirGlobal mac_ctx,
 		 */
 		report = qdf_mem_malloc(sizeof(tSirMacRadioMeasureReport));
 		if (NULL == report) {
-			pe_err("Unable to allocate memory during RRM Req processing");
+			lim_log(mac_ctx, LOGP, FL("Unable to allocate memory during RRM Req processing"));
 			return eSIR_MEM_ALLOC_FAILED;
 		}
+		lim_log(mac_ctx, LOGE, FL("Allocated memory for report"));
 		report->incapable = 1;
 		report->type = rrm_req->MeasurementRequest[0].measurement_type;
 		num_report = 1;
@@ -1238,7 +1185,7 @@ rrm_process_radio_measurement_request(tpAniSirGlobal mac_ctx,
 		case SIR_MAC_RRM_BEACON_TYPE:
 			/* Process beacon request. */
 			status = rrm_process_beacon_req(mac_ctx, peer,
-				 session_entry, curr_req, &report, rrm_req,
+				 session_entry, curr_req, report, rrm_req,
 				 &num_report, i);
 			if (eSIR_SUCCESS != status)
 				return status;
@@ -1246,12 +1193,13 @@ rrm_process_radio_measurement_request(tpAniSirGlobal mac_ctx,
 		case SIR_MAC_RRM_LCI_TYPE:
 		case SIR_MAC_RRM_LOCATION_CIVIC_TYPE:
 		case SIR_MAC_RRM_FINE_TIME_MEAS_TYPE:
-			pe_debug("RRM with type: %d sent to userspace",
+			lim_log(mac_ctx, LOG1,
+			    FL("RRM with type: %d sent to userspace"),
 			    rrm_req->MeasurementRequest[i].measurement_type);
 			break;
 		default:
 			/* Send a report with incapabale bit set. */
-			status = update_rrm_report(mac_ctx, &report, rrm_req,
+			status = update_rrm_report(mac_ctx, report, rrm_req,
 						   &num_report, i);
 			if (eSIR_SUCCESS != status)
 				return status;
@@ -1262,9 +1210,10 @@ rrm_process_radio_measurement_request(tpAniSirGlobal mac_ctx,
 end:
 	if (report) {
 		lim_send_radio_measure_report_action_frame(mac_ctx,
-			rrm_req->DialogToken.token, num_report, true,
-			report, peer, session_entry);
+			rrm_req->DialogToken.token, num_report, report,
+			peer, session_entry);
 		qdf_mem_free(report);
+		lim_log(mac_ctx, LOG3, FL(" Free memory for report"));
 	}
 	return status;
 }
@@ -1358,7 +1307,6 @@ tSirRetStatus rrm_initialize(tpAniSirGlobal pMac)
 	pMac->rrm.rrmPEContext.DialogToken = 0;
 
 	pMac->rrm.rrmPEContext.rrmEnable = 0;
-	pMac->rrm.rrmPEContext.prev_rrm_report_seq_num = 0xFFFF;
 
 	qdf_mem_set(pRRMCaps, sizeof(tRRMCaps), 0);
 	pRRMCaps->LinkMeasurement = 1;
@@ -1401,9 +1349,11 @@ tSirRetStatus rrm_cleanup(tpAniSirGlobal pMac)
 		    pElementIds) {
 			qdf_mem_free(pMac->rrm.rrmPEContext.pCurrentReq->
 				     request.Beacon.reqIes.pElementIds);
+			lim_log(pMac, LOG4, FL(" Free memory for pElementIds"));
 		}
 
 		qdf_mem_free(pMac->rrm.rrmPEContext.pCurrentReq);
+		lim_log(pMac, LOG4, FL(" Free memory for pCurrentReq"));
 	}
 
 	pMac->rrm.rrmPEContext.pCurrentReq = NULL;

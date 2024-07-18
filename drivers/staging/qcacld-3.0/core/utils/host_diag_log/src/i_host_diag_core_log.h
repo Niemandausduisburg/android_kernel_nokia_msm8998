@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #if !defined(__I_HOST_DIAG_CORE_LOG_H)
@@ -107,9 +116,6 @@ void host_diag_log_submit(void *plog_hdr_ptr);
 #define WLAN_HOST_DIAG_LOG_ALLOC(payload_ptr, payload_type, log_code)
 #define WLAN_HOST_DIAG_LOG_REPORT(payload_ptr)
 #define WLAN_HOST_DIAG_LOG_FREE(payload_ptr)
-
-#define host_diag_log_set_code(ptr, code) (0)
-#define host_diag_log_set_length(ptr, length) (0)
 
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
 

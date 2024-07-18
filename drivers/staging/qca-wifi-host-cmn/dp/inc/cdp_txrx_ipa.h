@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,7 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+ /**
  * @file cdp_txrx_ipa.h
  * @brief Define the host data path IP Acceleraor API functions
  */
@@ -26,29 +34,25 @@
 
 /**
  * ol_txrx_ipa_resources - Resources needed for IPA
- * @ce_sr: copyengine source ring resource
- * @ce_sr_ring_size: copyengine source ring size
- * @ce_reg_paddr: copyengine BAR register physical addrss
- * @tx_comp_ring: tx completion ring resource
- * @tx_num_alloc_buffer: tx number of allocated buffers
- * @rx_rdy_ring: rx ready ring resource
- * @rx_proc_done_idx: rx process done index physical address
- * @rx2_rdy_ring: rx2 ready ring resource
- * @rx2_proc_done_idx: rx2 process done index physical address
  */
 struct ol_txrx_ipa_resources {
-	qdf_shared_mem_t *ce_sr;
+	qdf_dma_addr_t ce_sr_base_paddr;
 	uint32_t ce_sr_ring_size;
 	qdf_dma_addr_t ce_reg_paddr;
 
-	qdf_shared_mem_t *tx_comp_ring;
+	qdf_dma_addr_t tx_comp_ring_base_paddr;
+	uint32_t tx_comp_ring_size;
 	uint32_t tx_num_alloc_buffer;
 
-	qdf_shared_mem_t *rx_rdy_ring;
-	qdf_shared_mem_t *rx_proc_done_idx;
+	qdf_dma_addr_t rx_rdy_ring_base_paddr;
+	uint32_t rx_rdy_ring_size;
+	qdf_dma_addr_t rx_proc_done_idx_paddr;
+	void *rx_proc_done_idx_vaddr;
 
-	qdf_shared_mem_t *rx2_rdy_ring;
-	qdf_shared_mem_t *rx2_proc_done_idx;
+	qdf_dma_addr_t rx2_rdy_ring_base_paddr;
+	uint32_t rx2_rdy_ring_size;
+	qdf_dma_addr_t rx2_proc_done_idx_paddr;
+	void *rx2_proc_done_idx_vaddr;
 };
 
 #ifdef IPA_OFFLOAD
@@ -81,27 +85,34 @@ void ol_txrx_ipa_uc_get_share_stats(ol_txrx_pdev_handle pdev,
 void ol_txrx_ipa_uc_set_quota(ol_txrx_pdev_handle pdev, uint64_t quota_bytes);
 
 qdf_nbuf_t ol_tx_send_ipa_data_frame(void *vdev, qdf_nbuf_t skb);
-
-int ol_txrx_rx_hash_smmu_map(ol_txrx_pdev_handle pdev, bool map);
-
 #else
+
+static inline void
+ol_txrx_ipa_uc_get_resource(ol_txrx_pdev_handle pdev,
+		 struct ol_txrx_ipa_resources *ipa_res)
+{
+	return;
+}
 
 static inline void
 ol_txrx_ipa_uc_set_doorbell_paddr(ol_txrx_pdev_handle pdev,
 				  qdf_dma_addr_t ipa_tx_uc_doorbell_paddr,
 				  qdf_dma_addr_t ipa_rx_uc_doorbell_paddr)
 {
+	return;
 }
 
 static inline void
 ol_txrx_ipa_uc_set_active(ol_txrx_pdev_handle pdev,
 	bool uc_active, bool is_tx)
 {
+	return;
 }
 
 static inline void
 ol_txrx_ipa_uc_op_response(ol_txrx_pdev_handle pdev, uint8_t *op_msg)
 {
+	return;
 }
 
 static inline void
@@ -110,25 +121,24 @@ ol_txrx_ipa_uc_register_op_cb(ol_txrx_pdev_handle pdev,
 							     void *osif_ctxt),
 				   void *osif_dev)
 {
+	return;
 }
 
 static inline void ol_txrx_ipa_uc_get_share_stats(ol_txrx_pdev_handle pdev,
 						 uint8_t reset_stats)
 {
+	return;
 }
 
 static inline void ol_txrx_ipa_uc_set_quota(ol_txrx_pdev_handle pdev,
 						 uint64_t quota_bytes)
 {
+	return;
 }
 
 static inline void ol_txrx_ipa_uc_get_stat(ol_txrx_pdev_handle pdev)
 {
-}
-
-static inline int ol_txrx_rx_hash_smmu_map(ol_txrx_pdev_handle pdev, bool map)
-{
-	return 0;
+	return;
 }
 #endif /* IPA_OFFLOAD */
 

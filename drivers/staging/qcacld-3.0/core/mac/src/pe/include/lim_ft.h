@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /**=========================================================================
 
    Macros and Function prototypes FT and 802.11R purposes
@@ -28,6 +37,7 @@
 #include <cds_api.h>
 #include <lim_global.h>
 #include <ani_global.h>
+#include <lim_debug.h>
 #include <lim_ser_des_utils.h>
 
 /*-------------------------------------------------------------------------

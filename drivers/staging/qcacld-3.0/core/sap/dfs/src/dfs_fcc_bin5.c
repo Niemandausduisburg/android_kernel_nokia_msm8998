@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2002-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2002-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*===========================================================================
@@ -173,11 +182,8 @@ int dfs_bin5_check(struct ath_dfs *dfs, int seg_id)
 	int index[DFS_MAX_B5_SIZE];
 	uint32_t n = 0, i = 0, i1 = 0, this = 0, prev = 0, rssi_diff =
 		0, width_diff = 0, bursts = 0;
-	/*
 	uint32_t total_diff = 0, average_diff = 0, total_width =
-		0, average_width = 0;
-	*/
-	uint32_t  numevents = 0;
+		0, average_width = 0, numevents = 0;
 	uint64_t pri;
 
 	if (dfs == NULL) {
@@ -327,12 +333,12 @@ int dfs_bin5_check(struct ath_dfs *dfs, int seg_id)
 				   DFS_DPRINTK(ic, ATH_DEBUG_DFS_BIN5, "bursts=%u numevents=%u total_width=%d average_width=%d total_diff=%d average_diff=%d\n", bursts, numevents, total_width, average_width, total_diff, average_diff);
 
 				   }
+				 */
 				DFS_DPRINTK(dfs, ATH_DEBUG_DFS_BIN5,
 					    "bursts=%u numevents=%u total_width=%d average_width=%d total_diff=%d average_diff=%d\n",
 					    bursts, numevents, total_width,
 					    average_width, total_diff,
 					    average_diff);
-				 */
 				DFS_PRINTK("bin 5 radar detected, bursts=%d\n",
 					   bursts);
 				return 1;
@@ -382,7 +388,7 @@ dfs_check_chirping_sowl(struct ath_dfs *dfs, void *buf,
 	/* DEBUG - Print relevant portions of the FFT data */
 	for (p = 0; p < num_fft_packets; p++) {
 
-		DFS_DPRINTK(dfs, ATH_DEBUG_DFS_BIN5_FFT, "fft_data_ptr=0x%pK\t",
+		DFS_DPRINTK(dfs, ATH_DEBUG_DFS_BIN5_FFT, "fft_data_ptr=0x%p\t",
 			    fft_data_ptr);
 		DFS_DPRINTK(dfs, ATH_DEBUG_DFS_BIN5_FFT, "[66]=%d [69]=%d\n",
 			    *(fft_data_ptr + FFT_LOWER_BIN_MAX_INDEX_BYTE) >> 2,

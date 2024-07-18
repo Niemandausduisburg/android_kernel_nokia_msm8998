@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011, 2014-2018, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2017, 2021 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /* standard header files */
@@ -70,8 +79,11 @@ static inline void ol_ap_fwd_check(struct ol_txrx_vdev_t *vdev, qdf_nbuf_t msdu)
 	    qdf_mem_cmp
 		     (mac_header->i_addr3, vdev->mac_addr.raw,
 		     IEEE80211_ADDR_LEN)) {
-		ol_txrx_dbg("Exit: %s | Unnecessary to adjust mac header\n",
+#ifdef DEBUG_HOST_RC
+		TXRX_PRINT(TXRX_PRINT_LEVEL_INFO1,
+			   "Exit: %s | Unnecessary to adjust mac header\n",
 			   __func__);
+#endif
 	} else {
 		/* Flip the ToDs bit to FromDs */
 		mac_header->i_fc[1] &= 0xfe;
@@ -124,7 +136,7 @@ static inline void ol_rx_fwd_to_tx(struct ol_txrx_vdev_t *vdev, qdf_nbuf_t msdu)
 	qdf_mem_set(msdu->cb, sizeof(msdu->cb), 0);
 	/* update any cb field expected by OL_TX_SEND */
 
-	msdu = OL_TX_SEND(vdev, msdu, 0);
+	msdu = OL_TX_SEND(vdev, msdu);
 
 	if (msdu) {
 		/*
@@ -134,12 +146,12 @@ static inline void ol_rx_fwd_to_tx(struct ol_txrx_vdev_t *vdev, qdf_nbuf_t msdu)
 		 */
 		qdf_nbuf_tx_free(msdu, QDF_NBUF_PKT_ERROR);
 	}
+	return;
 }
 
 void
 ol_rx_fwd_check(struct ol_txrx_vdev_t *vdev,
-		struct ol_txrx_peer_t *peer,
-		unsigned int tid, qdf_nbuf_t msdu_list)
+		struct ol_txrx_peer_t *peer, unsigned tid, qdf_nbuf_t msdu_list)
 {
 	struct ol_txrx_pdev_t *pdev = vdev->pdev;
 	qdf_nbuf_t deliver_list_head = NULL;
@@ -150,7 +162,6 @@ ol_rx_fwd_check(struct ol_txrx_vdev_t *vdev,
 	while (msdu) {
 		struct ol_txrx_vdev_t *tx_vdev;
 		void *rx_desc;
-		uint16_t off = 0;
 		/*
 		 * Remember the next list elem, because our processing
 		 * may cause the MSDU to get linked into a different list.
@@ -195,6 +206,7 @@ ol_rx_fwd_check(struct ol_txrx_vdev_t *vdev,
 			if (!ol_txrx_fwd_desc_thresh_check(vdev)) {
 				/* Drop the packet*/
 				htt_rx_msdu_desc_free(pdev->htt_pdev, msdu);
+				qdf_net_buf_debug_release_skb(msdu);
 				TXRX_STATS_MSDU_LIST_INCR(
 					pdev, tx.dropped.host_reject, msdu);
 				/* add NULL terminator */
@@ -205,14 +217,8 @@ ol_rx_fwd_check(struct ol_txrx_vdev_t *vdev,
 				continue;
 			}
 
-			if (pdev->cfg.is_high_latency)
-				off = htt_rx_msdu_rx_desc_size_hl(
-								 pdev->htt_pdev,
-								 rx_desc);
-
 			if (vdev->opmode == wlan_op_mode_ap &&
-			    __qdf_nbuf_data_is_ipv4_eapol_pkt(
-						   qdf_nbuf_data(msdu) + off) &&
+			    qdf_nbuf_is_ipv4_eapol_pkt(msdu) &&
 			    qdf_mem_cmp(qdf_nbuf_data(msdu) +
 					QDF_NBUF_DEST_MAC_OFFSET,
 					vdev->mac_addr.raw,
@@ -233,6 +239,7 @@ ol_rx_fwd_check(struct ol_txrx_vdev_t *vdev,
 			 */
 			if (htt_rx_msdu_discard(pdev->htt_pdev, rx_desc)) {
 				htt_rx_msdu_desc_free(pdev->htt_pdev, msdu);
+				qdf_net_buf_debug_release_skb(msdu);
 				ol_rx_fwd_to_tx(tx_vdev, msdu);
 				msdu = NULL;    /* already handled this MSDU */
 				tx_vdev->fwd_tx_packets++;
@@ -244,6 +251,13 @@ ol_rx_fwd_check(struct ol_txrx_vdev_t *vdev,
 
 				copy = qdf_nbuf_copy(msdu);
 				if (copy) {
+					/* Since this is a private copy of skb
+					 * and part of skb tracking table, so
+					 * mark it to make sure that this skb
+					 * is getting deleted from tracking
+					 * table on receiving tx completion.
+					 */
+					QDF_NBUF_CB_TX_IS_PACKET_PRIV(copy) = 1;
 					ol_rx_fwd_to_tx(tx_vdev, copy);
 					tx_vdev->fwd_tx_packets++;
 				}
@@ -271,6 +285,7 @@ ol_rx_fwd_check(struct ol_txrx_vdev_t *vdev,
 			ol_rx_deliver(vdev, peer, tid, deliver_list_head);
 		}
 	}
+	return;
 }
 
 /*

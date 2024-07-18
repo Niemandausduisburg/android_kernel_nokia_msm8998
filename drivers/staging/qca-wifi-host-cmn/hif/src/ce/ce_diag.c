@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #include "targcfg.h"
@@ -242,8 +251,7 @@ QDF_STATUS hif_diag_read_mem(struct hif_opaque_softc *hif_ctx,
 		}
 
 		/* Request CE to send from Target(!)
-		 * address to Host buffer
-		 */
+		 * address to Host buffer */
 		status = ce_send(ce_diag, NULL, ce_phy_addr, nbytes,
 				transaction_id, 0, user_flags);
 		if (status != QDF_STATUS_SUCCESS)
@@ -357,7 +365,6 @@ QDF_STATUS hif_diag_write_mem(struct hif_opaque_softc *hif_ctx,
 	unsigned int toeplitz_hash_result;
 	unsigned int user_flags = 0;
 	unsigned int target_type = 0;
-
 	ce_diag = hif_state->ce_diag;
 	transaction_id = (mux_id & MUX_ID_MASK) |
 		(transaction_id & TRANSACTION_ID_MASK);
@@ -377,7 +384,7 @@ QDF_STATUS hif_diag_write_mem(struct hif_opaque_softc *hif_ctx,
 	data_buf = qdf_mem_alloc_consistent(scn->qdf_dev, scn->qdf_dev->dev,
 				    orig_nbytes, &CE_data_base);
 	if (!data_buf) {
-		status = QDF_STATUS_E_NOMEM;
+		status = A_NO_MEMORY;
 		goto done;
 	}
 
@@ -480,7 +487,7 @@ done:
 	}
 
 	if (status != QDF_STATUS_SUCCESS) {
-		HIF_ERROR("%s failure (0x%llx)", __func__,
+		HIF_ERROR("%s failure (0x%llu)", __func__,
 			(uint64_t)ce_phy_addr);
 	}
 

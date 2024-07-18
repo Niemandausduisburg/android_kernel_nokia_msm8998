@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*===========================================================================
@@ -43,7 +52,7 @@
 /*---------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
  *-------------------------------------------------------------------------*/
-#define WLAN_NL_MAX_PAYLOAD   5120       /* maximum size for netlink message */
+#define WLAN_NL_MAX_PAYLOAD   256       /* maximum size for netlink message */
 #define WLAN_NLINK_PROTO_FAMILY  NETLINK_USERSOCK
 #define WLAN_NLINK_MCAST_GRP_ID  0x01
 
@@ -97,7 +106,6 @@ typedef enum eAniNlModuleTypes {
 	WLAN_NL_MSG_SVC,
 	WLAN_NL_MSG_CNSS_DIAG = ANI_NL_MSG_BASE + 0x0B, /* Value needs to be 27 */
 	ANI_NL_MSG_LOG,
-	WLAN_NL_MSG_SPECTRAL_SCAN,
 	ANI_NL_MSG_MAX
 } tAniNlModTypes, tWlanNlModTypes;
 
@@ -122,29 +130,6 @@ struct radio_index_tlv {
 	int radio;
 };
 
-/**
- * struct channel_info - Channel information
- * @chan_id: Channel ID
- * @reserved0: Reserved for padding and future use
- * @mhz: Primary 20 MHz channel frequency in MHz
- * @band_center_freq1: Center frequency 1 in MHz
- * @band_center_freq2: Center frequency 2 in MHz
- * @info: Channel info
- * @reg_info_1: Regulatory information field 1 which contains
- *              MIN power, MAX power, reg power and reg class ID
- * @reg_info_2: Regulatory information field 2 which contains antennamax
- */
-struct channel_info {
-	uint32_t chan_id;
-	uint32_t reserved0;
-	uint32_t mhz;
-	uint32_t band_center_freq1;
-	uint32_t band_center_freq2;
-	uint32_t info;
-	uint32_t reg_info_1;
-	uint32_t reg_info_2;
-};
-
 struct wlan_status_data {
 	uint8_t lpss_support;
 	uint8_t is_on;
@@ -159,7 +144,6 @@ struct wlan_status_data {
 	uint8_t channel_list[WLAN_SVC_MAX_NUM_CHAN];
 	uint8_t ssid[WLAN_SVC_MAX_SSID_LEN];
 	uint8_t bssid[WLAN_SVC_MAX_BSSID_LEN];
-	struct channel_info channel_info[WLAN_SVC_MAX_NUM_CHAN];
 };
 
 struct wlan_version_data {
@@ -173,26 +157,6 @@ struct wlan_version_data {
 struct wlan_dfs_info {
 	uint16_t channel;
 	uint8_t country_code[WLAN_SVC_COUNTRY_CODE_LEN];
-};
-
-/**
- * enum wlan_svc_recfg_mode - indicate reconfig channel mode to user
- * WLAN_SVC_RECFG_RESTART_HOSTAPD: restart hostapd to config channel
- * WLAN_SVC_RECFG_ECSA:            config channel with eCSA mode
- */
-enum wlan_svc_recfg_mode {
-	WLAN_SVC_RECFG_RESTART_HOSTAPD,
-	WLAN_SVC_RECFG_ECSA,
-};
-
-/**
- * struct lte_coex_info - msg to indicate lte coex info
- * @recfg_channel: target channel for SAP to switch to.
- * @recfg_mode:    sap switch channel mode
- */
-struct lte_coex_info {
-	uint8_t recfg_channel;
-	enum wlan_svc_recfg_mode recfg_mode;
 };
 
 /*

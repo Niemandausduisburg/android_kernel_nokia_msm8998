@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
 #ifndef _PCI_API_H_
 #define _PCI_API_H_
 QDF_STATUS hif_pci_open(struct hif_softc *hif_ctx,
@@ -32,7 +40,7 @@ void hif_pci_disable_isr(struct hif_softc *scn);
 void hif_pci_nointrs(struct hif_softc *scn);
 QDF_STATUS hif_pci_enable_bus(struct hif_softc *scn,
 			struct device *dev, void *bdev,
-			const struct hif_bus_id *bid,
+			const hif_bus_id *bid,
 			enum hif_enable_type type);
 void hif_pci_disable_bus(struct hif_softc *scn);
 int hif_pci_bus_configure(struct hif_softc *scn);

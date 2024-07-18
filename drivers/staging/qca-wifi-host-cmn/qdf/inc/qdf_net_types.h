@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -150,7 +159,6 @@ typedef enum {
 
 /**
  * typedef qdf_nbuf_l4_rx_cksum_type_t - receive checksum API types
- * @QDF_NBUF_RX_CKSUM_ZERO: Rx checksum zero
  * @QDF_NBUF_RX_CKSUM_TCP: Rx checksum TCP
  * @QDF_NBUF_RX_CKSUM_UDP: Rx checksum UDP
  * @QDF_NBUF_RX_CKSUM_TCPIPV6: Rx checksum TCP IPV6
@@ -160,7 +168,6 @@ typedef enum {
  * @QDF_NBUF_RX_CKSUM_TCPSUM16: Rx checksum TCP SUM16
  */
 typedef enum {
-	QDF_NBUF_RX_CKSUM_ZERO = 0x0000,
 	QDF_NBUF_RX_CKSUM_TCP = 0x0001,
 	QDF_NBUF_RX_CKSUM_UDP = 0x0002,
 	QDF_NBUF_RX_CKSUM_TCPIPV6 = 0x0010,

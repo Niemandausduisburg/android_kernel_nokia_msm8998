@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2018,2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +14,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -75,7 +81,7 @@ htt_attach(struct htt_pdev_t *pdev, int desc_pool_size);
  *
  * @param htt_pdev - handle to the HTT instance being initialized
  */
-QDF_STATUS htt_attach_target(htt_pdev_handle htt_pdev);
+A_STATUS htt_attach_target(htt_pdev_handle htt_pdev);
 
 /**
  * enum htt_op_mode - Virtual device operation mode
@@ -186,14 +192,6 @@ htt_t2h_dbg_stats_hdr_parse(uint8_t *stats_info_list,
  */
 void htt_t2h_stats_print(uint8_t *stats_data, int concise);
 
-/**
- * htt_log_rx_ring_info() - log htt rx ring info during FW_RX_REFILL failure
- * @pdev: handle to the HTT instance
- *
- * Return: None
- */
-void htt_log_rx_ring_info(htt_pdev_handle pdev);
-
 #ifndef HTT_DEBUG_LEVEL
 #if defined(DEBUG)
 #define HTT_DEBUG_LEVEL 10
@@ -214,32 +212,22 @@ void htt_display(htt_pdev_handle pdev, int indent);
 #ifdef IPA_OFFLOAD
 int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev);
 
-/**
- * htt_ipa_uc_get_resource() - Get uc resource from htt and lower layer
- * @pdev - handle to the HTT instance
- * @ce_sr - CE source ring DMA mapping info
- * @tx_comp_ring - tx completion ring DMA mapping info
- * @rx_rdy_ring - rx Ready ring DMA mapping info
- * @rx2_rdy_ring - rx2 Ready ring DMA mapping info
- * @rx_proc_done_idx - rx process done index
- * @rx2_proc_done_idx - rx2 process done index
- * @ce_sr_ring_size: copyengine source ring size
- * @ce_reg_paddr - CE Register address
- * @tx_num_alloc_buffer - Number of TX allocated buffers
- *
- * Return: 0 success
- */
 int
 htt_ipa_uc_get_resource(htt_pdev_handle pdev,
-			qdf_shared_mem_t **ce_sr,
-			qdf_shared_mem_t **tx_comp_ring,
-			qdf_shared_mem_t **rx_rdy_ring,
-			qdf_shared_mem_t **rx2_rdy_ring,
-			qdf_shared_mem_t **rx_proc_done_idx,
-			qdf_shared_mem_t **rx2_proc_done_idx,
+			qdf_dma_addr_t *ce_sr_base_paddr,
 			uint32_t *ce_sr_ring_size,
 			qdf_dma_addr_t *ce_reg_paddr,
-			uint32_t *tx_num_alloc_buffer);
+			qdf_dma_addr_t *tx_comp_ring_base_paddr,
+			uint32_t *tx_comp_ring_size,
+			uint32_t *tx_num_alloc_buffer,
+			qdf_dma_addr_t *rx_rdy_ring_base_paddr,
+			uint32_t *rx_rdy_ring_size,
+			qdf_dma_addr_t *rx_proc_done_idx_paddr,
+			void **rx_proc_done_idx_vaddr,
+			qdf_dma_addr_t *rx2_rdy_ring_base_paddr,
+			uint32_t *rx2_rdy_ring_size,
+			qdf_dma_addr_t *rx2_proc_done_idx_paddr,
+			void **rx2_proc_done_idx_vaddr);
 
 int
 htt_ipa_uc_set_doorbell_paddr(htt_pdev_handle pdev,
@@ -267,6 +255,46 @@ void htt_ipa_uc_detach(struct htt_pdev_t *pdev);
  * Return: 0 success
  */
 static inline int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
+{
+	return 0;
+}
+
+/**
+ * htt_ipa_uc_get_resource() - Get uc resource from htt and lower layer
+ * @pdev: handle to the HTT instance
+ * @ce_sr_base_paddr: copy engine source ring base physical address
+ * @ce_sr_ring_size: copy engine source ring size
+ * @ce_reg_paddr: copy engine register physical address
+ * @tx_comp_ring_base_paddr: tx comp ring base physical address
+ * @tx_comp_ring_size: tx comp ring size
+ * @tx_num_alloc_buffer: number of allocated tx buffer
+ * @rx_rdy_ring_base_paddr: rx ready ring base physical address
+ * @rx_rdy_ring_size: rx ready ring size
+ * @rx_proc_done_idx_paddr: rx process done index physical address
+ * @rx_proc_done_idx_vaddr: rx process done index virtual address
+ * @rx2_rdy_ring_base_paddr: rx done ring base physical address
+ * @rx2_rdy_ring_size: rx done ring size
+ * @rx2_proc_done_idx_paddr: rx done index physical address
+ * @rx2_proc_done_idx_vaddr: rx done index virtual address
+ *
+ * Return: 0 success
+ */
+static inline int
+htt_ipa_uc_get_resource(htt_pdev_handle pdev,
+			qdf_dma_addr_t *ce_sr_base_paddr,
+			uint32_t *ce_sr_ring_size,
+			qdf_dma_addr_t *ce_reg_paddr,
+			qdf_dma_addr_t *tx_comp_ring_base_paddr,
+			uint32_t *tx_comp_ring_size,
+			uint32_t *tx_num_alloc_buffer,
+			qdf_dma_addr_t *rx_rdy_ring_base_paddr,
+			uint32_t *rx_rdy_ring_size,
+			qdf_dma_addr_t *rx_proc_done_idx_paddr,
+			void **rx_proc_done_idx_vaddr,
+			qdf_dma_addr_t *rx2_rdy_ring_base_paddr,
+			uint32_t *rx2_rdy_ring_size,
+			qdf_dma_addr_t *rx2_proc_done_idx_paddr,
+			void **rx2_proc_done_idx_vaddr)
 {
 	return 0;
 }
@@ -356,14 +384,11 @@ static inline int htt_ipa_uc_attach(struct htt_pdev_t *pdev)
  */
 static inline void htt_ipa_uc_detach(struct htt_pdev_t *pdev)
 {
+	return;
 }
 #endif /* IPA_OFFLOAD */
 
 void htt_rx_mon_note_capture_channel(htt_pdev_handle pdev, int mon_ch);
-
-void htt_rx_mon_get_rx_status(htt_pdev_handle pdev,
-			      void *rx_desc,
-			      struct mon_rx_status *rx_status);
 
 void ol_htt_mon_note_chan(ol_txrx_pdev_handle pdev, int mon_ch);
 
@@ -375,10 +400,12 @@ void htt_clear_bundle_stats(struct htt_pdev_t *pdev);
 
 static inline void htt_dump_bundle_stats(struct htt_pdev_t *pdev)
 {
+	return;
 }
 
 static inline void htt_clear_bundle_stats(struct htt_pdev_t *pdev)
 {
+	return;
 }
 #endif
 

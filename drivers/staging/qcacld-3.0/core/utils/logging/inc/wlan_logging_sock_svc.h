@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /******************************************************************************
@@ -31,6 +40,8 @@
 
 int wlan_logging_sock_init_svc(void);
 int wlan_logging_sock_deinit_svc(void);
+int wlan_logging_sock_activate_svc(int log_fe_to_console, int num_buf);
+int wlan_logging_sock_deactivate_svc(void);
 int wlan_log_to_user(QDF_TRACE_LEVEL log_level, char *to_be_sent, int length);
 
 #ifdef WLAN_LOGGING_SOCK_SVC_ENABLE
@@ -38,8 +49,6 @@ void wlan_logging_set_per_pkt_stats(void);
 void wlan_logging_set_log_level(void);
 void wlan_logging_set_fw_flush_complete(void);
 void wlan_flush_host_logs_for_fatal(void);
-void wlan_logging_set_active(bool active);
-void wlan_logging_set_log_to_console(bool log_to_console);
 #else
 static inline void wlan_flush_host_logs_for_fatal(void)
 {
@@ -53,8 +62,6 @@ static inline void wlan_logging_set_per_pkt_stats(void)
 static inline void wlan_logging_set_fw_flush_complete(void)
 {
 }
-void wlan_logging_set_active(bool active) {}
-void wlan_logging_set_log_to_console(bool log_to_console) {}
 #endif /* WLAN_LOGGING_SOCK_SVC_ENABLE */
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
@@ -66,7 +73,7 @@ void wlan_report_log_completion(uint32_t is_fatal,
 static inline void wlan_report_log_completion(uint32_t is_fatal,
 		uint32_t indicator,
 		uint32_t reason_code,
-		uint8_t ring_id)
+		unit8_t ring_id)
 {
 	return;
 }

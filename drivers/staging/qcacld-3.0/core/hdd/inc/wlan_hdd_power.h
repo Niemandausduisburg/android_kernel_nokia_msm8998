@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012, 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012, 2014-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #ifndef __WLAN_HDD_POWER_H
 #define __WLAN_HDD_POWER_H
 
@@ -30,15 +39,6 @@
 #ifdef WLAN_FEATURE_PACKET_FILTERING
 
 #define HDD_MAX_CMP_PER_PACKET_FILTER	5
-
-#define HDD_WAKELOCK_TIMEOUT_CONNECT 1000
-#define HDD_WAKELOCK_TIMEOUT_RESUME 1000
-/*
- * HDD_WAKELOCK_CONNECT_COMPLETE = CSR_JOIN_FAILURE_TIMEOUT_DEFAULT (3000) +
- *                      WNI_CFG_AUTHENTICATE_FAILURE_TIMEOUT_STADEF (1000) +
- *                      WNI_CFG_ASSOCIATION_FAILURE_TIMEOUT_STADEF  (2000)
- */
-#define HDD_WAKELOCK_CONNECT_COMPLETE 6000
 
 /**
  * enum pkt_filter_protocol_layer - packet filter protocol layer
@@ -154,12 +154,10 @@ void hdd_conf_hostoffload(hdd_adapter_t *pAdapter, bool fenable);
  * hdd_conf_hw_filter_mode() - configure the given mode for the given adapter
  * @adapter: the adapter to configure the hw filter for
  * @mode: the hw filter mode to configure
- * @filter_enable: True: Enable HW filter, False: Disable
  *
  * Return: Errno
  */
-int hdd_conf_hw_filter_mode(hdd_adapter_t *adapter, enum hw_filter_mode mode,
-			    bool filter_enable);
+int hdd_conf_hw_filter_mode(hdd_adapter_t *adapter, enum hw_filter_mode mode);
 
 #ifdef WLAN_FEATURE_PACKET_FILTERING
 int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, uint8_t set);
@@ -208,17 +206,6 @@ void hdd_wlan_suspend_resume_event(uint8_t state);
 static inline
 void hdd_wlan_suspend_resume_event(uint8_t state) {}
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
-
-/**
- * wlan_hdd_set_powersave() - Set powersave mode
- * @adapter: adapter upon which the request was received
- * @allow_power_save: is wlan allowed to go into power save mode
- * @timeout: timeout period in ms
- *
- * Return: 0 on success, non-zero on any error
- */
-int wlan_hdd_set_powersave(hdd_adapter_t *adapter,
-			   bool allow_power_save, uint32_t timeout);
 
 /**
  * wlan_hdd_inc_suspend_stats() - Prints, then increments, then prints suspend
@@ -285,79 +272,5 @@ hdd_wlan_fake_apps_suspend(struct wiphy *wiphy, struct net_device *dev)
 	return 0;
 }
 #endif /* WLAN_SUSPEND_RESUME_TEST */
-/**
- * hdd_is_interface_down_during_ssr - Check if the interface went down during
- * SSR
- * @hdd_ctx: HDD context
- *
- * Check if any of the interface went down while the device is recovering.
- * If the interface went down close the session.
- */
-void hdd_is_interface_down_during_ssr(hdd_context_t *hdd_ctx);
 
-#ifdef FW_THERMAL_THROTTLE_SUPPORT
-/**
- * hdd_send_thermal_notification() - Send the thermal state to the FW
- * @hdd_ctx: The HDD context
- * @thermal_state: The thermal state that is to be sent to the firmware
- *
- * Return: None
- */
-void hdd_send_thermal_notification(hdd_context_t *hdd_ctx,
-				   enum hdd_thermal_states thermal_state);
-/**
- * hdd_thermal_mitigation_disable() - Disable thermal mitigation
- * @hdd_ctx: The HDD context
- *
- * This function verifies whether driver is already performing any sort of
- * thermal mitigation in connected STA scenario. If that is the case, then it
- * disables the thermal mitigation by sending command to FW.
- *
- * Return: None
- */
-void hdd_thermal_mitigation_disable(hdd_context_t *hdd_ctx);
-
-/**
- * hdd_thermal_mitigation_enable() - Enable thermal mitigation
- * @hdd_ctx: The HDD context
- *
- * This function verifies whether driver is connected in STA with no concurrent
- * sessions active. If yes then it sends the current thermal state notification
- * to the firmware.
- *
- * Return: None
- */
-void hdd_thermal_mitigation_enable(hdd_context_t *hdd_ctx);
-
-/**
- * hdd_map_thermal_states() - Return thermal state enum from int value
- * @state: The state that is to be mapped
- *
- * Return: enum hdd_thermal_states value for the corresponding state
- */
-enum hdd_thermal_states hdd_map_thermal_states(uint16_t state);
-#else
-static inline
-void hdd_send_thermal_notification(hdd_context_t *hdd_ctx,
-				   uint8_t thermal_state)
-{
-}
-
-static inline
-void hdd_thermal_mitigation_disable(hdd_context_t *hdd_ctx)
-{
-}
-
-static inline
-void hdd_thermal_mitigation_enable(hdd_context_t *hdd_ctx)
-{
-}
-
-static inline
-enum hdd_thermal_states hdd_map_thermal_states(uint16_t state)
-{
-	return HDD_THERMAL_STATE_INVAL;
-}
-
-#endif
 #endif /* __WLAN_HDD_POWER_H */

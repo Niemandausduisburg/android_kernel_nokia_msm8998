@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,7 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+ /**
  * @file cdp_txrx_flow_ctrl_legacy.h
  * @brief Define the host data path legacy flow control API
  * functions
@@ -74,15 +82,6 @@ enum netif_reason_type {
 };
 
 #ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
-
-/**
- * ol_txrx_tx_flow_control_is_pause_fp - is tx paused by flow control
- * function from txrx to OS shim
- * @osif_dev - the virtual device's OS shim object
- *
- * Return: true if tx is paused by flow control
- */
-typedef bool (*ol_txrx_tx_flow_control_is_pause_fp)(void *osif_dev);
 /**
  * ol_txrx_tx_flow_control_fp - tx flow control notification
  * function from txrx to OS shim
@@ -92,32 +91,14 @@ typedef bool (*ol_txrx_tx_flow_control_is_pause_fp)(void *osif_dev);
 typedef void (*ol_txrx_tx_flow_control_fp)(void *osif_dev,
 			 bool tx_resume);
 
-/**
- * ol_txrx_register_tx_flow_control() - register tx flow control callback
- * @vdev_id: vdev_id
- * @flowControl: flow control callback
- * @osif_fc_ctx: callback context
- * @flow_control_is_pause: is vdev paused by flow control
- *
- * Return: 0 for sucess or error code
- */
 int ol_txrx_register_tx_flow_control(uint8_t vdev_id,
 		 ol_txrx_tx_flow_control_fp flowControl,
-		 void *osif_fc_ctx,
-		 ol_txrx_tx_flow_control_is_pause_fp flow_control_is_pause);
+		 void *osif_fc_ctx);
 
 int ol_txrx_deregister_tx_flow_control_cb(uint8_t vdev_id);
 
 void ol_txrx_flow_control_cb(ol_txrx_vdev_handle vdev,
 			 bool tx_resume);
-
-/**
- * ol_txrx_flow_control_is_pause() - is osif paused by flow control
- * @vdev: vdev handle
- *
- * Return: true if osif is paused by flow control
- */
-bool ol_txrx_flow_control_is_pause(ol_txrx_vdev_handle vdev);
 bool
 ol_txrx_get_tx_resource(uint8_t sta_id,
 			 unsigned int low_watermark,
@@ -133,6 +114,7 @@ void ol_txrx_vdev_flush(ol_txrx_vdev_handle data_vdev);
 #ifdef CONFIG_ICNSS
 static inline void ol_txrx_vdev_pause(ol_txrx_vdev_handle vdev, uint32_t reason)
 {
+	return;
 }
 #else
 void ol_txrx_vdev_pause(ol_txrx_vdev_handle vdev, uint32_t reason);
@@ -142,6 +124,7 @@ void ol_txrx_vdev_pause(ol_txrx_vdev_handle vdev, uint32_t reason);
 static inline void ol_txrx_vdev_unpause(ol_txrx_vdev_handle data_vdev,
 					uint32_t reason)
 {
+	return;
 }
 #else
 void ol_txrx_vdev_unpause(ol_txrx_vdev_handle data_vdev, uint32_t reason);

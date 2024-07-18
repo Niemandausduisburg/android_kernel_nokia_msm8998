@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,14 +19,22 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #ifndef __WLAN_HDD_HOST_OFFLOAD_H__
 #define __WLAN_HDD_HOST_OFFLOAD_H__
 
-/**
- * DOC: wlan_hdd_host_offload.h
- *
- * Android WLAN HDD Host Offload API
- */
+/**===========================================================================
+
+   \file  wlan_hdd_host_offload.h
+
+   \brief Android WLAN HDD Host Offload API
+
+   ==========================================================================*/
 
 /* Offload types. */
 #define WLAN_IPV4_ARP_REPLY_OFFLOAD           0
@@ -33,11 +44,10 @@
 #define WLAN_OFFLOAD_DISABLE                     0
 #define WLAN_OFFLOAD_ENABLE                      0x1
 #define WLAN_OFFLOAD_BC_FILTER_ENABLE            0x2
-#define WLAN_OFFLOAD_ARP_AND_BC_FILTER_ENABLE    \
-			(WLAN_OFFLOAD_ENABLE | WLAN_OFFLOAD_BC_FILTER_ENABLE)
+#define WLAN_OFFLOAD_ARP_AND_BC_FILTER_ENABLE    (WLAN_OFFLOAD_ENABLE | WLAN_OFFLOAD_BC_FILTER_ENABLE)
 
 /* Offload request. */
-struct host_offload_req {
+typedef struct {
 	uint8_t offloadType;
 	uint8_t enableOrDisable;
 	union {
@@ -45,7 +55,7 @@ struct host_offload_req {
 		uint8_t hostIpv6Addr[SIR_MAC_IPV6_ADDR_LEN];
 	} params;
 	struct qdf_mac_addr bssId;
-};
+} tHostOffloadRequest, *tpHostOffloadRequest;
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 void hdd_wlan_offload_event(uint8_t type, uint8_t state);

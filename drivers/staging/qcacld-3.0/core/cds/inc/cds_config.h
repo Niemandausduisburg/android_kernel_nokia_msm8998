@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -31,6 +31,19 @@
 #include "cdp_txrx_cfg.h"
 
 /**
+ * enum driver_type - Indicate the driver type to the cds, and based on this
+ * do appropriate initialization.
+ *
+ * @DRIVER_TYPE_PRODUCTION: Driver used in the production
+ * @DRIVER_TYPE_MFG: Driver used in the Factory
+ *
+ */
+enum driver_type {
+	DRIVER_TYPE_PRODUCTION = 0,
+	DRIVER_TYPE_MFG = 1,
+};
+
+/**
  * enum cfg_sub_20_channel_width: ini values for su 20 mhz channel width
  * @WLAN_SUB_20_CH_WIDTH_5: Use 5 mhz channel width
  * @WLAN_SUB_20_CH_WIDTH_10: Use 10 mhz channel width
@@ -42,17 +55,17 @@ enum cfg_sub_20_channel_width {
 };
 
 /**
- * enum active_apf_mode - the modes active APF can operate in
- * @ACTIVE_APF_DISABLED: APF is disabled in active mode
- * @ACTIVE_APF_ENABLED: APF is enabled for all packets
- * @ACTIVE_APF_ADAPTIVE: APF is enabled for packets up to some threshold
- * @ACTIVE_APF_MODE_COUNT: The number of active APF modes
+ * enum active_bpf_mode - the modes active BPF can operate in
+ * @ACTIVE_BPF_DISABLED: BPF is disabled in active mode
+ * @ACTIVE_BPF_ENABLED: BPF is enabled for all packets
+ * @ACTIVE_BPF_ADAPTIVE: BPF is enabled for packets up to some threshold
+ * @ACTIVE_BPF_MODE_COUNT: The number of active BPF modes
  */
-enum active_apf_mode {
-	ACTIVE_APF_DISABLED = 0,
-	ACTIVE_APF_ENABLED,
-	ACTIVE_APF_ADAPTIVE,
-	ACTIVE_APF_MODE_COUNT
+enum active_bpf_mode {
+	ACTIVE_BPF_DISABLED = 0,
+	ACTIVE_BPF_ENABLED,
+	ACTIVE_BPF_ADAPTIVE,
+	ACTIVE_BPF_MODE_COUNT
 };
 
 /**
@@ -79,24 +92,6 @@ enum cds_hang_reason {
 	CDS_ACTIVE_LIST_TIMEOUT = 7,
 	CDS_SUSPEND_TIMEOUT = 8,
 	CDS_RESUME_TIMEOUT = 9,
-};
-
-/**
- * enum cds_auto_pwr_detect_failure_mode_t - auto detect failure modes
- * @CDS_FW_TO_CRASH_ON_PWR_FAILURE: Don't register wow wakeup event and FW
- * crashes on power failure
- * @CDS_FW_TO_SEND_WOW_IND_ON_PWR_FAILURE: Register wow wakeup event and FW
- * sends failure event to host on power failure
- * @CDS_FW_TO_REJUVENATE_ON_PWR_FAILURE: Don't register wow wakeup event and
- * FW silently rejuvenate on power failure
- * @CDS_AUTO_PWR_FAILURE_DETECT_DISABLE: Don't register wow wakeup event and the
- * auto power failure detect feature is disabled in FW.
- */
-enum cds_auto_pwr_detect_failure_mode_t {
-	CDS_FW_TO_CRASH_ON_PWR_FAILURE,
-	CDS_FW_TO_SEND_WOW_IND_ON_PWR_FAILURE,
-	CDS_FW_TO_REJUVENATE_ON_PWR_FAILURE,
-	CDS_AUTO_PWR_FAILURE_DETECT_DISABLE
 };
 
 /**
@@ -138,26 +133,16 @@ enum cds_auto_pwr_detect_failure_mode_t {
  * @tx_flow_start_queue_offset: Start queue offset in percentage
  * @is_lpass_enabled: Indicate whether LPASS is enabled or not
  * @is_nan_enabled: Indicate whether NAN is enabled or not
- * @bool apf_packet_filter_enable; Indicate apf filter enabled or not
+ * @bool bpf_packet_filter_enable; Indicate bpf filter enabled or not
  * @tx_chain_mask_cck: Tx chain mask enabled or not
  * @self_gen_frm_pwr: Self gen from power
  * @sub_20_channel_width: Sub 20 MHz ch width, ini intersected with fw cap
  * @flow_steering_enabled: Receive flow steering.
  * @is_fw_timeout: Indicate whether crash host when fw timesout or not
  * @force_target_assert_enabled: Indicate whether target assert enabled or not
- * @active_uc_apf_mode: Setting that determines how APF is applied in active
- * mode for uc packets
- * @active_mc_bc_apf_mode: Setting that determines how APF is applied in
- * active mode for MC/BC packets
+ * @active_bpf_mode: Setting that determines how BPF is applied in active mode
  * @rps_enabled: RPS enabled in SAP mode
- * @delay_before_vdev_stop: wait time for tx complete before vdev stop
  * @ito_repeat_count: Indicates ito repeated count
- * @bandcapability: Configured band by user
- * @etsi_srd_chan_in_master_mode: Use of ETSI SRD chan in SAP/P2P-GO ACS/PCL
- * @dot11p_mode: dot11p user configuration
- * @dfs_master_enable: DFS master capability
- * @thermal_sampling_time: Thermal throttling sampling time in ms
- * @thermal_throt_dc: Thermal throttling duty cycle to be enforced
  * Structure for holding cds ini parameters.
  */
 
@@ -168,7 +153,7 @@ struct cds_config_info {
 	uint8_t sta_maxlimod_dtim;
 	uint8_t sta_mod_dtim;
 	uint8_t sta_dynamic_dtim;
-	enum qdf_driver_type driver_type;
+	enum driver_type driver_type;
 	uint8_t max_wow_filters;
 	uint8_t wow_enable;
 	uint8_t ol_ini_info;
@@ -203,56 +188,20 @@ struct cds_config_info {
 #ifdef WLAN_FEATURE_NAN
 	bool is_nan_enabled;
 #endif
-	bool apf_packet_filter_enable;
+	bool bpf_packet_filter_enable;
 	bool tx_chain_mask_cck;
 	uint16_t self_gen_frm_pwr;
 	enum cfg_sub_20_channel_width sub_20_channel_width;
 	bool flow_steering_enabled;
-	uint8_t max_msdus_per_rxinorderind;
 	bool self_recovery_enabled;
 	bool fw_timeout_crash;
 
 	struct ol_tx_sched_wrr_ac_specs_t ac_specs[TX_WMM_AC_NUM];
 
 	bool force_target_assert_enabled;
-	enum active_apf_mode active_uc_apf_mode;
-	enum active_apf_mode active_mc_bc_apf_mode;
+	enum active_bpf_mode active_bpf_mode;
 	bool rps_enabled;
-	uint8_t delay_before_vdev_stop;
-	enum cds_auto_pwr_detect_failure_mode_t auto_power_save_fail_mode;
+	bool auto_power_save_fail_mode;
 	uint8_t ito_repeat_count;
-	uint8_t bandcapability;
-	bool etsi_srd_chan_in_master_mode;
-	uint8_t dot11p_mode;
-	bool dfs_master_enable;
-#ifdef FW_THERMAL_THROTTLE_SUPPORT
-	uint16_t thermal_sampling_time;
-	uint16_t thermal_throt_dc;
-#endif
 };
-
-#ifdef WLAN_FEATURE_FILS_SK
-#define MAX_PMK_LEN 48
-#define MAX_PMKID_LEN 16
-#define FILS_MAX_KEYNAME_NAI_LENGTH 253
-#define FILS_MAX_REALM_LEN 255
-#define FILS_MAX_RRK_LENGTH 64
-#define FILS_MAX_RIK_LENGTH FILS_MAX_RRK_LENGTH
-
-struct cds_fils_connection_info {
-	bool is_fils_connection;
-	uint8_t keyname_nai[FILS_MAX_KEYNAME_NAI_LENGTH];
-	uint32_t key_nai_length;
-	uint16_t sequence_number;
-	uint8_t r_rk[FILS_MAX_RRK_LENGTH];
-	uint32_t r_rk_length;
-	uint8_t realm[FILS_MAX_REALM_LEN];
-	uint32_t realm_len;
-	uint8_t akm_type;
-	uint8_t auth_type;
-	uint8_t pmk[MAX_PMK_LEN];
-	uint8_t pmk_len;
-	uint8_t pmkid[16];
-};
-#endif
 #endif /* !defined( __CDS_CONFIG_H ) */

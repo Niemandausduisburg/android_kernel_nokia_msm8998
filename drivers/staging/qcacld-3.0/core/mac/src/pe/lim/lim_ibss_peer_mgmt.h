@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2012, 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, 2014, 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -37,20 +46,6 @@ tSirRetStatus lim_ibss_coalesce(tpAniSirGlobal, tpSirMacMgmtHdr,
 				tpPESession);
 tSirRetStatus lim_ibss_sta_add(tpAniSirGlobal, void *, tpPESession);
 tSirRetStatus lim_ibss_add_sta_rsp(tpAniSirGlobal, void *, tpPESession);
-
-/**
- * lim_process_ibss_del_sta_rsp()- Handle ibss delete
- * peer resp from firmware
- *
- * @mac_ptr: Pointer to Global MAC structure
- * @lim_msg: delete sta response
- * @pe_session: pe session
- *
- * Return: None
- *
- */
-void lim_process_ibss_del_sta_rsp(tpAniSirGlobal mac_ctx, tpSirMsgQ lim_msg,
-	tpPESession pe_session);
 tLimIbssPeerNode *lim_ibss_peer_find(tpAniSirGlobal pMac, tSirMacAddr macAddr);
 void lim_ibss_del_bss_rsp(tpAniSirGlobal, void *, tpPESession);
 void lim_ibss_del_bss_rsp_when_coalescing(tpAniSirGlobal, void *, tpPESession);

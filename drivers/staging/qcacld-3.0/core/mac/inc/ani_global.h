@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #ifndef _ANIGLOBAL_H
 #define _ANIGLOBAL_H
 
@@ -28,6 +37,7 @@
 #include "sch_global.h"
 #include "sys_global.h"
 #include "cfg_global.h"
+#include "utils_global.h"
 #include "sir_api.h"
 
 #include "csr_api.h"
@@ -325,9 +335,6 @@ typedef struct sLimTimers {
 	TX_TIMER gLimActiveToPassiveChannelTimer;
 	TX_TIMER g_lim_periodic_auth_retry_timer;
 
-	/* SAE authentication related timer */
-	TX_TIMER sae_auth_timer;
-
 /* ********************TIMER SECTION ENDS************************************************** */
 /* ALL THE FIELDS BELOW THIS CAN BE ZEROED OUT in lim_initialize */
 /* **************************************************************************************** */
@@ -391,8 +398,6 @@ typedef struct sAniSirLim {
 	/* abort scan is used to abort an on-going scan */
 	uint8_t abortScan;
 	tLimScanChnInfo scanChnInfo;
-
-	struct lim_scan_channel_status scan_channel_status;
 
 	/* ////////////////////////////////////     SCAN/LEARN RELATED START /////////////////////////////////////////// */
 	tSirMacAddr gSelfMacAddr;       /* added for BT-AMP Support */
@@ -790,6 +795,7 @@ typedef struct sAniSirLim {
 	/* //////////////////////////////  HT RELATED           ////////////////////////////////////////// */
 
 #ifdef FEATURE_WLAN_TDLS
+	uint8_t gLimAddStaTdls;
 	uint8_t gLimTdlsLinkMode;
 	/* //////////////////////////////  TDLS RELATED         ////////////////////////////////////////// */
 #endif
@@ -827,8 +833,6 @@ typedef struct sAniSirLim {
 		uint32_t scan_id, uint32_t flags);
 	QDF_STATUS(*sme_msg_callback)
 		(tHalHandle hal, cds_msg_t *msg);
-	QDF_STATUS(*stop_roaming_callback)
-		(tHalHandle hal, uint8_t session_id, uint8_t reason);
 	uint8_t retry_packet_cnt;
 	uint8_t scan_disabled;
 	uint8_t beacon_probe_rsp_cnt_per_scan;
@@ -882,9 +886,22 @@ typedef struct sRrmContext {
 	tRrmPEContext rrmPEContext;
 } tRrmContext, *tpRrmContext;
 
+/**
+ * enum tDriverType - Indicate the driver type to the mac, and based on this
+ * do appropriate initialization.
+ *
+ * @eDRIVER_TYPE_PRODUCTION:
+ * @eDRIVER_TYPE_MFG:
+ *
+ */
+typedef enum {
+	eDRIVER_TYPE_PRODUCTION = 0,
+	eDRIVER_TYPE_MFG = 1,
+} tDriverType;
+
 typedef struct sHalMacStartParameters {
 	/* parametes for the Firmware */
-	enum qdf_driver_type driverType;
+	tDriverType driverType;
 
 } tHalMacStartParameters;
 
@@ -929,12 +946,13 @@ struct vdev_type_nss {
 /* ------------------------------------------------------------------- */
 /* / MAC Sirius parameter structure */
 typedef struct sAniSirGlobal {
-	enum qdf_driver_type gDriverType;
+	tDriverType gDriverType;
 
 	tAniSirCfg cfg;
 	tAniSirLim lim;
 	tAniSirSch sch;
 	tAniSirSys sys;
+	tAniSirUtils utils;
 
 	/* PAL/HDD handle */
 	tHddHandle hHdd;
@@ -966,7 +984,6 @@ typedef struct sAniSirGlobal {
 	uint8_t lteCoexAntShare;
 	uint8_t beacon_offload;
 	bool pmf_offload;
-	bool is_fils_roaming_supported;
 	uint32_t fEnableDebugLog;
 	uint16_t mgmtSeqNum;
 	bool enable5gEBT;
@@ -977,10 +994,6 @@ typedef struct sAniSirGlobal {
 	void *readyToExtWoWContext;
 #endif
 	uint32_t f_sta_miracast_mcc_rest_time_val;
-	uint32_t sta_scan_burst_duration;
-	uint32_t p2p_scan_burst_duration;
-	uint32_t go_scan_burst_duration;
-	uint32_t ap_scan_burst_duration;
 	uint8_t f_prefer_non_dfs_on_radar;
 	hdd_ftm_msg_processor ftm_msg_processor_callback;
 	uint32_t fine_time_meas_cap;
@@ -995,7 +1008,6 @@ typedef struct sAniSirGlobal {
 	uint8_t hw_dbs_capable;
 	/* Based on INI parameter */
 	uint32_t dual_mac_feature_disable;
-	uint32_t sta_sap_scc_on_dfs_chan;
 	sir_mgmt_frame_ind_callback mgmt_frame_ind_cb;
 	sir_p2p_ack_ind_callback p2p_ack_ind_cb;
 	bool first_scan_done;
@@ -1005,23 +1017,14 @@ typedef struct sAniSirGlobal {
 	bool sta_prefer_80MHz_over_160MHz;
 	enum  country_src reg_hint_src;
 	uint32_t rx_packet_drop_counter;
-	bool snr_monitor_enabled;
-	/* channel information callback */
-	void (*chan_info_cb)(struct scan_chan_info *chan_info);
+	struct candidate_chan_info candidate_channel_info[QDF_MAX_NUM_CHAN];
 
 	/* action ouis info */
 	bool enable_action_oui;
 	struct action_oui_info *oui_info;
-
-	/* 11k Offload Support */
-	bool is_11k_offload_supported;
-
-	/* if true, it is forced to follow the AP's edca */
-	bool follow_ap_edca;
 	uint32_t peer_rssi;
 	uint32_t peer_txrate;
 	uint32_t peer_rxrate;
-	uint32_t rx_mc_bc_cnt;
 } tAniSirGlobal;
 
 typedef enum {

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #include "ol_txrx_types.h"
@@ -35,7 +44,6 @@ static inline void
 wdi_event_del_subs(wdi_event_subscribe *wdi_sub, int event_index)
 {
 	wdi_event_notify deallocate_sub;
-
 	while (wdi_sub) {
 		wdi_event_subscribe *next = wdi_event_next_sub(wdi_sub);
 		/*
@@ -194,7 +202,6 @@ A_STATUS wdi_event_detach(struct ol_txrx_pdev_t *txrx_pdev)
 {
 	int i;
 	wdi_event_subscribe *wdi_sub;
-
 	if (!txrx_pdev) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "Invalid device in %s\nWDI detach failed",

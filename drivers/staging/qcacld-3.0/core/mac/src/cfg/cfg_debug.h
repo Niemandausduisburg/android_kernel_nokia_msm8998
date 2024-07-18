@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, 2014-2015 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,30 +19,33 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _WLAN_HDD_SYSFS_H_
-#define _WLAN_HDD_SYSFS_H_
-
-#ifdef WLAN_SYSFS
-/**
- * hdd_sysfs_create_version_interface - create version interface
- *
- * Return: none
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
-void hdd_sysfs_create_version_interface(void);
 
-/**
- * hdd_sysfs_destroy_version_interface - destroy version interface
+/*
  *
- * Return: none
+ * Author:      Kevin Nguyen
+ * Date:        04/09/02
+ * History:-
+ * 04/09/02        Created.
+ * --------------------------------------------------------------------
  */
-void hdd_sysfs_destroy_version_interface(void);
-#else
-static inline void hdd_sysfs_create_version_interface(void)
-{
-}
 
-static inline void hdd_sysfs_destroy_version_interface(void)
-{
-}
+#ifndef __CFG_DEBUG_H__
+#define __CFG_DEBUG_H__
+
+#include "sir_debug.h"
+#include "utils_api.h"
+#include "lim_trace.h"
+
+#if !defined(__printf)
+#define __printf(a, b)
 #endif
+
+void __printf(3, 4) cfg_log(tpAniSirGlobal pMac, uint32_t loglevel,
+			    const char *pString, ...);
+
 #endif

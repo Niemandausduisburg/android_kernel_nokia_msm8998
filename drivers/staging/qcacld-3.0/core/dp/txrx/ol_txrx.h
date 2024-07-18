@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #ifndef _OL_TXRX__H_
 #define _OL_TXRX__H_
 
@@ -30,16 +39,7 @@
  */
 #define OL_TX_NON_FWD_RESERVE	100
 #define OL_TXRX_PEER_UNREF_DELETE(peer) \
-	ol_txrx_peer_unref_delete(peer, __func__, __LINE__)
-
-/* ol_txrx_is_peer_eligible_for_deletion() - check if peer to be deleted
- * @peer: peer handler
- * @pdev: pointer to pdev
- *
- * Return: true if eligible for deletion else false
- */
-bool ol_txrx_is_peer_eligible_for_deletion(ol_txrx_peer_handle peer,
-					   struct ol_txrx_pdev_t *pdev);
+	ol_txrx_peer_unref_delete(peer, __func__, __LINE__);
 
 int ol_txrx_peer_unref_delete(ol_txrx_peer_handle peer,
 					      const char *fname,
@@ -48,9 +48,6 @@ int ol_txrx_peer_unref_delete(ol_txrx_peer_handle peer,
 ol_txrx_peer_handle ol_txrx_find_peer_by_addr_inc_ref(ol_txrx_pdev_handle pdev,
 						uint8_t *peer_addr,
 						uint8_t *peer_id);
-
-bool ol_txrx_mon_mgmt_process(struct mon_rx_status *rx_status,
-			      qdf_nbuf_t nbuf, uint8_t status);
 /**
  * ol_tx_desc_pool_size_hl() - allocate tx descriptor pool size for HL systems
  * @ctrl_pdev: the control pdev handle
@@ -94,6 +91,7 @@ ol_txrx_hl_tdls_flag_reset(struct ol_txrx_vdev_t *vdev, bool flag);
 static inline void
 ol_txrx_hl_tdls_flag_reset(struct ol_txrx_vdev_t *vdev, bool flag)
 {
+	return;
 }
 #endif
 
@@ -119,12 +117,14 @@ ol_txrx_update_last_real_peer(
 static inline void
 ol_txrx_copy_mac_addr_raw(ol_txrx_vdev_handle vdev, uint8_t *bss_addr)
 {
+	return;
 }
 
 static inline void
 ol_txrx_add_last_real_peer(ol_txrx_pdev_handle pdev,
 			   ol_txrx_vdev_handle vdev, uint8_t *peer_id)
 {
+	return;
 }
 
 static inline bool
@@ -140,6 +140,7 @@ ol_txrx_update_last_real_peer(
 	uint8_t *peer_id, bool restore_last_peer)
 
 {
+	return;
 }
 #endif
 
@@ -196,12 +197,11 @@ bool ol_txrx_fwd_desc_thresh_check(struct ol_txrx_vdev_t *vdev);
 ol_txrx_vdev_handle ol_txrx_get_vdev_from_vdev_id(uint8_t vdev_id);
 
 void htt_pkt_log_init(struct ol_txrx_pdev_t *handle, void *scn);
-void htt_pktlogmod_exit(struct ol_txrx_pdev_t *handle, void *scn);
 QDF_STATUS ol_txrx_set_wisa_mode(ol_txrx_vdev_handle vdev,
 			bool enable);
 void ol_txrx_update_mac_id(uint8_t vdev_id, uint8_t mac_id);
 void ol_txrx_peer_detach_force_delete(ol_txrx_peer_handle peer);
-void peer_unmap_timer_handler(unsigned long data);
+void peer_unmap_timer_handler(void *data);
 
 int ol_txrx_fw_stats_desc_pool_init(struct ol_txrx_pdev_t *pdev,
 				    uint8_t pool_size);
@@ -211,46 +211,5 @@ struct ol_txrx_fw_stats_desc_t
 				     *pdev);
 struct ol_txrx_stats_req_internal *ol_txrx_fw_stats_desc_get_req(struct
 	ol_txrx_pdev_t *pdev, uint8_t desc_id);
-
-/**
- * enum pktcapture_tx_status - packet capture tx status
- * @pktcapture_tx_status_ok: successfully sent + acked
- * @pktcapture_tx_status_discard: discard - not sent
- * @pktcapture_tx_status_no_ack: no_ack - sent, but no ack
- *
- * This enum has tx status types for packet capture mode
- */
-enum pktcapture_tx_status {
-	pktcapture_tx_status_ok,
-	pktcapture_tx_status_discard,
-	pktcapture_tx_status_no_ack,
-};
-
-/*
- * struct ol_mon_tx_status - tx packets info
- * @status: tx status
- * @tx_retry_cnt: tx retry count
- *
- */
-
-struct ol_mon_tx_status {
-	uint8_t status;
-	uint8_t tx_retry_cnt;
-	uint16_t chan_num;
-};
-
-/**
- * struct radiotap_header - base radiotap header
- * @it_version: radiotap version, always 0
- * @it_pad: padding (or alignment)
- * @it_len: overall radiotap header length
- * @it_present: (first) present word
- */
-struct radiotap_header {
-	uint8_t it_version;
-	uint8_t it_pad;
-	__le16 it_len;
-	__le32 it_present;
-} __packed;
 
 #endif /* _OL_TXRX__H_ */

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2002-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2002-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*===========================================================================
@@ -115,7 +124,7 @@ dfs_get_pri_margin(struct ath_dfs *dfs, int is_extchan_detect,
 					ext_chan_busy =
 						dfs->dfs_rinfo.dfs_ext_chan_busy;
 					DFS_DPRINTK(dfs, ATH_DEBUG_DFS2,
-						    " PRI Use cached copy of ext_chan_busy extchanbusy=%d\n",
+						    " PRI Use cached copy of ext_chan_busy extchanbusy=%d \n",
 						    ext_chan_busy);
 				}
 			}
@@ -199,7 +208,6 @@ uint32_t dfs_round(int32_t val)
 struct dfs_ieee80211_channel *ieee80211_get_extchan(struct ieee80211com *ic)
 {
 	int chan_offset = 0;
-
 	if (IEEE80211_IS_CHAN_HT40PLUS_CAPABLE(ic->ic_curchan)) {
 		chan_offset = 20;
 	} else if (IEEE80211_IS_CHAN_HT40MINUS_CAPABLE(ic->ic_curchan)) {

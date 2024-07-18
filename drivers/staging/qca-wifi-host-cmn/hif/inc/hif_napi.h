@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifndef __HIF_NAPI_H__
@@ -87,12 +96,12 @@ enum qca_napi_event {
 #define NAPI_ID2PIPE(i) ((i)-1)
 #define NAPI_PIPE2ID(p) ((p)+1)
 
-int hif_napi_offld_flush_cb_register(struct hif_opaque_softc *hif_hdl,
-				   void (lro_flush_handler)(void *arg),
+int hif_napi_lro_flush_cb_register(struct hif_opaque_softc *hif_hdl,
+				   void (lro_flush_handler)(void *),
 				   void *(lro_init_handler)(void));
 
 void hif_napi_lro_flush_cb_deregister(struct hif_opaque_softc *hif_hdl,
-				      void (lro_deinit_cb)(void *arg));
+				      void (lro_deinit_cb)(void *));
 
 void *hif_napi_get_lro_info(struct hif_opaque_softc *hif_hdl, int napi_id);
 #ifdef FEATURE_NAPI
@@ -114,7 +123,6 @@ int hif_napi_destroy(struct hif_opaque_softc  *hif,
 		     int               force);
 
 struct qca_napi_data *hif_napi_get_all(struct hif_opaque_softc   *hif);
-struct qca_napi_info *hif_get_napi(int napi_id, void *napi_d);
 
 int hif_napi_event(struct hif_opaque_softc     *hif,
 		   enum  qca_napi_event event,
@@ -149,7 +157,7 @@ static inline void hif_napi_update_yield_stats(struct CE_state *ce_state,
 
 #ifdef FEATURE_NAPI_DEBUG
 #define NAPI_DEBUG(fmt, ...)			\
-	qdf_debug("wlan: NAPI: %s:%d "fmt, __func__, __LINE__, ##__VA_ARGS__)
+	qdf_print("wlan: NAPI: %s:%d "fmt, __func__, __LINE__, ##__VA_ARGS__);
 #else
 #define NAPI_DEBUG(fmt, ...) /* NO-OP */
 #endif /* FEATURE NAPI_DEBUG */
@@ -165,8 +173,7 @@ enum qca_blacklist_op {
 	BLACKLIST_ON
 };
 
-int hif_napi_cpu_blacklist(struct qca_napi_data *napid,
-			   enum qca_blacklist_op op);
+int hif_napi_cpu_blacklist(struct qca_napi_data *napid, enum qca_blacklist_op op);
 /**
  * Local interface to HIF implemented functions of NAPI CPU affinity management.
  * Note:
@@ -231,11 +238,6 @@ static inline struct qca_napi_data *hif_napi_get_all(
 				struct hif_opaque_softc *hif)
 { return NULL; }
 
-static inline struct napi_struct *hif_get_napi(int napi_id, void *napi_d)
-{
-	return NULL;
-}
-
 static inline int hif_napi_event(struct hif_opaque_softc     *hif,
 				 enum  qca_napi_event event,
 				 void                *data)
@@ -258,19 +260,5 @@ static inline int hif_napi_poll(struct napi_struct *napi, int budget)
 static inline void hif_napi_stats(struct qca_napi_data *napid) { }
 
 #endif /* FEATURE_NAPI */
-
-/**
- * hif_update_napi_max_poll_time() - updates NAPI max poll time
- * @ce_state: ce state
- * @napi_info: pointer to napi info structure
- * @cpu_id: cpu id
- *
- * This API updates NAPI max poll time per CE per SPU.
- *
- * Return: void
- */
-void hif_update_napi_max_poll_time(struct CE_state *ce_state,
-				   struct qca_napi_info *napi_info,
-				   int cpu_id);
 
 #endif /* __HIF_NAPI_H__ */

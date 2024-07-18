@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #if !defined __CDS_REG_SERVICE_H
@@ -37,8 +46,6 @@
 #define CDS_CHANNEL_FREQ(chan_enum) chan_mapping[chan_enum].center_freq
 #define CDS_IS_DFS_CH(chan_num) (cds_get_channel_state((chan_num)) == \
 				CHANNEL_STATE_DFS)
-#define CDS_IS_DISABLE_CH(chan_num) (cds_get_channel_state((chan_num)) == \
-				     CHANNEL_STATE_DISABLE)
 
 #define CDS_IS_PASSIVE_OR_DISABLE_CH(chan_num) \
 	(cds_get_channel_state(chan_num) != CHANNEL_STATE_ENABLE)
@@ -49,6 +56,10 @@
 #define CDS_MAX_59GHZ_CHANNEL_NUMBER chan_mapping[MAX_59GHZ_CHANNEL].chan_num
 #define CDS_MIN_5GHZ_CHANNEL_NUMBER chan_mapping[MIN_5GHZ_CHANNEL].chan_num
 #define CDS_MAX_5GHZ_CHANNEL_NUMBER chan_mapping[MAX_5GHZ_CHANNEL].chan_num
+
+#define CDS_IS_CHANNEL_DSRC(chan_num) \
+	((chan_num >= CDS_MIN_59GHZ_CHANNEL_NUMBER) && \
+	 (chan_num <= CDS_MAX_59GHZ_CHANNEL_NUMBER))
 
 #define CDS_IS_CHANNEL_5GHZ(chan_num) \
 	((chan_num >= CDS_MIN_5GHZ_CHANNEL_NUMBER) && \
@@ -61,6 +72,8 @@
 #define CDS_IS_SAME_BAND_CHANNELS(chan_num1, chan_num2) \
 	(chan_num1 && chan_num2 && \
 	(CDS_IS_CHANNEL_5GHZ(chan_num1) == CDS_IS_CHANNEL_5GHZ(chan_num2)))
+
+#define CDS_MIN_11P_CHANNEL chan_mapping[MIN_59GHZ_CHANNEL].chan_num
 
 typedef enum {
 	REGDOMAIN_FCC,
@@ -172,7 +185,6 @@ enum channel_enum {
 	CHAN_ENUM_161,
 	CHAN_ENUM_165,
 
-	CHAN_ENUM_169,
 	CHAN_ENUM_170,
 	CHAN_ENUM_171,
 	CHAN_ENUM_172,
@@ -279,9 +291,8 @@ enum country_src {
  * @ctl_2g: 2G CTL value
  * @ctl_5g: 5G CTL value
  * @reg_pair: pointer to regulatory pair
- * @cc_src: hdd country code src
+ * @cc_src: country code src
  * @reg_flags: kernel regulatory flags
- * @reset: whether to reset to 00
  */
 struct regulatory {
 	uint32_t reg_domain;
@@ -293,7 +304,6 @@ struct regulatory {
 	const void *regpair;
 	enum country_src cc_src;
 	uint32_t reg_flags;
-	bool reset;
 };
 
 /**
@@ -378,19 +388,6 @@ QDF_STATUS cds_get_channel_list_with_power(struct channel_power
 					   *base_channels,
 					   uint8_t *num_base_channels);
 
-/**
- * cds_set_channel_state() - API to set the channel state in reg table
- * @chan_num  - input channel enum
- * @state - state of the channel to be set
- * CHANNEL_STATE_DISABLE
- * CHANNEL_STATE_DFS
- * CHANNEL_STATE_ENABLE
- * CHANNEL_STATE_INVALID
- *
- * Return: Void
- */
-void cds_set_channel_state(uint32_t chan_num, enum channel_state state);
-
 enum channel_state cds_get_channel_state(uint32_t chan_num);
 QDF_STATUS cds_get_dfs_region(enum dfs_region *dfs_reg);
 QDF_STATUS cds_put_dfs_region(enum dfs_region dfs_reg);
@@ -410,23 +407,6 @@ QDF_STATUS cds_set_reg_domain(void *client_ctxt, v_REGDOMAIN_t reg_domain);
 QDF_STATUS cds_put_default_country(uint8_t *def_country);
 uint16_t cds_bw_value(enum phy_ch_width bw);
 uint8_t cds_skip_dfs_and_2g(uint32_t rf_channel);
-
-/**
- * cds_is_5g_regdmn_etsi13() - is the 5G regdomain ETSI13
- *
- * Return: true on ETSI13 regdomain, false otherwise
- */
-bool cds_is_5g_regdmn_etsi13(void);
-
-/*
- * cds_is_etsi13_regdmn_srd_chan() - is the channel ETSI SRD channel
- * @center_freq: center freq of the channel
- *
- * Return: true if channel is etsi13 domain SRD channel
- *         false otherwise
- */
-bool cds_is_etsi13_regdmn_srd_chan(uint16_t center_freq);
-
 /**
  * cds_get_channel_enum() - get the channel enumeration
  * @chan_num: channel number
@@ -434,12 +414,4 @@ bool cds_is_etsi13_regdmn_srd_chan(uint16_t center_freq);
  * Return: enum for the channel
  */
 enum channel_enum cds_get_channel_enum(uint32_t chan_num);
-
-/**
- * cds_set_5G_regdmn() - save 5G reg domain value
- * @regdmn_5g: 5G reg domain value
- *
- * Return: None
- */
-void cds_set_5G_regdmn(uint16_t regdmn_5g);
 #endif /* __CDS_REG_SERVICE_H */

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #ifndef _OL_CFG__H_
 #define _OL_CFG__H_
 
@@ -23,7 +32,11 @@
 #include <cdp_txrx_cmn.h>       /* ol_pdev_handle */
 #include <cds_ieee80211_common.h>   /* ieee80211_qosframe_htc_addr4 */
 #include <enet.h>               /* LLC_SNAP_HDR_LEN */
-#include "target_if_def_config.h"
+#if defined(CONFIG_HL_SUPPORT)
+#include "wlan_tgt_def_config_hl.h"
+#else
+#include "wlan_tgt_def_config.h"
+#endif
 #include "ol_txrx_ctrl_api.h"   /* txrx_pdev_cfg_param_t */
 
 
@@ -73,9 +86,6 @@ struct txrx_pdev_cfg_t {
 	u8 rx_fwd_disabled;
 	u8 is_packet_log_enabled;
 	u8 is_full_reorder_offload;
-#ifdef WLAN_FEATURE_TSF_PLUS
-	u8 is_ptp_rx_opt_enabled;
-#endif
 	struct wlan_ipa_uc_rsc_t ipa_uc_rsc;
 	bool ip_tcp_udp_checksum_offload;
 	bool enable_rxthread;
@@ -87,8 +97,6 @@ struct txrx_pdev_cfg_t {
 	bool flow_steering_enabled;
 
 	struct ol_tx_sched_wrr_ac_specs_t ac_specs[TX_WMM_AC_NUM];
-
-	uint8_t pktcapture_mode;
 };
 
 /**
@@ -265,8 +273,8 @@ void ol_cfg_set_tx_free_at_download(ol_pdev_handle pdev);
  */
 #define OL_CFG_NUM_MSDU_REAP 512
 #define ol_cfg_tx_credit_lwm(pdev)					       \
-	((TGT_NUM_MSDU_DESC >  OL_CFG_NUM_MSDU_REAP) ?		       \
-	 (TGT_NUM_MSDU_DESC -  OL_CFG_NUM_MSDU_REAP) : 0)
+	((CFG_TGT_NUM_MSDU_DESC >  OL_CFG_NUM_MSDU_REAP) ?		       \
+	 (CFG_TGT_NUM_MSDU_DESC -  OL_CFG_NUM_MSDU_REAP) : 0)
 
 /**
  * @brief In a HL system, specify the target initial credit count.
@@ -364,22 +372,6 @@ int ol_cfg_throttle_duty_cycle_level(ol_pdev_handle pdev, int level);
  */
 int ol_cfg_is_full_reorder_offload(ol_pdev_handle pdev);
 
-#ifdef WLAN_FEATURE_TSF_PLUS
-void ol_set_cfg_ptp_rx_opt_enabled(ol_pdev_handle pdev, u_int8_t val);
-u_int8_t ol_cfg_is_ptp_rx_opt_enabled(ol_pdev_handle pdev);
-#else
-static inline void
-ol_set_cfg_ptp_rx_opt_enabled(ol_pdev_handle pdev, u_int8_t val)
-{
-}
-
-static inline u_int8_t
-ol_cfg_is_ptp_rx_opt_enabled(ol_pdev_handle pdev)
-{
-	return 0;
-}
-#endif
-
 int ol_cfg_is_rx_thread_enabled(ol_pdev_handle pdev);
 
 /**
@@ -393,7 +385,6 @@ static inline
 int ol_cfg_is_ip_tcp_udp_checksum_offload_enabled(ol_pdev_handle pdev)
 {
 	struct txrx_pdev_cfg_t *cfg = (struct txrx_pdev_cfg_t *)pdev;
-
 	return cfg->ip_tcp_udp_checksum_offload;
 }
 
@@ -563,6 +554,7 @@ static inline unsigned int ol_cfg_ipa_uc_tx_partition_base(
 static inline void ol_cfg_set_ipa_uc_tx_partition_base(
 	ol_pdev_handle pdev, uint32_t value)
 {
+	return;
 }
 #endif /* IPA_OFFLOAD */
 
@@ -605,8 +597,4 @@ uint16_t ol_cfg_get_send_limit(ol_pdev_handle pdev, int ac);
 int ol_cfg_get_credit_reserve(ol_pdev_handle pdev, int ac);
 
 int ol_cfg_get_discard_weight(ol_pdev_handle pdev, int ac);
-
-int ol_cfg_pktcapture_mode(ol_pdev_handle pdev);
-
-void ol_cfg_set_pktcapture_mode(ol_pdev_handle pdev, int val);
 #endif /* _OL_CFG__H_ */

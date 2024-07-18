@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #include "qdf_types.h"
 #include "dummy.h"
 #include "hif_debug.h"
@@ -30,7 +39,7 @@
  */
 void hif_dummy_bus_prevent_linkdown(struct hif_softc *scn, bool flag)
 {
-	HIF_DBG("wlan: %s pcie power collapse ignored",
+	HIF_ERROR("wlan: %s pcie power collapse ignored",
 			(flag ? "disable" : "enable"));
 }
 
@@ -186,6 +195,7 @@ hif_dummy_get_config_item(struct hif_softc *hif_sc,
 void
 hif_dummy_set_mailbox_swap(struct hif_softc *hif_sc)
 {
+	return;
 }
 
 /**
@@ -197,6 +207,7 @@ hif_dummy_set_mailbox_swap(struct hif_softc *hif_sc)
 void
 hif_dummy_claim_device(struct hif_softc *hif_sc)
 {
+	return;
 }
 
 /**
@@ -208,6 +219,7 @@ hif_dummy_claim_device(struct hif_softc *hif_sc)
 void
 hif_dummy_cancel_deferred_target_sleep(struct hif_softc *hif_sc)
 {
+	return;
 }
 
 /**
@@ -258,14 +270,14 @@ void hif_dummy_dump_target_memory(struct hif_softc *hif_sc, void *ramdump_base,
 /**
  * hif_dummy_ipa_get_ce_resource - dummy call
  * @scn: HIF context
- * @ce_sr: copyengine source ring resource info
+ * @sr_base_paddr: source base address
  * @sr_ring_size: source ring size
  * @reg_paddr: bus physical address
  *
  * Return: None
  */
 void hif_dummy_ipa_get_ce_resource(struct hif_softc *hif_sc,
-				   qdf_shared_mem_t **ce_sr,
+				   qdf_dma_addr_t *sr_base_paddr,
 				   uint32_t *sr_ring_size,
 				   qdf_dma_addr_t *reg_paddr)
 {
@@ -280,6 +292,7 @@ void hif_dummy_ipa_get_ce_resource(struct hif_softc *hif_sc,
 void
 hif_dummy_mask_interrupt_call(struct hif_softc *hif_sc)
 {
+	return;
 }
 
 /**
@@ -310,6 +323,7 @@ void hif_dummy_clear_stats(struct hif_softc *hif_ctx)
 void hif_dummy_set_bundle_mode(struct hif_softc *hif_ctx,
 					bool enabled, int rx_bundle_cnt)
 {
+	return;
 }
 
 /**

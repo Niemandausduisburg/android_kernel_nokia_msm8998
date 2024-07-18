@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2013-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #ifndef HDD_IPA_H__
 #define HDD_IPA_H__
 
@@ -23,6 +32,7 @@
  * DOC: wlan_hdd_ipa.h
  *
  * WLAN IPA interface module headers
+ * Originally written by Qualcomm Atheros, Inc
  */
 
 /**
@@ -88,32 +98,20 @@ int hdd_ipa_resume(hdd_context_t *hdd_ctx);
 void hdd_ipa_uc_stat_query(hdd_context_t *hdd_ctx, uint32_t *ipa_tx_diff,
 	uint32_t *ipa_rx_diff);
 void hdd_ipa_uc_rt_debug_host_dump(hdd_context_t *hdd_ctx);
-void hdd_ipa_uc_stat_request(hdd_context_t *hdd_ctx, uint8_t reason);
+void hdd_ipa_uc_stat_request(hdd_adapter_t *adapter, uint8_t reason);
 void hdd_ipa_uc_sharing_stats_request(hdd_adapter_t *adapter,
 				      uint8_t reset_stats);
 void hdd_ipa_uc_set_quota(hdd_adapter_t *adapter, uint8_t set_quota,
 			  uint64_t quota_bytes);
 bool hdd_ipa_is_enabled(hdd_context_t *pHddCtx);
 bool hdd_ipa_uc_is_enabled(hdd_context_t *pHddCtx);
-bool hdd_ipa_is_fw_wdi_actived(hdd_context_t *hdd_ctx);
-
 #ifndef QCA_LL_TX_FLOW_CONTROL_V2
 int hdd_ipa_send_mcc_scc_msg(hdd_context_t *hdd_ctx, bool mcc_mode);
-void hdd_ipa_set_mcc_mode(bool mcc_mode);
-void hdd_ipa_mcc_work_handler(struct work_struct *work);
 #else
 static inline int hdd_ipa_send_mcc_scc_msg(hdd_context_t *hdd_ctx,
 					   bool mcc_mode)
 {
 	return 0;
-}
-
-static inline void hdd_ipa_set_mcc_mode(bool mcc_mode)
-{
-}
-
-static inline void hdd_ipa_mcc_work_handler(struct work_struct *work)
-{
 }
 #endif
 int hdd_ipa_uc_ssr_reinit(hdd_context_t *hdd_ctx);
@@ -121,68 +119,11 @@ int hdd_ipa_uc_ssr_deinit(void);
 void hdd_ipa_uc_force_pipe_shutdown(hdd_context_t *hdd_ctx);
 struct sk_buff *hdd_ipa_tx_packet_ipa(hdd_context_t *hdd_ctx,
 	struct sk_buff *skb, uint8_t session_id);
-bool hdd_ipa_is_present(void);
+bool hdd_ipa_is_present(hdd_context_t *hdd_ctx);
 void hdd_ipa_dump_info(hdd_context_t *hdd_ctx);
 QDF_STATUS hdd_ipa_uc_ol_init(hdd_context_t *hdd_ctx);
 int hdd_ipa_uc_ol_deinit(hdd_context_t *hdd_ctx);
-
-/**
- * hdd_ipa_uc_smmu_map() - Map / Unmap DMA buffer to IPA UC
- * @map: Map / unmap operation
- * @num_buf: Number of buffers in array
- * @buf_arr: Buffer array of DMA mem mapping info
- *
- * This API maps/unmaps WLAN-IPA buffers if SMMU S1 translation
- * is enabled.
- *
- * Return: Status of map operation
- */
-int hdd_ipa_uc_smmu_map(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr);
-
-/**
- * hdd_ipa_uc_stat() - Print IPA uC stats
- * @adapter: network adapter
- *
- * Return: None
- */
-void hdd_ipa_uc_stat(hdd_adapter_t *adapter);
-
-/**
- * hdd_ipa_uc_info() - Print IPA uC resource and session information
- * @adapter: network adapter
- *
- * Return: None
- */
-void hdd_ipa_uc_info(hdd_context_t *hdd_ctx);
-
-/**
- * hdd_ipa_clean_adapter_iface() - Clean adapter IPA interface
- * @adapter: network adapter
- *
- * Return: None
- */
-void hdd_ipa_clean_adapter_iface(hdd_adapter_t *adapter);
-
-/**
- * hdd_ipa_fw_rejuvenate() - send fw rejuvenate message to IPA driver
- * @hdd_ctx: hdd context
- *
- * Return: void
- */
-void hdd_ipa_fw_rejuvenate_send_msg(hdd_context_t *hdd_ctx);
-
-/**
- * hdd_ipa_uc_disconnect_ap() - send ap disconnect event
- * @hdd_ctx: pointer to hdd adapter
- *
- * Send disconnect ap event to IPA driver during SSR
- *
- * Return: 0 - Success
- */
-int hdd_ipa_uc_disconnect_ap(hdd_adapter_t *adapter);
-
 #else
-
 static inline QDF_STATUS hdd_ipa_init(hdd_context_t *hdd_ctx)
 {
 	return QDF_STATUS_SUCCESS;
@@ -215,14 +156,6 @@ static inline int hdd_ipa_send_mcc_scc_msg(hdd_context_t *hdd_ctx,
 	return 0;
 }
 
-static inline void hdd_ipa_set_mcc_mode(bool mcc_mode)
-{
-}
-
-static inline void hdd_ipa_mcc_work_handler(struct work_struct *work)
-{
-}
-
 static inline int hdd_ipa_set_perf_level(hdd_context_t *hdd_ctx,
 	uint64_t tx_packets,
 	uint64_t rx_packets)
@@ -246,15 +179,18 @@ static inline void hdd_ipa_uc_stat_query(hdd_context_t *hdd_ctx,
 {
 	*ipa_tx_diff = 0;
 	*ipa_rx_diff = 0;
+	return;
 }
 
-static inline void hdd_ipa_uc_stat_request(hdd_context_t *hdd_ctx,
-					   uint8_t reason)
+static inline void hdd_ipa_uc_stat_request(hdd_adapter_t *adapter,
+	uint8_t reason)
 {
+	return;
 }
 
 static inline void hdd_ipa_uc_rt_debug_host_dump(hdd_context_t *hdd_ctx)
 {
+	return;
 }
 
 static inline bool hdd_ipa_is_enabled(hdd_context_t *pHddCtx)
@@ -267,13 +203,9 @@ static inline bool hdd_ipa_uc_is_enabled(hdd_context_t *pHddCtx)
 	return false;
 }
 
-static inline bool hdd_ipa_is_fw_wdi_actived(hdd_context_t *hdd_ctx)
-{
-	return false;
-}
-
 static inline void hdd_ipa_dump_info(hdd_context_t *hdd_ctx)
 {
+	return;
 }
 
 static inline int hdd_ipa_uc_ssr_reinit(hdd_context_t *hdd_ctx)
@@ -287,6 +219,7 @@ static inline int hdd_ipa_uc_ssr_deinit(void)
 }
 static inline void hdd_ipa_uc_force_pipe_shutdown(hdd_context_t *hdd_ctx)
 {
+	return;
 }
 
 /**
@@ -309,6 +242,7 @@ static inline struct sk_buff *hdd_ipa_tx_packet_ipa(hdd_context_t *hdd_ctx,
 
 /**
  * hdd_ipa_is_present() - get IPA hw status
+ * @hdd_ctx: pointer to hdd context
  *
  * ipa_uc_reg_rdyCB is not directly designed to check
  * ipa hw status. This is an undocumented function which
@@ -317,7 +251,7 @@ static inline struct sk_buff *hdd_ipa_tx_packet_ipa(hdd_context_t *hdd_ctx,
  * Return: true - ipa hw present
  *         false - ipa hw not present
  */
-static inline bool hdd_ipa_is_present(void)
+bool hdd_ipa_is_present(hdd_context_t *hdd_ctx)
 {
 	return false;
 }
@@ -328,7 +262,7 @@ static inline bool hdd_ipa_is_present(void)
  *
  * Return: QDF_STATUS
  */
-static inline QDF_STATUS hdd_ipa_uc_ol_init(hdd_context_t *hdd_ctx)
+QDF_STATUS hdd_ipa_uc_ol_init(hdd_context_t *hdd_ctx)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -339,34 +273,7 @@ static inline QDF_STATUS hdd_ipa_uc_ol_init(hdd_context_t *hdd_ctx)
  *
  * Return: 0 on success, negativer errno on error
  */
-static inline int hdd_ipa_uc_ol_deinit(hdd_context_t *hdd_ctx)
-{
-	return 0;
-}
-
-static inline int hdd_ipa_uc_smmu_map(bool map, uint32_t num_buf,
-				      qdf_mem_info_t *buf_arr)
-{
-	return 0;
-}
-
-static inline void hdd_ipa_uc_stat(hdd_adapter_t *adapter)
-{
-}
-
-static inline void hdd_ipa_uc_info(hdd_context_t *hdd_ctx)
-{
-}
-
-static inline void hdd_ipa_fw_rejuvenate_send_msg(hdd_context_t *hdd_ctx)
-{
-}
-
-static inline void hdd_ipa_clean_adapter_iface(hdd_adapter_t *adapter)
-{
-}
-
-static inline int hdd_ipa_uc_disconnect_ap(hdd_adapter_t *adapter)
+static int hdd_ipa_uc_ol_deinit(hdd_context_t *hdd_ctx)
 {
 	return 0;
 }

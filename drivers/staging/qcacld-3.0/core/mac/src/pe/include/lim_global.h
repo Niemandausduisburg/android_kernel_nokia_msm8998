@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -58,11 +67,7 @@
 	((LIntrvl * LIM_TIM_WAIT_COUNT_FACTOR) > LIM_MIN_TIM_WAIT_COUNT ? \
 	(LIntrvl * LIM_TIM_WAIT_COUNT_FACTOR) : LIM_MIN_TIM_WAIT_COUNT)
 
-#ifdef CHANNEL_HOPPING_ALL_BANDS
-#define CHAN_HOP_ALL_BANDS_ENABLE        1
-#else
-#define CHAN_HOP_ALL_BANDS_ENABLE        0
-#endif
+#define LIM_MAX_CSA_IE_UPDATES    (5)
 
 /* enums exported by LIM are as follows */
 
@@ -94,6 +99,7 @@ typedef enum eLimSmeStates {
 	eLIM_SME_WT_AUTH_STATE,
 	eLIM_SME_WT_ASSOC_STATE,
 	eLIM_SME_WT_REASSOC_STATE,
+	eLIM_SME_WT_REASSOC_LINK_FAIL_STATE,
 	eLIM_SME_JOIN_FAILURE_STATE,
 	eLIM_SME_ASSOCIATED_STATE,
 	eLIM_SME_REASSOCIATED_STATE,
@@ -157,7 +163,6 @@ typedef enum eLimMlmStates {
 	eLIM_MLM_WT_ADD_BSS_RSP_FT_REASSOC_STATE,
 	eLIM_MLM_WT_FT_REASSOC_RSP_STATE,
 	eLIM_MLM_P2P_LISTEN_STATE,
-	eLIM_MLM_WT_SAE_AUTH_STATE,
 } tLimMlmStates;
 
 /* 11h channel quiet states */
@@ -298,33 +303,6 @@ typedef struct sLimMlmOemDataRsp {
 } tLimMlmOemDataRsp, *tpLimMlmOemDataRsp;
 #endif
 
-/* Forward declarations */
-struct sSirAssocReq;
-struct sDphHashNode;
-
-/* struct lim_assoc_data - Assoc data to be cached to defer association
- *                         indication to SME
- * @present: Indicates whether assoc data is present or not
- * @sub_type: Indicates whether it is Association Request(=0) or Reassociation
- *            Request(=1) frame
- * @hdr: MAC header
- * @assoc_req: pointer to parsed ASSOC/REASSOC Request frame
- * @pmf_connection: flag indicating pmf connection
- * @assoc_req_copied: boolean to indicate if assoc req was copied to tmp above
- * @dup_entry: flag indicating if duplicate entry found
- * @sta_ds: station dph entry
- */
-struct lim_assoc_data {
-	bool present;
-	uint8_t sub_type;
-	tSirMacMgmtHdr hdr;
-	struct sSirAssocReq *assoc_req;
-	bool pmf_connection;
-	bool assoc_req_copied;
-	bool dup_entry;
-	struct sDphHashNode *sta_ds;
-};
-
 /* Pre-authentication structure definition */
 typedef struct tLimPreAuthNode {
 	struct tLimPreAuthNode *next;
@@ -340,10 +318,6 @@ typedef struct tLimPreAuthNode {
 	TX_TIMER timer;
 	uint16_t seq_num;
 	unsigned long timestamp;
-	/* keeping copy of association request received, this is
-	 * to defer the association request processing
-	 */
-	struct lim_assoc_data assoc_req;
 } tLimPreAuthNode, *tpLimPreAuthNode;
 
 /* Pre-authentication table definition */
@@ -371,7 +345,6 @@ typedef struct sLimMlmStaContext {
 	/* 802.11n HT Capability in Station: Enabled 1 or DIsabled 0 */
 	uint8_t htCapability:1;
 	uint8_t vhtCapability:1;
-	bool force_1x1;
 } tLimMlmStaContext, *tpLimMlmStaContext;
 
 /* Structure definition to hold deferred messages queue parameters */

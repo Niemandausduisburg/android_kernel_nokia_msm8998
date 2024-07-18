@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011, 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -64,15 +73,8 @@ void ol_txrx_peer_display(ol_txrx_peer_handle peer, int indent);
 
 /*--- txrx stats display debug functions ---*/
 
-/**
- * ol_txrx_stats_display() - display tx rx stats
- * @pdev: pdev handle
- * @level: verbosity level for logs
- *
- * Return: none
- */
-void ol_txrx_stats_display(ol_txrx_pdev_handle pdev,
-				enum qdf_stats_verb_lvl level);
+
+void ol_txrx_stats_display(ol_txrx_pdev_handle pdev);
 
 void ol_txrx_stats_clear(ol_txrx_pdev_handle pdev);
 
@@ -139,14 +141,16 @@ ol_tx_queue_log_display(ol_txrx_pdev_handle pdev);
 void ol_tx_queue_log_clear(ol_txrx_pdev_handle pdev);
 #else
 
-static inline
-void ol_tx_queue_log_display(ol_txrx_pdev_handle pdev)
+static inline void
+ol_tx_queue_log_display(ol_txrx_pdev_handle pdev)
 {
+	return;
 }
 
 static inline
 void ol_tx_queue_log_clear(ol_txrx_pdev_handle pdev)
 {
+	return;
 }
 #endif /* defined(DEBUG_HL_LOGGING) && defined(CONFIG_HL_SUPPORT) */
 

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,7 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+ /**
  * @file cdp_txrx_api_common.h
  * @brief Define the host data path converged API functions
  * called by the host control SW and the OS interface module
@@ -42,9 +50,9 @@
  *****************************************************************************/
 
  /**
-  * ol_txrx_pdev_handle - opaque handle for txrx physical device
-  * object
-  */
+ * ol_txrx_pdev_handle - opaque handle for txrx physical device
+ * object
+ */
 struct ol_txrx_pdev_t;
 typedef struct ol_txrx_pdev_t *ol_txrx_pdev_handle;
 
@@ -120,56 +128,12 @@ enum wlan_op_mode {
 };
 
 /**
- * mon_data_process_type - data pkt type for pkt capture mode
- * @PROCESS_TYPE_DATA_RX: process RX data packet (normal rx + offloaded rx)
- * @PROCESS_TYPE_DATA_TX: process TX data packet (ofloaded tx)
- * @PROCESS_TYPE_DATA_TX_COMPL: process TX compl data packet (normal tx)
- */
-enum mon_data_process_type {
-	PROCESS_TYPE_DATA_RX,
-	PROCESS_TYPE_DATA_TX,
-	PROCESS_TYPE_DATA_TX_COMPL,
-};
-
-/**
- * connectivity_stats_pkt_status - data pkt type
- * @PKT_TYPE_REQ: Request packet
- * @PKT_TYPE_RSP: Response packet
- * @PKT_TYPE_TX_DROPPED: TX packet dropped
- * @PKT_TYPE_RX_DROPPED: RX packet dropped
- * @PKT_TYPE_RX_DELIVERED: RX packet delivered
- * @PKT_TYPE_RX_REFUSED: RX packet refused
- * @PKT_TYPE_TX_HOST_FW_SENT: TX packet FW sent
- * @PKT_TYPE_TX_ACK_CNT:TC packet acked
- */
-enum connectivity_stats_pkt_status {
-	PKT_TYPE_REQ,
-	PKT_TYPE_RSP,
-	PKT_TYPE_TX_DROPPED,
-	PKT_TYPE_RX_DROPPED,
-	PKT_TYPE_RX_DELIVERED,
-	PKT_TYPE_RX_REFUSED,
-	PKT_TYPE_TX_HOST_FW_SENT,
-	PKT_TYPE_TX_ACK_CNT,
-};
-
-/**
  * ol_txrx_tx_fp - top-level transmit function
  * @data_vdev - handle to the virtual device object
  * @msdu_list - list of network buffers
- * @notify_tx_comp - tx completion to be notified
  */
 typedef qdf_nbuf_t (*ol_txrx_tx_fp)(ol_txrx_vdev_handle data_vdev,
-				    qdf_nbuf_t msdu_list,
-				    bool notify_tx_comp);
-/**
- * ol_txrx_completion_fp - top-level transmit function
- * for tx completion
- * @skb: skb data
- * @osif_dev: the virtual device's OS shim object
- */
-typedef void (*ol_txrx_completion_fp)(struct sk_buff *skb,
-					 void *osif_dev);
+				    qdf_nbuf_t msdu_list);
 /**
  * ol_txrx_tx_flow_control_fp - tx flow control notification
  * function from txrx to OS shim
@@ -178,14 +142,6 @@ typedef void (*ol_txrx_completion_fp)(struct sk_buff *skb,
  */
 typedef void (*ol_txrx_tx_flow_control_fp)(void *osif_dev,
 					    bool tx_resume);
-/**
- * ol_txrx_tx_flow_control_is_pause_fp - is tx paused by flow control
- * function from txrx to OS shim
- * @osif_dev - the virtual device's OS shim object
- *
- * Return: true if tx is paused by flow control
- */
-typedef bool (*ol_txrx_tx_flow_control_is_pause_fp)(void *osif_dev);
 
 /**
  * ol_txrx_rx_fp - receive function to hand batches of data
@@ -195,24 +151,9 @@ typedef bool (*ol_txrx_tx_flow_control_is_pause_fp)(void *osif_dev);
  */
 typedef QDF_STATUS (*ol_txrx_rx_fp)(void *osif_dev, qdf_nbuf_t msdu_list);
 
-typedef QDF_STATUS(*ol_txrx_mon_callback_fp)(void *osif_dev,
-					     qdf_nbuf_t msdu_list);
-
-/**
- * ol_txrx_stats_rx_fp - receive function to hand batches of data
- * frames from txrx to OS shim
- * @skb: skb data
- * @osif_dev: the virtual device's OS shim object
- * @action: data packet type
- * @pkt_type: packet data type
- */
-typedef void (*ol_txrx_stats_rx_fp)(struct sk_buff *skb,
-		void *osif_dev, enum connectivity_stats_pkt_status action,
-		uint8_t *pkt_type);
-
 /**
  * ol_txrx_rx_check_wai_fp - OSIF WAPI receive function
- */
+*/
 typedef bool (*ol_txrx_rx_check_wai_fp)(ol_osif_vdev_handle vdev,
 					    qdf_nbuf_t mpdu_head,
 					    qdf_nbuf_t mpdu_tail);
@@ -226,7 +167,7 @@ typedef void (*ol_txrx_rx_mon_fp)(ol_osif_vdev_handle vdev,
 
 /**
  * ol_txrx_proxy_arp_fp - proxy arp function pointer
- */
+*/
 typedef int (*ol_txrx_proxy_arp_fp)(ol_osif_vdev_handle vdev,
 					    qdf_nbuf_t netbuf);
 
@@ -289,7 +230,6 @@ struct ol_txrx_ops {
 	/* tx function pointers - specified by txrx, stored by OS shim */
 	struct {
 		ol_txrx_tx_fp         tx;
-		ol_txrx_completion_fp tx_comp;
 	} tx;
 
 	/* rx function pointers - specified by OS shim, stored by txrx */
@@ -297,7 +237,6 @@ struct ol_txrx_ops {
 		ol_txrx_rx_fp           rx;
 		ol_txrx_rx_check_wai_fp wai_check;
 		ol_txrx_rx_mon_fp       mon;
-		ol_txrx_stats_rx_fp           stats_rx;
 	} rx;
 
 	/* proxy arp function pointer - specified by OS shim, stored by txrx */
@@ -397,8 +336,6 @@ void
 ol_txrx_vdev_register(ol_txrx_vdev_handle vdev,
 			 void *osif_vdev, struct ol_txrx_ops *txrx_ops);
 
-void ol_register_offld_flush_cb(void (gro_flush_cb)(void *),
-				void *(gro_init_cb)(void));
 int
 ol_txrx_mgmt_send(
 	ol_txrx_vdev_handle vdev,
@@ -424,11 +361,6 @@ ol_txrx_mgmt_tx_cb_set(ol_txrx_pdev_handle pdev,
 			 ol_txrx_mgmt_tx_cb ota_ack_cb, void *ctxt);
 
 int ol_txrx_get_tx_pending(ol_txrx_pdev_handle pdev);
-
-void ol_txrx_mon_cb_deregister(void);
-
-void ol_txrx_mon_cb_register(void *osif_vdev,
-			     ol_txrx_mon_callback_fp mon_cb);
 
 /**
  * enum data_stall_log_event_indicator - Module triggering data stall
@@ -456,7 +388,6 @@ enum data_stall_log_event_indicator {
  * @DATA_STALL_LOG_FW_RX_FCS_LEN_ERROR
  * @DATA_STALL_LOG_FW_WDOG_ERRORS
  * @DATA_STALL_LOG_BB_WDOG_ERROR
- * @DATA_STALL_LOG_POST_TIM_NO_TXRX_ERROR
  * @DATA_STALL_LOG_HOST_STA_TX_TIMEOUT
  * @DATA_STALL_LOG_HOST_SOFTAP_TX_TIMEOUT
  * @DATA_STALL_LOG_NUD_FAILURE
@@ -472,9 +403,7 @@ enum data_stall_log_event_type {
 	DATA_STALL_LOG_FW_RX_FCS_LEN_ERROR,
 	DATA_STALL_LOG_FW_WDOG_ERRORS,
 	DATA_STALL_LOG_BB_WDOG_ERROR,
-	DATA_STALL_LOG_POST_TIM_NO_TXRX_ERROR,
-	/* Stall events triggered by host/framework start from 0x100 onwards. */
-	DATA_STALL_LOG_HOST_STA_TX_TIMEOUT = 0x100,
+	DATA_STALL_LOG_HOST_STA_TX_TIMEOUT,
 	DATA_STALL_LOG_HOST_SOFTAP_TX_TIMEOUT,
 	DATA_STALL_LOG_NUD_FAILURE,
 };
@@ -573,6 +502,8 @@ void ol_txrx_fw_stats_cfg(
 	 uint8_t cfg_stats_type,
 	 uint32_t cfg_val);
 
+void ol_txrx_print_level_set(unsigned level);
+
 #define TXRX_FW_STATS_TXSTATS                     1
 #define TXRX_FW_STATS_RXSTATS                     2
 #define TXRX_FW_STATS_RX_RATE_INFO                3
@@ -599,10 +530,6 @@ void ol_txrx_fw_stats_cfg(
 
 #define PER_RADIO_FW_STATS_REQUEST 0
 #define PER_VDEV_FW_STATS_REQUEST 1
-
-#define TXRX_PKT_FORMAT_8023    0
-#define TXRX_PKT_FORMAT_80211   1
-
 /**
  * ol_txrx_get_vdev_mac_addr() - Return mac addr of vdev
  * @vdev: vdev handle

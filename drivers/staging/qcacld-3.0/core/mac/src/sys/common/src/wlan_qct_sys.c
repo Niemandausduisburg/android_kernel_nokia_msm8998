@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #include <wlan_qct_sys.h>
@@ -41,57 +50,57 @@ static qdf_event_t g_stop_evt;
 
 /**
  * sys_build_message_header() - to build the sys message header
- * @msg_id: message id
- * @msg: pointer to message context
+ * @sysMsgId: message id
+ * @pMsg: pointer to message context
  *
  * This API is used to build the sys message header.
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS sys_build_message_header(SYS_MSG_ID msg_id, cds_msg_t *msg)
+QDF_STATUS sys_build_message_header(SYS_MSG_ID sysMsgId, cds_msg_t *pMsg)
 {
-	msg->type = msg_id;
-	msg->reserved = SYS_MSG_COOKIE;
+	pMsg->type = sysMsgId;
+	pMsg->reserved = SYS_MSG_COOKIE;
 
 	return QDF_STATUS_SUCCESS;
 }
 
 /**
- * umac_stop_complete_cb() - a callback when system stop completes
- * @user_data: pointer to user provided data context
+ * sys_stop_complete_cb() - a callback when system stop completes
+ * @pUserData: pointer to user provided data context
  *
  * this callback is used once system stop is completed.
  *
  * Return: none
  */
 #ifdef QDF_ENABLE_TRACING
-static void umac_stop_complete_cb(void *user_data)
+static void sys_stop_complete_cb(void *pUserData)
 {
-	qdf_event_t *stop_evt = (qdf_event_t *) user_data;
-	QDF_STATUS qdf_status = qdf_event_set(stop_evt);
+	qdf_event_t *pStopEvt = (qdf_event_t *) pUserData;
+	QDF_STATUS qdf_status = qdf_event_set(pStopEvt);
 
 	QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
 
 }
 #else
-static void umac_stop_complete_cb(void *user_data)
+static void sys_stop_complete_cb(void *pUserData)
 {
 	return;
 }
 #endif
 
 /**
- * umac_stop() - To post stop message to system module
+ * sys_stop() - To post stop message to system module
  * @p_cds_context:  pointer to cds context
  *
  * This API is used post a stop message to system module
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS umac_stop(v_CONTEXT_t p_cds_context)
+QDF_STATUS sys_stop(v_CONTEXT_t p_cds_context)
 {
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
-	cds_msg_t umac_stop_msg;
+	cds_msg_t sysMsg;
 
 	/* Initialize the stop event */
 	qdf_status = qdf_event_create(&g_stop_evt);
@@ -100,18 +109,19 @@ QDF_STATUS umac_stop(v_CONTEXT_t p_cds_context)
 		return qdf_status;
 
 	/* post a message to SYS module in MC to stop SME and MAC */
-	sys_build_message_header(SYS_MSG_ID_MC_STOP, &umac_stop_msg);
+	sys_build_message_header(SYS_MSG_ID_MC_STOP, &sysMsg);
 
 	/* Save the user callback and user data */
-	umac_stop_msg.callback = umac_stop_complete_cb;
-	umac_stop_msg.bodyptr = (void *)&g_stop_evt;
+	sysMsg.callback = sys_stop_complete_cb;
+	sysMsg.bodyptr = (void *)&g_stop_evt;
 
 	/* post the message.. */
-	qdf_status = cds_mq_post_message(QDF_MODULE_ID_SYS, &umac_stop_msg);
+	qdf_status = cds_mq_post_message(CDS_MQ_ID_SYS, &sysMsg);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 		qdf_status = QDF_STATUS_E_BADMSG;
 
-	qdf_status = qdf_wait_single_event(&g_stop_evt, SYS_STOP_TIMEOUT);
+	qdf_status = qdf_wait_for_event_completion(&g_stop_evt,
+			SYS_STOP_TIMEOUT);
 	QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
 
 	qdf_status = qdf_event_destroy(&g_stop_evt);
@@ -168,21 +178,26 @@ QDF_STATUS sys_mc_process_msg(v_CONTEXT_t p_cds_context, cds_msg_t *pMsg)
 		case SYS_MSG_ID_MC_STOP:
 			QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_INFO,
 				"Processing SYS MC STOP");
+
+			/* get the HAL context... */
 			hHal = cds_get_context(QDF_MODULE_ID_PE);
 			if (NULL == hHal) {
 				QDF_TRACE(QDF_MODULE_ID_SYS,
 					QDF_TRACE_LEVEL_ERROR,
 					"%s: Invalid hHal", __func__);
-				break;
+			} else {
+				qdf_status = sme_stop(hHal,
+						HAL_STOP_TYPE_SYS_DEEP_SLEEP);
+				QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
+				qdf_status = mac_stop(hHal,
+						HAL_STOP_TYPE_SYS_DEEP_SLEEP);
+				QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
+
+				((sysResponseCback) pMsg->callback)(
+						(void *)pMsg->bodyptr);
+
+				qdf_status = QDF_STATUS_SUCCESS;
 			}
-			qdf_status = sme_stop(hHal,
-					      HAL_STOP_TYPE_SYS_DEEP_SLEEP);
-			QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
-			qdf_status = mac_stop(hHal,
-					      HAL_STOP_TYPE_SYS_DEEP_SLEEP);
-			QDF_ASSERT(QDF_IS_STATUS_SUCCESS(qdf_status));
-			((sys_rsp_cb) pMsg->callback)(pMsg->bodyptr);
-			qdf_status = QDF_STATUS_SUCCESS;
 			break;
 
 		case SYS_MSG_ID_MC_THR_PROBE:
@@ -211,7 +226,13 @@ QDF_STATUS sys_mc_process_msg(v_CONTEXT_t p_cds_context, cds_msg_t *pMsg)
 				break;
 			}
 			mac_ctx = PMAC_STRUCT(hHal);
-
+			if (NULL == mac_ctx) {
+				QDF_TRACE(QDF_MODULE_ID_SYS,
+						QDF_TRACE_LEVEL_ERROR,
+						FL("Invalid mac context"));
+				qdf_mem_free(pMsg->bodyptr);
+				break;
+			}
 			if (NULL == mac_ctx->ftm_msg_processor_callback) {
 				QDF_TRACE(QDF_MODULE_ID_SYS,
 						QDF_TRACE_LEVEL_ERROR,
@@ -229,9 +250,6 @@ QDF_STATUS sys_mc_process_msg(v_CONTEXT_t p_cds_context, cds_msg_t *pMsg)
 			if (NULL != data_stall_detect_callback)
 				data_stall_detect_callback(pMsg->bodyptr);
 			qdf_mem_free(pMsg->bodyptr);
-			break;
-		case SYS_MSG_ID_CLEAN_VDEV_RSP_QUEUE:
-			wma_cleanup_vdev_resp_and_hold_req(pMsg->bodyptr);
 			break;
 		default:
 			QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_ERROR,
@@ -265,7 +283,7 @@ QDF_STATUS sys_mc_process_msg(v_CONTEXT_t p_cds_context, cds_msg_t *pMsg)
  */
 void sys_process_mmh_msg(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
 {
-	QDF_MODULE_ID targetMQ = QDF_MODULE_ID_SYS;
+	CDS_MQ_ID targetMQ = CDS_MQ_ID_SYS;
 
 	/*
 	 * The body of this pMsg is a tSirMbMsg
@@ -286,7 +304,7 @@ void sys_process_mmh_msg(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
 	case WNI_CFG_DNLD_REQ:
 	case WNI_CFG_DNLD_CNF:
 		/* Forward this message to the SYS module */
-		targetMQ = QDF_MODULE_ID_SYS;
+		targetMQ = CDS_MQ_ID_SYS;
 		QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_ERROR,
 			"Handling for the Message ID %d is removed in SYS",
 			pMsg->type);
@@ -298,7 +316,7 @@ void sys_process_mmh_msg(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
 		 */
 	case WNI_CFG_DNLD_RSP:
 		/* Forward this message to the HAL module */
-		targetMQ = QDF_MODULE_ID_WMA;
+		targetMQ = CDS_MQ_ID_WMA;
 		QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_ERROR,
 			"Handling for the Message ID %d is removed as no HAL",
 			pMsg->type);
@@ -309,19 +327,19 @@ void sys_process_mmh_msg(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
 	case WNI_CFG_GET_REQ:
 	case eWNI_SME_SYS_READY_IND:
 		/* Forward this message to the PE module */
-		targetMQ = QDF_MODULE_ID_PE;
+		targetMQ = CDS_MQ_ID_PE;
 		break;
 
 	case WNI_CFG_GET_RSP:
 	case WNI_CFG_SET_CNF:
 		/* Forward this message to the SME module */
-		targetMQ = QDF_MODULE_ID_SME;
+		targetMQ = CDS_MQ_ID_SME;
 		break;
 
 	default:
 		if ((pMsg->type >= eWNI_SME_MSG_TYPES_BEGIN)
 				&& (pMsg->type <= eWNI_SME_MSG_TYPES_END)) {
-			targetMQ = QDF_MODULE_ID_SME;
+			targetMQ = CDS_MQ_ID_SME;
 			break;
 		}
 
@@ -360,5 +378,5 @@ void wlan_sys_probe(void)
 	cds_message.reserved = SYS_MSG_COOKIE;
 	cds_message.type = SYS_MSG_ID_MC_THR_PROBE;
 	cds_message.bodyptr = NULL;
-	cds_mq_post_message(QDF_MODULE_ID_SYS, &cds_message);
+	cds_mq_post_message(CDS_MQ_ID_SYS, &cds_message);
 }

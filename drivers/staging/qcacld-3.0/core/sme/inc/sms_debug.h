@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2013-2015 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,27 +19,30 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
- * DOC: i_qdf_idr.h (ID Allocation)
- * Linux-specific definitions for QDF ID Allocation API's
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
-#if !defined(__I_QDF_IDR_H)
-#define __I_QDF_IDR_H
-
-#include <linux/idr.h>
-#include <qdf_lock.h>
-
 /**
- * struct __qdf_idr_s
- * @lock: qdf spinlock
- * @idr:  idr handler
+ * \file cssDebug.h
+ *
+ * Define debug log interface for SMS.
  */
-struct __qdf_idr_s {
-	qdf_spinlock_t lock;
-	struct idr idr;
-};
 
-typedef struct __qdf_idr_s __qdf_idr;
+#ifndef SMS_DEBUG_H__
+#define SMS_DEBUG_H__
 
-#endif /* __I_QDF_IDR_H */
+#include "utils_api.h"
+#include "sir_debug.h"
+
+#if !defined(__printf)
+#define __printf(a, b)
+#endif
+
+void __printf(3, 4)
+	sms_log(tpAniSirGlobal pMac, uint32_t loglevel,
+			const char *pString, ...);
+
+#endif /* __SMS_DEBUG_H__ */

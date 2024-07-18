@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -51,7 +60,10 @@ typedef struct timer_list os_timer_t;
 #undef spin_unlock
 #undef spin_trylock
 
-#define spin_lock(x)  spin_lock_bh(x)
+#define spin_lock(x) \
+	do { \
+		spin_lock_bh(x); \
+	} while (0)
 
 #define spin_unlock(x) \
 	do { \
@@ -124,7 +136,6 @@ typedef struct {
 	int32_t num_queued;
 	int32_t mesg_len;
 	uint8_t *mesg_queue_buf;
-
 	STAILQ_HEAD(, _os_mesg_t) mesg_head;
 	STAILQ_HEAD(, _os_mesg_t) mesg_free_head;
 	spinlock_t lock;

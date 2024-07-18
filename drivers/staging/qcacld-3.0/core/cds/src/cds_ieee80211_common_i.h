@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifndef CDS_COMMON__IEEE80211_I_H_
@@ -397,11 +406,11 @@ enum ieee80211_scanmode {
 	(((_c)->ic_flags & (IEEE80211_CHAN_VHT20 | \
 			    IEEE80211_CHAN_VHT40PLUS | IEEE80211_CHAN_VHT40MINUS | IEEE80211_CHAN_VHT80)) != 0)
 #define IEEE80211_IS_CHAN_11AC(_c) \
-	(IEEE80211_IS_CHAN_5GHZ((_c)) && IEEE80211_IS_CHAN_VHT((_c)))
+	( IEEE80211_IS_CHAN_5GHZ((_c)) && IEEE80211_IS_CHAN_VHT((_c)) )
 #define IEEE80211_CHAN_11AC_VHT20 \
 	(IEEE80211_CHAN_5GHZ | IEEE80211_CHAN_VHT20)
 #define IEEE80211_CHAN_11AC_VHT40 \
-	(IEEE80211_CHAN_5GHZ | IEEE80211_CHAN_VHT40PLUS | IEEE80211_CHAN_VHT40MINUS)
+	(IEEE80211_CHAN_5GHZ | IEEE80211_CHAN_VHT40PLUS | IEEE80211_CHAN_VHT40MINUS )
 #define IEEE80211_CHAN_11AC_VHT40PLUS \
 	(IEEE80211_CHAN_5GHZ | IEEE80211_CHAN_VHT40PLUS)
 #define IEEE80211_CHAN_11AC_VHT40MINUS \
@@ -412,7 +421,7 @@ enum ieee80211_scanmode {
 	(((_c)->ic_flags & IEEE80211_CHAN_11AC_VHT20) == IEEE80211_CHAN_11AC_VHT20)
 
 #define IEEE80211_IS_CHAN_11AC_VHT40(_c) \
-	(((_c)->ic_flags & (IEEE80211_CHAN_VHT40PLUS | IEEE80211_CHAN_VHT40MINUS)) != 0)
+	(((_c)->ic_flags & (IEEE80211_CHAN_VHT40PLUS | IEEE80211_CHAN_VHT40MINUS)) !=0)
 #define IEEE80211_IS_CHAN_11AC_VHT40PLUS(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_11AC_VHT40PLUS) == IEEE80211_CHAN_11AC_VHT40PLUS)
 #define IEEE80211_IS_CHAN_11AC_VHT40MINUS(_c) \
@@ -439,7 +448,7 @@ enum ieee80211_scanmode {
 
 /* channel encoding for FH phy */
 #define IEEE80211_FH_CHANMOD            80
-#define IEEE80211_FH_CHAN(set, pat)      (((set)-1)*IEEE80211_FH_CHANMOD+(pat))
+#define IEEE80211_FH_CHAN(set,pat)      (((set)-1)*IEEE80211_FH_CHANMOD+(pat))
 #define IEEE80211_FH_CHANSET(chan)      ((chan)/IEEE80211_FH_CHANMOD+1)
 #define IEEE80211_FH_CHANPAT(chan)      ((chan)%IEEE80211_FH_CHANMOD)
 

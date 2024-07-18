@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #if !defined(__SME_POWER_SAVE_API_H)
 #define __SME_POWER_SAVE_API_H
 
@@ -25,8 +34,6 @@
 
 QDF_STATUS sme_ps_enable_disable(tHalHandle hal_ctx, uint32_t session_id,
 		enum sme_ps_cmd command);
-
-QDF_STATUS sme_ps_timer_flush_sync(tHalHandle hal, uint8_t session_id);
 
 QDF_STATUS sme_ps_uapsd_enable(tHalHandle hal_ctx, uint32_t session_id);
 
@@ -64,14 +71,15 @@ tSirRetStatus sme_post_pe_message(tpAniSirGlobal mac_ctx, tpSirMsgQ pMsg);
 
 /**
  * sme_ps_enable_auto_ps_timer(): Enable power-save auto timer with timeout
- * @hal_ctx:       HAL context
- * @session_id:    adapter session Id
- * @timeout:       timeout period in ms
+ * @hal_ctx:	HAL context
+ * @session_id:	adapter session Id
+ * @timeout:	timeout period in ms
+ * @force_trigger: forcing power-save timer to trigger
  *
- * Returns: QDF_STATUS
+ * Returns:	0 on success, non-zero on failure
  */
 QDF_STATUS sme_ps_enable_auto_ps_timer(tHalHandle hal_ctx,
-		uint32_t sessionId, uint32_t timeout);
+		uint32_t sessionId, uint32_t timeout, bool force_trigger);
 QDF_STATUS sme_ps_disable_auto_ps_timer(tHalHandle hal_ctx,
 		uint32_t sessionId);
 

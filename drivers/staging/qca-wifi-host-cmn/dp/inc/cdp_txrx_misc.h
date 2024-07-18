@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,7 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+ /**
  * @file cdp_txrx_misc.h
  * @brief Define the host data path miscelleneous API functions
  * called by the host control SW and the OS interface module
@@ -89,3 +97,18 @@ qdf_nbuf_t ol_tx_non_std(ol_txrx_vdev_handle vdev,
 uint16_t ol_txrx_set_ibss_vdev_heart_beat_timer(ol_txrx_vdev_handle vdev,
 						uint16_t timer_value_sec);
 #endif /* _CDP_TXRX_MISC_H_ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

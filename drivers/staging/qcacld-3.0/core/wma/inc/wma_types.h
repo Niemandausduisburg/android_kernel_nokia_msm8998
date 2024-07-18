@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #ifndef WLAN_QCT_WMA_H
 #define WLAN_QCT_WMA_H
 
@@ -26,8 +35,7 @@
 #include "i_cds_packet.h"
 
 #define IS_MCC_SUPPORTED 1
-#define IS_FEATURE_SUPPORTED_BY_FW(feat_enum_value) \
-				wma_get_fw_wlan_feat_caps(feat_enum_value)
+#define IS_FEATURE_SUPPORTED_BY_FW(feat_enum_value) wma_get_fw_wlan_feat_caps(feat_enum_value)
 
 #define IS_ROAM_SCAN_OFFLOAD_FEATURE_ENABLE 1
 
@@ -69,9 +77,6 @@
 
 #define WMA_GET_RX_MPDU_DATA(pRxMeta) \
 	(((t_packetmeta *)pRxMeta)->mpdu_data_ptr)
-
-#define WMA_GET_RX_RSSI_CTL_PTR(pRxMeta) \
-		(((t_packetmeta *)pRxMeta)->rssi_per_chain)
 
 #define WMA_GET_RX_MPDU_HEADER_OFFSET(pRxMeta) 0
 
@@ -151,7 +156,6 @@
 #define WMA_DELETE_BSS_RSP             SIR_HAL_DELETE_BSS_RSP
 #define WMA_DELETE_BSS_HO_FAIL_RSP     SIR_HAL_DELETE_BSS_HO_FAIL_RSP
 #define WMA_SEND_BEACON_REQ            SIR_HAL_SEND_BEACON_REQ
-#define WMA_SEND_BCN_RSP               SIR_HAL_SEND_BCN_RSP
 #define WMA_SEND_PROBE_RSP_TMPL        SIR_HAL_SEND_PROBE_RSP_TMPL
 
 #define WMA_SET_BSSKEY_REQ             SIR_HAL_SET_BSSKEY_REQ
@@ -161,6 +165,7 @@
 #define WMA_UPDATE_EDCA_PROFILE_IND    SIR_HAL_UPDATE_EDCA_PROFILE_IND
 
 #define WMA_UPDATE_BEACON_IND          SIR_HAL_UPDATE_BEACON_IND
+#define WMA_UPDATE_CF_IND              SIR_HAL_UPDATE_CF_IND
 #define WMA_CHNL_SWITCH_REQ            SIR_HAL_CHNL_SWITCH_REQ
 #define WMA_ADD_TS_REQ                 SIR_HAL_ADD_TS_REQ
 #define WMA_DEL_TS_REQ                 SIR_HAL_DEL_TS_REQ
@@ -170,7 +175,6 @@
 #define WMA_ENTER_PS_REQ               SIR_HAL_ENTER_PS_REQ
 #define WMA_EXIT_PS_REQ                SIR_HAL_EXIT_PS_REQ
 
-#define WMA_HIDDEN_SSID_RESTART_RSP    SIR_HAL_HIDDEN_SSID_RESTART_RSP
 #define WMA_SWITCH_CHANNEL_RSP         SIR_HAL_SWITCH_CHANNEL_RSP
 #define WMA_P2P_NOA_ATTR_IND           SIR_HAL_P2P_NOA_ATTR_IND
 #define WMA_P2P_NOA_START_IND          SIR_HAL_P2P_NOA_START_IND
@@ -178,8 +182,7 @@
 #define WMA_REGISTER_PE_CALLBACK       SIR_HAL_REGISTER_PE_CALLBACK
 
 #define WMA_IBSS_STA_ADD               SIR_HAL_IBSS_STA_ADD
-#define WMA_TIMER_ADJUST_ADAPTIVE_THRESHOLD_IND \
-		SIR_HAL_TIMER_ADJUST_ADAPTIVE_THRESHOLD_IND
+#define WMA_TIMER_ADJUST_ADAPTIVE_THRESHOLD_IND   SIR_HAL_TIMER_ADJUST_ADAPTIVE_THRESHOLD_IND
 #define WMA_SET_LINK_STATE             SIR_HAL_SET_LINK_STATE
 #define WMA_SET_LINK_STATE_RSP         SIR_HAL_SET_LINK_STATE_RSP
 #define WMA_SET_STA_BCASTKEY_REQ       SIR_HAL_SET_STA_BCASTKEY_REQ
@@ -220,7 +223,7 @@
 #define WMA_WOW_ADD_PTRN               SIR_HAL_WOW_ADD_PTRN
 #define WMA_WOW_DEL_PTRN               SIR_HAL_WOW_DEL_PTRN
 #define WMA_WOWL_ENTER_REQ             SIR_HAL_WOWL_ENTER_REQ
-#define WMA_ROAM_SYNC_TIMEOUT          SIR_HAL_WMA_ROAM_SYNC_TIMEOUT
+#define WMA_WOWL_ENTER_RSP             SIR_HAL_WOWL_ENTER_RSP
 #define WMA_WOWL_EXIT_REQ              SIR_HAL_WOWL_EXIT_REQ
 #define WMA_WOWL_EXIT_RSP              SIR_HAL_WOWL_EXIT_RSP
 /* / PE <-> HAL statistics messages */
@@ -329,7 +332,6 @@
 #define WMA_STOP_SCAN_OFFLOAD_REQ  SIR_HAL_STOP_SCAN_OFFLOAD_REQ
 #define WMA_UPDATE_CHAN_LIST_REQ    SIR_HAL_UPDATE_CHAN_LIST_REQ
 #define WMA_RX_SCAN_EVENT           SIR_HAL_RX_SCAN_EVENT
-#define WMA_RX_CHN_STATUS_EVENT     SIR_HAL_RX_CHN_STATUS_EVENT
 #define WMA_IBSS_PEER_INACTIVITY_IND SIR_HAL_IBSS_PEER_INACTIVITY_IND
 
 #define WMA_CLI_SET_CMD             SIR_HAL_CLI_SET_CMD
@@ -393,9 +395,8 @@
 #define WMA_DFS_BEACON_TX_SUCCESS_IND   SIR_HAL_BEACON_TX_SUCCESS_IND
 #define WMA_DISASSOC_TX_COMP       SIR_HAL_DISASSOC_TX_COMP
 #define WMA_DEAUTH_TX_COMP         SIR_HAL_DEAUTH_TX_COMP
-
 #define WMA_GET_PEER_INFO          SIR_HAL_GET_PEER_INFO
-#define WMA_GET_PEER_INFO_EXT      SIR_HAL_GET_PEER_INFO_EXT
+
 
 #define WMA_MODEM_POWER_STATE_IND SIR_HAL_MODEM_POWER_STATE_IND
 
@@ -428,7 +429,6 @@
 #define WMA_LINK_LAYER_STATS_SET_REQ          SIR_HAL_LL_STATS_SET_REQ
 #define WMA_LINK_LAYER_STATS_GET_REQ          SIR_HAL_LL_STATS_GET_REQ
 #define WMA_LINK_LAYER_STATS_RESULTS_RSP      SIR_HAL_LL_STATS_RESULTS_RSP
-#define WMA_LINK_LAYER_STATS_SET_THRESHOLD    SIR_HAL_LL_STATS_EXT_SET_THRESHOLD
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
 #define WMA_LINK_STATUS_GET_REQ SIR_HAL_LINK_STATUS_GET_REQ
@@ -475,8 +475,8 @@
 #define WMA_REMOVE_BCN_FILTER_CMDID          SIR_HAL_REMOVE_BCN_FILTER_CMDID
 #define WMA_SET_ADAPT_DWELLTIME_CONF_PARAMS  SIR_HAL_SET_ADAPT_DWELLTIME_PARAMS
 
-#define WDA_APF_GET_CAPABILITIES_REQ         SIR_HAL_APF_GET_CAPABILITIES_REQ
-#define WDA_APF_SET_INSTRUCTIONS_REQ         SIR_HAL_APF_SET_INSTRUCTIONS_REQ
+#define WDA_BPF_GET_CAPABILITIES_REQ         SIR_HAL_BPF_GET_CAPABILITIES_REQ
+#define WDA_BPF_SET_INSTRUCTIONS_REQ         SIR_HAL_BPF_SET_INSTRUCTIONS_REQ
 
 #define WMA_SET_PDEV_IE_REQ                  SIR_HAL_SET_PDEV_IE_REQ
 #define WMA_UPDATE_WEP_DEFAULT_KEY           SIR_HAL_UPDATE_WEP_DEFAULT_KEY
@@ -485,8 +485,6 @@
 #define WMA_POWER_DEBUG_STATS_REQ            SIR_HAL_POWER_DEBUG_STATS_REQ
 #define WMA_GET_RCPI_REQ                     SIR_HAL_GET_RCPI_REQ
 
-#define WMA_SET_DBS_SCAN_SEL_CONF_PARAMS     SIR_HAL_SET_DBS_SCAN_SEL_PARAMS
-
 #define WMA_SET_WOW_PULSE_CMD                SIR_HAL_SET_WOW_PULSE_CMD
 
 #define WDA_SET_UDP_RESP_OFFLOAD             SIR_HAL_SET_UDP_RESP_OFFLOAD
@@ -494,13 +492,6 @@
 #define WMA_SET_PER_ROAM_CONFIG_CMD          SIR_HAL_SET_PER_ROAM_CONFIG_CMD
 #define WMA_SET_ARP_STATS_REQ                SIR_HAL_SET_ARP_STATS_REQ
 #define WMA_GET_ARP_STATS_REQ                SIR_HAL_GET_ARP_STATS_REQ
-
-#define WDA_ACTION_FRAME_RANDOM_MAC          SIR_HAL_ACTION_FRAME_RANDOM_MAC
-
-#define WMA_SET_LIMIT_OFF_CHAN               SIR_HAL_SET_LIMIT_OFF_CHAN
-#define WMA_INVOKE_NEIGHBOR_REPORT           SIR_HAL_INVOKE_NEIGHBOR_REPORT
-
-#define WMA_GET_ROAM_SCAN_STATS              SIR_HAL_GET_ROAM_SCAN_STATS
 
 /* Bit 6 will be used to control BD rate for Management frames */
 #define HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME 0x40
@@ -679,23 +670,23 @@ struct ar6k_testmode_cmd_data {
  * @WMA_TDLS_PEER_ADD_MAC_ADDR: add peer into connection table
  * @WMA_TDLS_PEER_REMOVE_MAC_ADDR: remove peer from connection table
  */
-enum WMA_TdlsPeerState {
+typedef enum {
 	WMA_TDLS_PEER_STATE_PEERING,
 	WMA_TDLS_PEER_STATE_CONNECTED,
 	WMA_TDLS_PEER_STATE_TEARDOWN,
 	WMA_TDLS_PEER_ADD_MAC_ADDR,
 	WMA_TDLS_PEER_REMOVE_MAC_ADDR,
-};
+} WMA_TdlsPeerState;
 
 /**
  * enum wma_tdls_off_chan_mode - modes for WMI_TDLS_SET_OFFCHAN_MODE_CMDID
  * @WMA_TDLS_ENABLE_OFFCHANNEL: enable off channel
  * @WMA_TDLS_DISABLE_OFFCHANNEL: disable off channel
  */
-enum wma_tdls_off_chan_mode {
+typedef enum {
 	WMA_TDLS_ENABLE_OFFCHANNEL,
 	WMA_TDLS_DISABLE_OFFCHANNEL
-};
+} wma_tdls_off_chan_mode;
 
 #endif /* FEATURE_WLAN_TDLS */
 
@@ -722,24 +713,12 @@ tSirRetStatus u_mac_post_ctrl_msg(void *pSirGlobal, tSirMbMsg *pMb);
 QDF_STATUS wma_set_idle_ps_config(void *wma_ptr, uint32_t idle_ps);
 QDF_STATUS wma_get_snr(tAniGetSnrReq *psnr_req);
 
-/**
- * wma_set_wlm_latency_level() - set latency level to FW
- * @wma_ptr: wma handle
- * @latency_params: latency params
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS wma_set_wlm_latency_level(void *wma_ptr,
-			struct wlm_latency_level_param *latency_params);
-
 QDF_STATUS
 wma_ds_peek_rx_packet_info
 	(cds_pkt_t *vosDataBuff, void **ppRxHeader, bool bSwap);
 
 
 void wma_tx_abort(uint8_t vdev_id);
-
-bool wma_is_rmf_mgmt_action_frame(uint8_t action_category);
 
 QDF_STATUS wma_tx_packet(void *pWMA,
 			 void *pFrmBuf,
@@ -789,10 +768,7 @@ QDF_STATUS wma_register_roaming_callbacks(void *cds_ctx,
 			enum sir_roam_op_code reason),
 		QDF_STATUS (*pe_roam_synch_cb)(tpAniSirGlobal mac,
 			roam_offload_synch_ind *roam_synch_data,
-			tpSirBssDescription  bss_desc_ptr,
-			enum sir_roam_op_code reason),
-		QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
-			struct roam_pmkid_req_event *bss_list));
+			tpSirBssDescription  bss_desc_ptr));
 #else
 static inline QDF_STATUS wma_register_roaming_callbacks(void *cds_ctx,
 		QDF_STATUS (*csr_roam_synch_cb)(tpAniSirGlobal mac,
@@ -801,10 +777,7 @@ static inline QDF_STATUS wma_register_roaming_callbacks(void *cds_ctx,
 			enum sir_roam_op_code reason),
 		QDF_STATUS (*pe_roam_synch_cb)(tpAniSirGlobal mac,
 			roam_offload_synch_ind *roam_synch_data,
-			tpSirBssDescription  bss_desc_ptr,
-			enum sir_roam_op_code reason),
-		QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
-			struct roam_pmkid_req_event *bss_list))
+			tpSirBssDescription  bss_desc_ptr))
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /*=== header file includes ===*/
 /* generic utilities */
 #include <qdf_nbuf.h>           /* qdf_nbuf_t, etc. */
@@ -28,7 +37,7 @@
 
 #ifdef QCA_SUPPORT_OL_RX_REORDER_TIMEOUT
 
-void ol_rx_reorder_timeout_remove(struct ol_txrx_peer_t *peer, unsigned int tid)
+void ol_rx_reorder_timeout_remove(struct ol_txrx_peer_t *peer, unsigned tid)
 {
 	struct ol_txrx_pdev_t *pdev;
 	struct ol_tx_reorder_cat_timeout_t *rx_reorder_timeout_ac;
@@ -115,7 +124,7 @@ void ol_rx_reorder_timeout_update(struct ol_txrx_peer_t *peer, uint8_t tid)
 	ol_rx_reorder_timeout_add(peer, tid);
 }
 
-static void ol_rx_reorder_timeout(unsigned long arg)
+static void ol_rx_reorder_timeout(void *arg)
 {
 	struct ol_txrx_pdev_t *pdev;
 	struct ol_rx_reorder_timeout_list_elem_t *list_elem, *tmp;
@@ -131,7 +140,7 @@ static void ol_rx_reorder_timeout(unsigned long arg)
 	TAILQ_FOREACH_SAFE(list_elem,
 			   &rx_reorder_timeout_ac->virtual_timer_list,
 			   reorder_timeout_list_elem, tmp) {
-		unsigned int idx_start, idx_end;
+		unsigned idx_start, idx_end;
 		struct ol_txrx_peer_t *peer;
 
 		if (list_elem->timestamp_ms > time_now_ms)
@@ -165,7 +174,6 @@ void ol_rx_reorder_timeout_init(struct ol_txrx_pdev_t *pdev)
 	for (i = 0; i < QDF_ARRAY_SIZE(pdev->rx.reorder_timeout.access_cats);
 		i++) {
 		struct ol_tx_reorder_cat_timeout_t *rx_reorder_timeout_ac;
-
 		rx_reorder_timeout_ac =
 			&pdev->rx.reorder_timeout.access_cats[i];
 		/* init the per-AC timers */
@@ -201,7 +209,6 @@ void ol_rx_reorder_timeout_cleanup(struct ol_txrx_pdev_t *pdev)
 	for (i = 0; i < QDF_ARRAY_SIZE(pdev->rx.reorder_timeout.access_cats);
 		i++) {
 		struct ol_tx_reorder_cat_timeout_t *rx_reorder_timeout_ac;
-
 		rx_reorder_timeout_ac =
 			&pdev->rx.reorder_timeout.access_cats[i];
 		qdf_timer_stop(&rx_reorder_timeout_ac->timer);

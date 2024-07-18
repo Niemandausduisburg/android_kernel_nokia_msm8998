@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2010-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -44,13 +53,9 @@
 
 #define __qdf_virt_module_exit(_x)  module_exit(_x)
 
-#define __qdf_virt_module_name(_name) MODULE_LICENSE("Dual BSD/GPL")
+#define __qdf_virt_module_name(_name) MODULE_LICENSE("Proprietary");
 
-#ifdef WLAN_DISABLE_EXPORT_SYMBOL
-#define __qdf_export_symbol(_sym)
-#else
 #define __qdf_export_symbol(_sym) EXPORT_SYMBOL(_sym)
-#endif
 
 #define __qdf_declare_param(_name, _type) \
 	module_param(_name, _type, 0600)

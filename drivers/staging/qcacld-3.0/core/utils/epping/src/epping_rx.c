@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*========================================================================
@@ -103,19 +112,17 @@ void epping_rx(void *ctx, HTC_PACKET *pPacket)
 	epping_context_t *pEpping_ctx = (epping_context_t *) ctx;
 	epping_adapter_t *pAdapter = pEpping_ctx->epping_adapter;
 	struct net_device *dev = pAdapter->dev;
-	QDF_STATUS status = pPacket->Status;
-#ifdef WLAN_DEBUG
+	A_STATUS status = pPacket->Status;
 	HTC_ENDPOINT_ID eid = pPacket->Endpoint;
-#endif
 	struct sk_buff *pktSkb = (struct sk_buff *)pPacket->pPktContext;
 
 	EPPING_LOG(QDF_TRACE_LEVEL_INFO,
-		   "%s: pAdapter = 0x%pK eid=%d, skb=0x%pK, data=0x%pK, len=0x%x status:%d",
+		   "%s: pAdapter = 0x%p eid=%d, skb=0x%p, data=0x%p, len=0x%x status:%d",
 		   __func__, pAdapter, eid, pktSkb, pPacket->pBuffer,
 		   pPacket->ActualLength, status);
 
-	if (status != QDF_STATUS_SUCCESS) {
-		if (status != QDF_STATUS_E_CANCELED) {
+	if (status != A_OK) {
+		if (status != A_ECANCELED) {
 			printk("%s: RX ERR (%d)\n", __func__, status);
 		}
 		qdf_nbuf_free(pktSkb);

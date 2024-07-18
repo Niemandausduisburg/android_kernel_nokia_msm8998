@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -84,12 +93,14 @@ ol_tx_queue_log_enqueue(struct ol_txrx_pdev_t *pdev,
 			struct ol_txrx_msdu_info_t *msdu_info,
 			int frms, int bytes)
 {
+	return;
 }
 
 static inline void
 ol_tx_queue_log_dequeue(struct ol_txrx_pdev_t *pdev,
 			struct ol_tx_frms_queue_t *txq, int frms, int bytes)
 {
+	return;
 }
 
 static inline void
@@ -97,6 +108,7 @@ ol_tx_queue_log_free(struct ol_txrx_pdev_t *pdev,
 		     struct ol_tx_frms_queue_t *txq,
 		     int tid, int frms, int bytes, bool is_peer_txq)
 {
+	return;
 }
 
 #endif
@@ -139,7 +151,7 @@ ol_tx_enqueue(
  *     output: how much credit the dequeued frames consume
  * @param[out] bytes - the sum of the sizes of the dequeued frames
  * @return number of frames dequeued
- */
+*/
 u_int16_t
 ol_tx_dequeue(
 	struct ol_txrx_pdev_t *pdev,
@@ -177,8 +189,7 @@ ol_tx_queue_free(
  *
  * @param pdev - the physical device object, which stores the txqs
  * @param flush_all - flush all pending tx queues if set to true
- * @param tx_descs - List Of tx_descs to be discarded will be returned by this
- *                   function
+ * @param tx_descs - List Of tx_descs to be discarded will be returned by this function
  */
 
 void
@@ -196,6 +207,7 @@ ol_tx_enqueue(
 		struct ol_tx_desc_t *tx_desc,
 		struct ol_txrx_msdu_info_t *tx_msdu_info)
 {
+	return;
 }
 
 static inline u_int16_t
@@ -216,6 +228,7 @@ ol_tx_queue_free(
 		struct ol_tx_frms_queue_t *txq,
 		int tid, bool is_peer_txq)
 {
+	return;
 }
 
 static inline void
@@ -224,6 +237,7 @@ ol_tx_queue_discard(
 		bool flush_all,
 		ol_tx_desc_list *tx_descs)
 {
+	return;
 }
 #endif /* defined(CONFIG_HL_SUPPORT) */
 
@@ -321,20 +335,24 @@ static inline void ol_txrx_peer_bal_add_limit_peer(
 		u_int16_t peer_id,
 		u_int16_t peer_limit)
 {
+	return;
 }
 
 static inline void ol_txrx_peer_bal_remove_limit_peer(
 		struct ol_txrx_pdev_t *pdev,
 		u_int16_t peer_id)
 {
+	return;
 }
 
 static inline void ol_txrx_peer_pause_but_no_mgmt_q(ol_txrx_peer_handle peer)
 {
+	return;
 }
 
 static inline void ol_txrx_peer_unpause_but_no_mgmt_q(ol_txrx_peer_handle peer)
 {
+	return;
 }
 
 static inline u_int16_t
@@ -352,6 +370,7 @@ ol_tx_bad_peer_update_tx_limit(struct ol_txrx_pdev_t *pdev,
 			       u_int16_t frames,
 			       u_int16_t tx_limit_flag)
 {
+	return;
 }
 
 static inline void
@@ -359,14 +378,17 @@ ol_txrx_set_txq_peer(
 		struct ol_tx_frms_queue_t *txq,
 		struct ol_txrx_peer_t *peer)
 {
+	return;
 }
 
 static inline void ol_tx_badpeer_flow_cl_init(struct ol_txrx_pdev_t *pdev)
 {
+	return;
 }
 
 static inline void ol_tx_badpeer_flow_cl_deinit(struct ol_txrx_pdev_t *pdev)
 {
+	return;
 }
 
 #endif /* defined(CONFIG_HL_SUPPORT) && defined(QCA_BAD_PEER_TX_FLOW_CL) */
@@ -396,6 +418,7 @@ ol_tx_queue_log_sched(struct ol_txrx_pdev_t *pdev,
 		      int *num_active_tids,
 		      uint32_t **active_bitmap, uint8_t **data)
 {
+	return;
 }
 #endif /* defined(CONFIG_HL_SUPPORT) && defined(DEBUG_HL_LOGGING) */
 
@@ -412,6 +435,7 @@ ol_tx_queues_display(struct ol_txrx_pdev_t *pdev);
 static inline void
 ol_tx_queues_display(struct ol_txrx_pdev_t *pdev)
 {
+	return;
 }
 #endif
 
@@ -534,6 +558,7 @@ static inline void ol_tx_txq_group_credit_update(
 		int32_t credit,
 		u_int8_t absolute)
 {
+	return;
 }
 
 static inline void
@@ -541,6 +566,7 @@ ol_tx_txq_set_group_ptr(
 		struct ol_tx_frms_queue_t *txq,
 		struct ol_tx_queue_group_t *grp_ptr)
 {
+	return;
 }
 
 static inline void
@@ -550,6 +576,7 @@ ol_tx_set_peer_group_ptr(
 		u_int8_t vdev_id,
 		u_int8_t tid)
 {
+	return;
 }
 #endif
 

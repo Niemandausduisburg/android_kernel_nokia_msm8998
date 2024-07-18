@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -87,7 +96,7 @@
 #define HIF_GET_CE_STATE(scn) ((struct HIF_CE_state *)scn)
 #define HIF_GET_SDIO_SOFTC(scn) ((struct hif_sdio_softc *)scn)
 #define HIF_GET_USB_SOFTC(scn) ((struct hif_usb_softc *)scn)
-#define HIF_GET_USB_DEVICE(scn) ((struct HIF_DEVICE_USB *)scn)
+#define HIF_GET_USB_DEVICE(scn) ((HIF_DEVICE_USB *)scn)
 #define HIF_GET_SOFTC(scn) ((struct hif_softc *)scn)
 #define GET_HIF_OPAQUE_HDL(scn) ((struct hif_opaque_softc *)scn)
 
@@ -107,27 +116,8 @@ enum hif_fake_apps_state_bits {
 	HIF_FA_SUSPENDED_BIT = 0
 };
 
-void hif_fake_apps_init_ctx(struct hif_softc *scn);
 void hif_fake_apps_resume_work(struct work_struct *work);
-bool hif_interrupt_is_fake_apps_resume(struct hif_opaque_softc *hif_ctx,
-					      int ce_id);
-void hif_trigger_fake_apps_resume(struct hif_opaque_softc *hif_ctx);
-#else
-static inline void hif_fake_apps_init_ctx(struct hif_softc *scn)
-{
-}
-
-static inline bool
-hif_interrupt_is_fake_apps_resume(struct hif_opaque_softc *hif_ctx, int ce_id)
-{
-	return false;
-}
-
-static inline void
-hif_trigger_fake_apps_resume(struct hif_opaque_softc *hif_ctx)
-{
-}
-#endif /* End of WLAN_SUSPEND_RESUME_TEST */
+#endif /* WLAN_SUSPEND_RESUME_TEST */
 
 struct hif_softc {
 	struct hif_opaque_softc osc;
@@ -167,16 +157,10 @@ struct hif_softc {
 #ifdef FEATURE_NAPI
 	struct qca_napi_data napi_data;
 #endif /* FEATURE_NAPI */
-	/* stores ce_service_max_yield_time in ns */
-	unsigned long long ce_service_max_yield_time;
-	uint8_t ce_service_max_rx_ind_flush;
 	struct hif_driver_state_callbacks callbacks;
 	uint32_t hif_con_param;
 #ifdef QCA_NSS_WIFI_OFFLOAD_SUPPORT
 	uint32_t nss_wifi_ol_mode;
-#endif
-#ifdef IPA_OFFLOAD
-	qdf_shared_mem_t *ipa_ce_ring;
 #endif
 #ifdef WLAN_SUSPEND_RESUME_TEST
 	struct fake_apps_context fake_apps_ctx;
@@ -225,14 +209,13 @@ void hif_bus_close(struct hif_softc *ol_sc);
 QDF_STATUS hif_bus_open(struct hif_softc *ol_sc,
 	enum qdf_bus_type bus_type);
 QDF_STATUS hif_enable_bus(struct hif_softc *ol_sc, struct device *dev,
-	void *bdev, const struct hif_bus_id *bid, enum hif_enable_type type);
+	void *bdev, const hif_bus_id *bid, enum hif_enable_type type);
 void hif_disable_bus(struct hif_softc *scn);
 void hif_bus_prevent_linkdown(struct hif_softc *scn, bool flag);
 int hif_bus_get_context_size(enum qdf_bus_type bus_type);
 void hif_read_phy_mem_base(struct hif_softc *scn, qdf_dma_addr_t *bar_value);
 uint32_t hif_get_conparam(struct hif_softc *scn);
-struct hif_driver_state_callbacks *hif_get_callbacks_handle(
-							struct hif_softc *scn);
+struct hif_driver_state_callbacks *hif_get_callbacks_handle(struct hif_softc *scn);
 bool hif_is_driver_unloading(struct hif_softc *scn);
 bool hif_is_load_or_unload_in_progress(struct hif_softc *scn);
 bool hif_is_recovery_in_progress(struct hif_softc *scn);

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2015, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -55,6 +64,10 @@ typedef struct {
 
 /* The hash table object */
 extern dphHashTableClass dphHashTable;
+
+/* Print MAC addresse */
+extern void dph_print_mac_addr(struct sAniSirGlobal *pMac, uint8_t addr[],
+			       uint32_t);
 
 tpDphHashNode dph_lookup_hash_entry(tpAniSirGlobal pMac, uint8_t staAddr[],
 				    uint16_t *pStaId,

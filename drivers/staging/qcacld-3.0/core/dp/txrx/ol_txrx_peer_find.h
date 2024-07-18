@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011, 2015-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2015-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /**
  * @file ol_txrx_peer_find.h
  * @brief Define the API for the rx peer lookup datapath module.
@@ -29,7 +38,7 @@
 
 
 #define OL_TXRX_PEER_INC_REF_CNT(peer) \
-	__ol_txrx_peer_change_ref_cnt(peer, 1, __func__, __LINE__)
+	__ol_txrx_peer_change_ref_cnt(peer, 1, __func__, __LINE__);
 
 void __ol_txrx_peer_change_ref_cnt(struct ol_txrx_peer_t *peer,
 						int change,
@@ -61,7 +70,6 @@ struct ol_txrx_peer_t *ol_txrx_peer_find_by_id(struct ol_txrx_pdev_t *pdev,
 					       uint16_t peer_id)
 {
 	struct ol_txrx_peer_t *peer;
-
 	peer = (peer_id > ol_cfg_max_peer_id(pdev->ctrl_pdev)) ? NULL :
 	       pdev->peer_id_to_obj_map[peer_id].peer;
 	/*
@@ -87,11 +95,10 @@ void
 ol_txrx_peer_find_hash_add(struct ol_txrx_pdev_t *pdev,
 			   struct ol_txrx_peer_t *peer);
 
-struct ol_txrx_peer_t *ol_txrx_peer_find_hash_find_inc_ref(
-					struct ol_txrx_pdev_t *pdev,
-					uint8_t *peer_mac_addr,
-					int mac_addr_is_aligned,
-					uint8_t check_valid);
+struct ol_txrx_peer_t *ol_txrx_peer_find_hash_find_inc_ref(struct ol_txrx_pdev_t *pdev,
+						   uint8_t *peer_mac_addr,
+						   int mac_addr_is_aligned,
+						   uint8_t check_valid);
 
 struct
 ol_txrx_peer_t *ol_txrx_peer_vdev_find_hash(struct ol_txrx_pdev_t *pdev,
@@ -105,8 +112,6 @@ ol_txrx_peer_find_hash_remove(struct ol_txrx_pdev_t *pdev,
 			      struct ol_txrx_peer_t *peer);
 
 void ol_txrx_peer_find_hash_erase(struct ol_txrx_pdev_t *pdev);
-
-void ol_txrx_peer_delete_roam_stale_peer(struct ol_txrx_pdev_t *pdev);
 
 struct ol_txrx_peer_t *ol_txrx_assoc_peer_find(struct ol_txrx_vdev_t *vdev);
 void ol_txrx_peer_remove_obj_map_entries(ol_txrx_pdev_handle pdev,

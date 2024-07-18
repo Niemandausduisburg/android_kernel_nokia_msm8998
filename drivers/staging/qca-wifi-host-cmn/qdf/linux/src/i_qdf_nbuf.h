@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -36,6 +45,7 @@
 #include <qdf_mem.h>
 #include <linux/tcp.h>
 #include <qdf_util.h>
+#include <qdf_nbuf.h>
 
 /*
  * Use socket buffer as the underlying implentation as skbuf .
@@ -55,9 +65,6 @@ typedef struct sk_buff *__qdf_nbuf_t;
 #define QDF_NBUF_CB_PACKET_TYPE_ARP    2
 #define QDF_NBUF_CB_PACKET_TYPE_WAPI   3
 #define QDF_NBUF_CB_PACKET_TYPE_DHCP   4
-#define QDF_NBUF_CB_PACKET_TYPE_ICMP   5
-#define QDF_NBUF_CB_PACKET_TYPE_ICMPv6 6
-
 
 /* mark the first packet after wow wakeup */
 #define QDF_MARK_FIRST_WAKEUP_PACKET   0x80000000
@@ -109,6 +116,7 @@ typedef union {
  * @tx.trace       : combined structure for DP and protocol trace
  * @tx.trace.packet_state: {NBUF_TX_PKT_[(HDD)|(TXRX_ENQUEUE)|(TXRX_DEQUEUE)|
  *                       +               (TXRX)|(HTT)|(HTC)|(HIF)|(CE)|(FREE)]
+ * @tx.trace.is_packet_priv: flag, pkt generated internally or come from NS
  * @tx.trace.packet_track: {NBUF_TX_PKT_[(DATA)|(MGMT)]_TRACK}
  * @tx.trace.proto_type  : bitmap of NBUF_PKT_TRAC_TYPE[(EAPOL)|(DHCP)|
  *                       +                              (MGMT_ACTION)] - 4 bits
@@ -117,8 +125,6 @@ typedef union {
  * @tx.trace.vdev_id     : vdev (for protocol trace)
  * @tx.ipa.owned   : packet owned by IPA
  * @tx.ipa.priv    : private data, used by IPA
- * @tx.dma_option.bi_map: flag to do special dma map with QDF_DMA_BIDIRECTIONAL
- * @tx.dma_option.reserved: reserved bits for future use
  * @tx.desc_id     : tx desc id, used to sync between host and fw
  */
 struct qdf_nbuf_cb {
@@ -178,7 +184,8 @@ struct qdf_nbuf_cb {
 				struct {
 					uint32_t data_attr; /* 4 bytes */
 					struct{
-						uint8_t packet_state;
+						uint8_t packet_state:7,
+							is_packet_priv:1;
 						uint8_t packet_track:4,
 							proto_type:4;
 						uint8_t dp_trace:1,
@@ -194,12 +201,8 @@ struct qdf_nbuf_cb {
 						uint32_t owned:1,
 							priv:31;
 					} ipa; /* 4 */
-					struct {
-						uint8_t bi_map:1,
-							reserved:7;
-					} dma_option; /* 1 byte */
 					uint16_t desc_id; /* 2 bytes */
-				} mcl;/* 15 bytes*/
+				} mcl;/* 14 bytes*/
 			} dev;
 		} tx; /* 40 bytes */
 	} u;
@@ -276,6 +279,9 @@ struct qdf_nbuf_cb {
 #define QDF_NBUF_CB_TX_PACKET_STATE(skb) \
 	(((struct qdf_nbuf_cb *) \
 		((skb)->cb))->u.tx.dev.mcl.trace.packet_state)
+#define QDF_NBUF_CB_TX_IS_PACKET_PRIV(skb) \
+	(((struct qdf_nbuf_cb *) \
+		((skb)->cb))->u.tx.dev.mcl.trace.is_packet_priv)
 #define QDF_NBUF_CB_TX_PACKET_TRACK(skb) \
 	(((struct qdf_nbuf_cb *) \
 		((skb)->cb))->u.tx.dev.mcl.trace.packet_track)
@@ -304,8 +310,6 @@ struct qdf_nbuf_cb {
 	(((struct qdf_nbuf_cb *)((skb)->cb))->u.tx.dev.mcl.ipa.owned)
 #define QDF_NBUF_CB_TX_IPA_PRIV(skb) \
 	(((struct qdf_nbuf_cb *)((skb)->cb))->u.tx.dev.mcl.ipa.priv)
-#define QDF_NBUF_CB_TX_DMA_BI_MAP(skb) \
-	(((struct qdf_nbuf_cb *)((skb)->cb))->u.tx.dev.mcl.dma_option.bi_map)
 #define QDF_NBUF_CB_TX_DESC_ID(skb) \
 	(((struct qdf_nbuf_cb *)((skb)->cb))->u.tx.dev.mcl.desc_id)
 #define QDF_NBUF_CB_TX_FTYPE(skb) \
@@ -323,7 +327,9 @@ struct qdf_nbuf_cb {
 	(QDF_NBUF_CB_TX_NUM_EXTRA_FRAGS(skb) + 1)
 
 #define __qdf_nbuf_reset_num_frags(skb) \
-	(QDF_NBUF_CB_TX_NUM_EXTRA_FRAGS(skb) = 0)
+	do { \
+		QDF_NBUF_CB_TX_NUM_EXTRA_FRAGS(skb) = 0; \
+	} while (0)
 
 /**
  *   end of nbuf->cb access macros
@@ -335,7 +341,9 @@ typedef void (*qdf_nbuf_free_t)(__qdf_nbuf_t);
 #define __qdf_nbuf_mapped_paddr_get(skb) QDF_NBUF_CB_PADDR(skb)
 
 #define __qdf_nbuf_mapped_paddr_set(skb, paddr)	\
-	(QDF_NBUF_CB_PADDR(skb) = paddr)
+	do { \
+		QDF_NBUF_CB_PADDR(skb) = paddr; \
+	} while (0)
 
 #define __qdf_nbuf_frag_push_head(					\
 	skb, frag_len, frag_vaddr, frag_paddr)				\
@@ -381,7 +389,9 @@ typedef void (*qdf_nbuf_free_t)(__qdf_nbuf_t);
 	} while (0)
 
 #define __qdf_nbuf_set_vdev_ctx(skb, vdev_ctx) \
-	(QDF_NBUF_CB_TX_VDEV_CTX((skb)) = (vdev_ctx))
+	do { \
+		QDF_NBUF_CB_TX_VDEV_CTX((skb)) = (vdev_ctx); \
+	} while (0)
 
 #define __qdf_nbuf_get_vdev_ctx(skb) \
 	QDF_NBUF_CB_TX_VDEV_CTX((skb))
@@ -399,19 +409,25 @@ typedef void (*qdf_nbuf_free_t)(__qdf_nbuf_t);
 		 QDF_NBUF_CB_TX_FTYPE((skb))
 
 #define __qdf_nbuf_set_chfrag_start(skb, val) \
-	((QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_CHFRAG_START((skb))) = val)
+	do { \
+		(QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_CHFRAG_START((skb))) = val; \
+	} while (0)
 
 #define __qdf_nbuf_is_chfrag_start(skb) \
 	(QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_CHFRAG_START((skb)))
 
 #define __qdf_nbuf_set_chfrag_end(skb, val) \
-	((QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_CHFRAG_END((skb))) = val)
+	do { \
+		(QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_CHFRAG_END((skb))) = val; \
+	} while (0)
 
 #define __qdf_nbuf_is_chfrag_end(skb) \
 	(QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_CHFRAG_END((skb)))
 
-#define __qdf_nbuf_trace_set_proto_type(skb, proto_type)  \
-	(QDF_NBUF_CB_TX_PROTO_TYPE(skb) = (proto_type))
+#define __qdf_nbuf_trace_set_proto_type(skb, proto_type)	\
+	do { \
+		QDF_NBUF_CB_TX_PROTO_TYPE(skb) = (proto_type); \
+	} while (0)
 
 #define __qdf_nbuf_trace_get_proto_type(skb) \
 	QDF_NBUF_CB_TX_PROTO_TYPE(skb)
@@ -419,22 +435,25 @@ typedef void (*qdf_nbuf_free_t)(__qdf_nbuf_t);
 #define __qdf_nbuf_data_attr_get(skb)		\
 	QDF_NBUF_CB_TX_DATA_ATTR(skb)
 #define __qdf_nbuf_data_attr_set(skb, data_attr) \
-	(QDF_NBUF_CB_TX_DATA_ATTR(skb) = (data_attr))
+	do { \
+		QDF_NBUF_CB_TX_DATA_ATTR(skb) = (data_attr); \
+	} while (0)
 
 #define __qdf_nbuf_ipa_owned_get(skb) \
 	QDF_NBUF_CB_TX_IPA_OWNED(skb)
 
 #define __qdf_nbuf_ipa_owned_set(skb) \
-	(QDF_NBUF_CB_TX_IPA_OWNED(skb) = 1)
-
-#define __qdf_nbuf_ipa_owned_clear(skb) \
-	(QDF_NBUF_CB_TX_IPA_OWNED(skb) = 0)
+	do { \
+		QDF_NBUF_CB_TX_IPA_OWNED(skb) = 1; \
+	} while (0)
 
 #define __qdf_nbuf_ipa_priv_get(skb)	\
 	QDF_NBUF_CB_TX_IPA_PRIV(skb)
 
 #define __qdf_nbuf_ipa_priv_set(skb, priv) \
-	(QDF_NBUF_CB_TX_IPA_PRIV(skb) = (priv))
+	do { \
+		QDF_NBUF_CB_TX_IPA_PRIV(skb) = (priv); \
+	} while (0)
 
 /**
  * __qdf_nbuf_num_frags_init() - init extra frags
@@ -490,6 +509,7 @@ void __qdf_nbuf_unmap_nbytes_single(
 void __qdf_nbuf_dma_map_info(__qdf_dma_map_t bmap, qdf_dmamap_info_t *sg);
 uint32_t __qdf_nbuf_get_frag_size(__qdf_nbuf_t nbuf, uint32_t cur_frag);
 void __qdf_nbuf_frag_info(struct sk_buff *skb, qdf_sglist_t  *sg);
+void qdf_net_buf_debug_delete_node(struct sk_buff *net_buf);
 QDF_STATUS __qdf_nbuf_frag_map(
 	qdf_device_t osdev, __qdf_nbuf_t nbuf,
 	int offset, qdf_dma_dir_t dir, int cur_frag);
@@ -512,18 +532,6 @@ bool __qdf_nbuf_data_is_arp_req(uint8_t *data);
 bool __qdf_nbuf_data_is_arp_rsp(uint8_t *data);
 uint32_t __qdf_nbuf_get_arp_src_ip(uint8_t *data);
 uint32_t __qdf_nbuf_get_arp_tgt_ip(uint8_t *data);
-uint8_t *__qdf_nbuf_get_dns_domain_name(uint8_t *data, uint32_t len);
-bool __qdf_nbuf_data_is_dns_query(uint8_t *data);
-bool __qdf_nbuf_data_is_dns_response(uint8_t *data);
-bool __qdf_nbuf_data_is_tcp_syn(uint8_t *data);
-bool __qdf_nbuf_data_is_tcp_syn_ack(uint8_t *data);
-bool __qdf_nbuf_data_is_tcp_ack(uint8_t *data);
-uint16_t __qdf_nbuf_data_get_tcp_src_port(uint8_t *data);
-uint16_t __qdf_nbuf_data_get_tcp_dst_port(uint8_t *data);
-bool __qdf_nbuf_data_is_icmpv4_req(uint8_t *data);
-bool __qdf_nbuf_data_is_icmpv4_rsp(uint8_t *data);
-uint32_t __qdf_nbuf_get_icmpv4_src_ip(uint8_t *data);
-uint32_t __qdf_nbuf_get_icmpv4_tgt_ip(uint8_t *data);
 enum qdf_proto_subtype  __qdf_nbuf_data_get_dhcp_subtype(uint8_t *data);
 enum qdf_proto_subtype  __qdf_nbuf_data_get_eapol_subtype(uint8_t *data);
 enum qdf_proto_subtype  __qdf_nbuf_data_get_arp_subtype(uint8_t *data);
@@ -531,22 +539,6 @@ enum qdf_proto_subtype  __qdf_nbuf_data_get_icmp_subtype(uint8_t *data);
 enum qdf_proto_subtype  __qdf_nbuf_data_get_icmpv6_subtype(uint8_t *data);
 uint8_t __qdf_nbuf_data_get_ipv4_proto(uint8_t *data);
 uint8_t __qdf_nbuf_data_get_ipv6_proto(uint8_t *data);
-#ifdef CONFIG_MCL
-void __qdf_nbuf_init_replenish_timer(void);
-void __qdf_nbuf_deinit_replenish_timer(void);
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 13, 0)
-#define qdf_nbuf_users_inc atomic_inc
-#define qdf_nbuf_users_dec atomic_dec
-#define qdf_nbuf_users_set atomic_set
-#define qdf_nbuf_users_read atomic_read
-#else
-#define qdf_nbuf_users_inc refcount_inc
-#define qdf_nbuf_users_dec refcount_dec
-#define qdf_nbuf_users_set refcount_set
-#define qdf_nbuf_users_read refcount_read
-#endif /* KERNEL_VERSION(4, 13, 0) */
 
 /**
  * __qdf_to_status() - OS to QDF status conversion
@@ -592,8 +584,8 @@ static inline size_t __qdf_nbuf_len(struct sk_buff *skb)
  * @dst: Buffer to piggyback into
  * @src: Buffer to put
  *
- * Concat two nbufs, the new buf(src) is piggybacked into the older one.
- * It is callers responsibility to free the src skb.
+ * Link tow nbufs the new buf is piggybacked into the older one. The older
+ * (src) skb is released.
  *
  * Return: QDF_STATUS (status of the call) if failed the src skb
  *         is released
@@ -615,9 +607,11 @@ __qdf_nbuf_cat(struct sk_buff *dst, struct sk_buff *src)
 		if (error)
 			return __qdf_to_status(error);
 	}
-
 	memcpy(skb_tail_pointer(dst), src->data, src->len);
+
 	skb_put(dst, src->len);
+	dev_kfree_skb_any(src);
+
 	return __qdf_to_status(error);
 }
 
@@ -946,6 +940,27 @@ static inline struct sk_buff *__qdf_nbuf_get_ext_list(struct sk_buff *head_buf)
 }
 
 /**
+ * __qdf_nbuf_tx_free() - free skb list
+ * @skb: Pointer to network buffer
+ * @tx_err: TX error
+ *
+ * Return: none
+ */
+static inline void __qdf_nbuf_tx_free(struct sk_buff *bufs, int tx_err)
+{
+	while (bufs) {
+		struct sk_buff *next = __qdf_nbuf_next(bufs);
+
+		if (QDF_NBUF_CB_TX_IS_PACKET_PRIV(bufs)) {
+			if (qdf_likely(bufs))
+				qdf_net_buf_debug_delete_node(bufs);
+		}
+		__qdf_nbuf_free(bufs);
+		bufs = next;
+	}
+}
+
+/**
  * __qdf_nbuf_get_age() - return the checksum value of the skb
  * @skb: Pointer to network buffer
  *
@@ -1033,7 +1048,9 @@ __qdf_nbuf_set_protocol(struct sk_buff *skb, uint16_t protocol)
 }
 
 #define __qdf_nbuf_set_tx_htt2_frm(skb, candi) \
-	(QDF_NBUF_CB_TX_HL_HTT2_FRM(skb) = (candi))
+	do { \
+		QDF_NBUF_CB_TX_HL_HTT2_FRM(skb) = (candi); \
+	} while (0)
 
 #define __qdf_nbuf_get_tx_htt2_frm(skb)	\
 	QDF_NBUF_CB_TX_HL_HTT2_FRM(skb)
@@ -1342,6 +1359,7 @@ static inline bool __qdf_nbuf_is_queue_empty(__qdf_nbuf_queue_t *qhead)
 static inline void
 __qdf_nbuf_set_send_complete_flag(struct sk_buff *skb, bool flag)
 {
+	return;
 }
 
 /**
@@ -1500,8 +1518,7 @@ static inline void *__qdf_nbuf_transport_header(__qdf_nbuf_t buf)
  * @skb: sk buff
  *
  * Return: TCP MSS size
- *
- */
+ * */
 static inline size_t __qdf_nbuf_tcp_tso_size(struct sk_buff *skb)
 {
 	return skb_shinfo(skb)->gso_size;
@@ -1515,9 +1532,44 @@ static inline size_t __qdf_nbuf_tcp_tso_size(struct sk_buff *skb)
  */
 static inline void __qdf_nbuf_init(__qdf_nbuf_t nbuf)
 {
-	qdf_nbuf_users_set(&nbuf->users, 1);
+	atomic_set(&nbuf->users, 1);
 	nbuf->data = nbuf->head + NET_SKB_PAD;
 	skb_reset_tail_pointer(nbuf);
+}
+
+/**
+ * __qdf_nbuf_set_rx_info() - set rx info
+ * @nbuf: sk buffer
+ * @info: rx info
+ * @len: length
+ *
+ * Return: none
+ */
+static inline void
+__qdf_nbuf_set_rx_info(__qdf_nbuf_t nbuf, void *info, uint32_t len)
+{
+	/* Customer may have skb->cb size increased, e.g. to 96 bytes,
+	 * then len's large enough to save the rs status info struct
+	 */
+	uint8_t offset = sizeof(struct qdf_nbuf_cb);
+	uint32_t max = sizeof(((struct sk_buff *)0)->cb)-offset;
+
+	len = (len > max ? max : len);
+
+	memcpy(((uint8_t *)(nbuf->cb) + offset), info, len);
+}
+
+/**
+ * __qdf_nbuf_get_rx_info() - get rx info
+ * @nbuf: sk buffer
+ *
+ * Return: rx_info
+ */
+static inline void *
+__qdf_nbuf_get_rx_info(__qdf_nbuf_t nbuf)
+{
+	uint8_t offset = sizeof(struct qdf_nbuf_cb);
+	return (void *)((uint8_t *)(nbuf->cb) + offset);
 }
 
 /*
@@ -1644,9 +1696,9 @@ static inline void __qdf_invalidate_range(void *start, void *end)
 static inline void __qdf_invalidate_range(void *start, void *end)
 {
 	/* TODO figure out how to invalidate cache on x86 and other
-	 * non-MSM platform
-	 */
+	   non-MSM platform */
 	pr_err("Cache invalidate not yet implemneted for non-MSM platforms\n");
+	return;
 }
 #endif
 

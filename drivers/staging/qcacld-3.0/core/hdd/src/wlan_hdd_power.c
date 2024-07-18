@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -70,10 +79,10 @@
 #include <wlan_logging_sock_svc.h>
 #include "cds_utils.h"
 #include "wlan_hdd_packet_filter_api.h"
-#include "cds_concurrency.h"
 
 /* Preprocessor definitions and constants */
 #define HDD_SSR_BRING_UP_TIME 30000
+#define HDD_WAKE_LOCK_RESUME_DURATION 1000
 
 /* Type declarations */
 
@@ -119,6 +128,10 @@ void hdd_wlan_offload_event(uint8_t type, uint8_t state)
 
 /* Function and variables declarations */
 
+extern struct notifier_block hdd_netdev_notifier;
+
+static struct timer_list ssr_timer;
+static bool ssr_timer_started;
 /**
  * hdd_conf_gtk_offload() - Configure GTK offload
  * @pAdapter:   pointer to the adapter
@@ -141,61 +154,59 @@ static void hdd_conf_gtk_offload(hdd_adapter_t *pAdapter, bool fenable)
 		    && (GTK_OFFLOAD_ENABLE ==
 			pHddStaCtx->gtkOffloadReqParams.ulFlags)) {
 			qdf_mem_copy(&hddGtkOffloadReqParams,
-					&pHddStaCtx->gtkOffloadReqParams,
+				     &pHddStaCtx->gtkOffloadReqParams,
 				     sizeof(tSirGtkOffloadParams));
 
-			ret = sme_set_gtk_offload(
-						WLAN_HDD_GET_HAL_CTX(pAdapter),
-						&hddGtkOffloadReqParams,
-						pAdapter->sessionId);
+			ret = sme_set_gtk_offload(WLAN_HDD_GET_HAL_CTX(pAdapter),
+						  &hddGtkOffloadReqParams,
+						  pAdapter->sessionId);
 			if (QDF_STATUS_SUCCESS != ret) {
-				hdd_err("sme_set_gtk_offload failed %d", ret);
+				hdd_err("sme_set_gtk_offload failed, returned %d", ret);
 				return;
 			}
 
-			hdd_debug("sme_set_gtk_offload successfull");
+			hdd_notice("sme_set_gtk_offload successfull");
 		}
 
 	} else {
 		if ((eConnectionState_Associated ==
 		     pHddStaCtx->conn_info.connState)
-		    && (qdf_is_macaddr_equal(
-				&pHddStaCtx->gtkOffloadReqParams.bssid,
-				&pHddStaCtx->conn_info.bssId))
+		    && (qdf_is_macaddr_equal(&pHddStaCtx->gtkOffloadReqParams.bssid,
+			       &pHddStaCtx->conn_info.bssId))
 		    && (GTK_OFFLOAD_ENABLE ==
 			pHddStaCtx->gtkOffloadReqParams.ulFlags)) {
 
 			/* Host driver has previously offloaded GTK rekey  */
 			ret = sme_get_gtk_offload
 				(WLAN_HDD_GET_HAL_CTX(pAdapter),
-				 wlan_hdd_cfg80211_update_replay_counter_cb,
+				 wlan_hdd_cfg80211_update_replay_counter_callback,
 				 pAdapter, pAdapter->sessionId);
 			if (QDF_STATUS_SUCCESS != ret) {
-				hdd_err("sme_get_gtk_offload failed, returned %d",
-					ret);
+				hdd_err("sme_get_gtk_offload failed, returned %d", ret);
 				return;
-			}
-			hdd_debug("sme_get_gtk_offload successful");
+			} else {
+				hdd_notice("sme_get_gtk_offload successful");
 
-			/* Sending GTK offload dissable */
-			memcpy(&hddGtkOffloadReqParams,
-			       &pHddStaCtx->gtkOffloadReqParams,
-			       sizeof(tSirGtkOffloadParams));
-			hddGtkOffloadReqParams.ulFlags =
-				GTK_OFFLOAD_DISABLE;
-			ret =
-				sme_set_gtk_offload(WLAN_HDD_GET_HAL_CTX
-							    (pAdapter),
-						    &hddGtkOffloadReqParams,
-						    pAdapter->sessionId);
-			if (QDF_STATUS_SUCCESS != ret) {
-				hdd_err("failed to dissable GTK offload, returned %d",
-					ret);
-				return;
+				/* Sending GTK offload dissable */
+				memcpy(&hddGtkOffloadReqParams,
+				       &pHddStaCtx->gtkOffloadReqParams,
+				       sizeof(tSirGtkOffloadParams));
+				hddGtkOffloadReqParams.ulFlags =
+					GTK_OFFLOAD_DISABLE;
+				ret =
+					sme_set_gtk_offload(WLAN_HDD_GET_HAL_CTX
+								    (pAdapter),
+							    &hddGtkOffloadReqParams,
+							    pAdapter->sessionId);
+				if (QDF_STATUS_SUCCESS != ret) {
+					hdd_err("failed to dissable GTK offload, returned %d", ret);
+					return;
+				}
+				hdd_notice("successfully dissabled GTK offload request to HAL");
 			}
-			hdd_debug("successfully dissabled GTK offload request to HAL");
 		}
 	}
+	return;
 }
 #else /* WLAN_FEATURE_GTK_OFFLOAD */
 static void hdd_conf_gtk_offload(hdd_adapter_t *pAdapter, bool fenable)
@@ -230,7 +241,7 @@ static int __wlan_hdd_ipv6_changed(struct notifier_block *nb,
 	ENTER_DEV(ndev);
 
 	if ((pAdapter == NULL) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-		hdd_debug("Adapter context is invalid %pK", pAdapter);
+		hdd_err("Adapter context is invalid %p", pAdapter);
 		return NOTIFY_DONE;
 	}
 
@@ -290,7 +301,6 @@ int wlan_hdd_ipv6_changed(struct notifier_block *nb,
  * @idev: pointer to net device
  * @ipv6addr: destination array to fill IPv6 addresses
  * @ipv6addr_type: IPv6 Address type
- * @scope_array: IPv6 Address scope
  * @count: number of IPv6 addresses
  *
  * This is the IPv6 utility function to populate unicast addresses.
@@ -299,9 +309,7 @@ int wlan_hdd_ipv6_changed(struct notifier_block *nb,
  */
 static int hdd_fill_ipv6_uc_addr(struct inet6_dev *idev,
 				uint8_t ipv6_uc_addr[][SIR_MAC_IPV6_ADDR_LEN],
-				uint8_t *ipv6addr_type,
-				enum sir_ipv6_addr_scope *scope_array,
-				uint32_t *count)
+				uint8_t *ipv6addr_type, uint32_t *count)
 {
 	struct inet6_ifaddr *ifa;
 	struct list_head *p;
@@ -323,14 +331,13 @@ static int hdd_fill_ipv6_uc_addr(struct inet6_dev *idev,
 			qdf_mem_copy(ipv6_uc_addr[*count], &ifa->addr.s6_addr,
 				sizeof(ifa->addr.s6_addr));
 			ipv6addr_type[*count] = SIR_IPV6_ADDR_UC_TYPE;
-			scope_array[*count] = sir_get_ipv6_addr_scope(scope);
-			hdd_debug("Index %d scope = %s UC-Address: %pI6",
+			hdd_info("Index %d scope = %s UC-Address: %pI6",
 				*count, (scope == IPV6_ADDR_SCOPE_LINKLOCAL) ?
 				"LINK LOCAL" : "GLOBAL", ipv6_uc_addr[*count]);
 			*count += 1;
 			break;
 		default:
-			hdd_warn("The Scope %d is not supported", scope);
+			hdd_err("The Scope %d is not supported", scope);
 		}
 	}
 
@@ -343,7 +350,6 @@ static int hdd_fill_ipv6_uc_addr(struct inet6_dev *idev,
  * @idev: pointer to net device
  * @ipv6addr: destination array to fill IPv6 addresses
  * @ipv6addr_type: IPv6 Address type
- * @scope_array: IPv6 Address scope
  * @count: number of IPv6 addresses
  *
  * This is the IPv6 utility function to populate anycast addresses.
@@ -352,9 +358,7 @@ static int hdd_fill_ipv6_uc_addr(struct inet6_dev *idev,
  */
 static int hdd_fill_ipv6_ac_addr(struct inet6_dev *idev,
 				uint8_t ipv6_ac_addr[][SIR_MAC_IPV6_ADDR_LEN],
-				uint8_t *ipv6addr_type,
-				enum sir_ipv6_addr_scope *scope_array,
-				uint32_t *count)
+				uint8_t *ipv6addr_type, uint32_t *count)
 {
 	struct ifacaddr6 *ifaca;
 	uint32_t scope;
@@ -373,14 +377,13 @@ static int hdd_fill_ipv6_ac_addr(struct inet6_dev *idev,
 			qdf_mem_copy(ipv6_ac_addr[*count], &ifaca->aca_addr,
 				sizeof(ifaca->aca_addr));
 			ipv6addr_type[*count] = SIR_IPV6_ADDR_AC_TYPE;
-			scope_array[*count] = sir_get_ipv6_addr_scope(scope);
-			hdd_debug("Index %d scope = %s AC-Address: %pI6",
+			hdd_info("Index %d scope = %s AC-Address: %pI6",
 				*count, (scope == IPV6_ADDR_SCOPE_LINKLOCAL) ?
 				"LINK LOCAL" : "GLOBAL", ipv6_ac_addr[*count]);
 			*count += 1;
 			break;
 		default:
-			hdd_warn("The Scope %d is not supported", scope);
+			hdd_err("The Scope %d is not supported", scope);
 		}
 	}
 
@@ -398,10 +401,6 @@ static void hdd_disable_ns_offload(hdd_adapter_t *adapter)
 {
 	tSirHostOffloadReq offloadReq;
 	QDF_STATUS status;
-
-	qdf_mutex_acquire(&adapter->ns_offload_info_lock);
-	adapter->ns_offload_info.offload = false;
-	qdf_mutex_release(&adapter->ns_offload_info_lock);
 
 	qdf_mem_zero((void *)&offloadReq, sizeof(tSirHostOffloadReq));
 	hdd_wlan_offload_event(SIR_IPV6_NS_OFFLOAD, SIR_OFFLOAD_DISABLE);
@@ -427,7 +426,6 @@ static void hdd_enable_ns_offload(hdd_adapter_t *adapter)
 	uint8_t ipv6_addr[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA]
 					[SIR_MAC_IPV6_ADDR_LEN] = { {0,} };
 	uint8_t ipv6_addr_type[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA] = { 0 };
-	enum sir_ipv6_addr_scope scope[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA];
 	tSirHostOffloadReq offloadReq;
 	QDF_STATUS status;
 	uint32_t count = 0;
@@ -435,27 +433,25 @@ static void hdd_enable_ns_offload(hdd_adapter_t *adapter)
 
 	in6_dev = __in6_dev_get(adapter->dev);
 	if (NULL == in6_dev) {
-		hdd_warn("IPv6 dev does not exist. Failed to request NSOffload");
+		hdd_err("IPv6 dev does not exist. Failed to request NSOffload");
 		return;
 	}
 
-	qdf_mem_zero(scope, sizeof(scope));
-
 	/* Unicast Addresses */
-	err = hdd_fill_ipv6_uc_addr(in6_dev, ipv6_addr, ipv6_addr_type, scope,
-				    &count);
+	err = hdd_fill_ipv6_uc_addr(in6_dev, ipv6_addr, ipv6_addr_type, &count);
 	if (err) {
 		hdd_disable_ns_offload(adapter);
-		hdd_debug("Max supported addresses: disabling NS offload");
+		hdd_notice("Reached max supported addresses and not enabling "
+			"NS offload");
 		return;
 	}
 
 	/* Anycast Addresses */
-	err = hdd_fill_ipv6_ac_addr(in6_dev, ipv6_addr, ipv6_addr_type, scope,
-				    &count);
+	err = hdd_fill_ipv6_ac_addr(in6_dev, ipv6_addr, ipv6_addr_type, &count);
 	if (err) {
 		hdd_disable_ns_offload(adapter);
-		hdd_debug("Max supported addresses: disabling NS offload");
+		hdd_notice("Reached max supported addresses and not enabling "
+			"NS offload");
 		return;
 	}
 
@@ -489,14 +485,13 @@ static void hdd_enable_ns_offload(hdd_adapter_t *adapter)
 			SIR_IPV6_ADDR_VALID;
 		offloadReq.nsOffloadInfo.target_ipv6_addr_ac_type[i] =
 			ipv6_addr_type[i];
-		offloadReq.nsOffloadInfo.scope[i] = scope[i];
 
 		qdf_mem_copy(&offloadReq.params.hostIpv6Addr,
 			&offloadReq.nsOffloadInfo.targetIPv6Addr[i],
 			SIR_MAC_IPV6_ADDR_LEN);
 
-		hdd_debug("Setting NSOffload with solicitedIp: ");
-		hdd_debug("%pI6, targetIp: %pI6, Index %d",
+		hdd_info("Setting NSOffload with solicitedIp: "
+			"%pI6, targetIp: %pI6, Index %d",
 			&offloadReq.nsOffloadInfo.selfIPv6Addr[i],
 			&offloadReq.nsOffloadInfo.targetIPv6Addr[i], i);
 	}
@@ -509,12 +504,6 @@ static void hdd_enable_ns_offload(hdd_adapter_t *adapter)
 
 	/* set number of ns offload address count */
 	offloadReq.num_ns_offload_count = count;
-
-	qdf_mutex_acquire(&adapter->ns_offload_info_lock);
-	adapter->ns_offload_info.offload = true;
-	adapter->ns_offload_info.num_ns_offload_count = count;
-	adapter->ns_offload_info.nsOffloadInfo = offloadReq.nsOffloadInfo;
-	qdf_mutex_release(&adapter->ns_offload_info_lock);
 
 	/* Configure the Firmware with this */
 	status = sme_set_host_offload(WLAN_HDD_GET_HAL_CTX(adapter),
@@ -539,7 +528,7 @@ void hdd_conf_ns_offload(hdd_adapter_t *adapter, bool fenable)
 	hdd_context_t *hdd_ctx;
 
 	ENTER();
-	hdd_debug(" fenable = %d", fenable);
+	hdd_notice(" fenable = %d", fenable);
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
@@ -550,7 +539,7 @@ void hdd_conf_ns_offload(hdd_adapter_t *adapter, bool fenable)
 	if ((QDF_SAP_MODE == adapter->device_mode ||
 		QDF_P2P_GO_MODE == adapter->device_mode) &&
 		!hdd_ctx->ap_arpns_support) {
-		hdd_debug("NS Offload is not supported in SAP/P2PGO mode");
+		hdd_notice("NS Offload is not supported in SAP/P2PGO mode");
 		return;
 	}
 
@@ -565,6 +554,7 @@ void hdd_conf_ns_offload(hdd_adapter_t *adapter, bool fenable)
 		hdd_disable_ns_offload(adapter);
 
 	EXIT();
+	return;
 }
 
 /**
@@ -594,7 +584,7 @@ static void __hdd_ipv6_notifier_work_queue(struct work_struct *work)
 		return;
 
 	if (!pHddCtx->config->active_mode_offload) {
-		hdd_warn("Active mode offload is disabled");
+		hdd_err("Active mode offload is disabled");
 		return;
 	}
 
@@ -640,21 +630,21 @@ void hdd_conf_hostoffload(hdd_adapter_t *pAdapter, bool fenable)
 
 	ENTER();
 
-	hdd_debug("Configuring offloads with flag: %d", fenable);
+	hdd_info("Configuring offloads with flag: %d", fenable);
 
 	/* Get the HDD context. */
 	pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
 
 	if (((QDF_STA_MODE != pAdapter->device_mode) &&
 	     (QDF_P2P_CLIENT_MODE != pAdapter->device_mode))) {
-		hdd_debug("Offloads not supported in mode %d",
+		hdd_info("Offloads not supported in mode %d",
 			pAdapter->device_mode);
 		return;
 	}
 
 	if (eConnectionState_Associated !=
 	       (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState) {
-		hdd_debug("Offloads not supported in state %d",
+		hdd_info("Offloads not supported in state %d",
 			(WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->
 							conn_info.connState);
 		return;
@@ -667,7 +657,7 @@ void hdd_conf_hostoffload(hdd_adapter_t *pAdapter, bool fenable)
 	 * only if active mode offload is disabled
 	 */
 	if (!pHddCtx->config->active_mode_offload) {
-		hdd_debug("configuring unconfigured active mode offloads");
+		hdd_info("configuring unconfigured active mode offloads");
 		hdd_conf_arp_offload(pAdapter, fenable);
 		wlan_hdd_set_mc_addr_list(pAdapter, fenable);
 
@@ -677,10 +667,16 @@ void hdd_conf_hostoffload(hdd_adapter_t *pAdapter, bool fenable)
 	}
 
 	/* Configure DTIM hardware filter rules */
-	hdd_conf_hw_filter_mode(pAdapter, pHddCtx->config->hw_filter_mode,
-				fenable);
+	{
+		enum hw_filter_mode mode = pHddCtx->config->hw_filter_mode;
+
+		if (!fenable)
+			mode = HW_FILTER_DISABLED;
+		hdd_conf_hw_filter_mode(pAdapter, mode);
+	}
 
 	EXIT();
+	return;
 }
 #endif
 
@@ -801,7 +797,7 @@ static int hdd_set_grat_arp_keepalive(hdd_adapter_t *adapter)
 	req.timePeriod = hdd_ctx->config->infraStaKeepAlivePeriod;
 	req.sessionId = adapter->sessionId;
 
-	hdd_debug("Setting gratuitous ARP keepalive; ipv4_addr:%u.%u.%u.%u",
+	hdd_info("Setting gratuitous ARP keepalive; ipv4_addr:%u.%u.%u.%u",
 		 req.hostIpv4Addr[0], req.hostIpv4Addr[1],
 		 req.hostIpv4Addr[2], req.hostIpv4Addr[3]);
 
@@ -821,8 +817,7 @@ static int hdd_set_grat_arp_keepalive(hdd_adapter_t *adapter)
  * This function performs the work initially trigged by a callback
  * from the IPv4 netdev notifier.  Since this means there has been a
  * change in IPv4 state for the interface, the ARP offload is
- * reconfigured. Also, Updates the HLP IE info with IP address info
- * to fw if LFR3 is enabled
+ * reconfigured.
  *
  * Return: None
  */
@@ -835,11 +830,8 @@ static void __hdd_ipv4_notifier_work_queue(struct work_struct *work)
 	int status;
 	bool ndi_connected;
 	bool sta_associated;
-	hdd_wext_state_t *wext_state;
-	tCsrRoamProfile *roam_profile;
-	struct in_ifaddr *ifa;
 
-	hdd_debug("Configuring ARP Offload");
+	hdd_info("Configuring ARP Offload");
 
 	pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
 	status = wlan_hdd_validate_context(pHddCtx);
@@ -847,7 +839,7 @@ static void __hdd_ipv4_notifier_work_queue(struct work_struct *work)
 		return;
 
 	if (!pHddCtx->config->active_mode_offload) {
-		hdd_warn("Active mode offload is disabled");
+		hdd_err("Active mode offload is disabled");
 		return;
 	}
 
@@ -870,19 +862,6 @@ static void __hdd_ipv4_notifier_work_queue(struct work_struct *work)
 
 	if (pHddCtx->config->sta_keepalive_method == HDD_STA_KEEPALIVE_GRAT_ARP)
 		hdd_set_grat_arp_keepalive(pAdapter);
-
-	wext_state = WLAN_HDD_GET_WEXT_STATE_PTR(pAdapter);
-	roam_profile = &wext_state->roamProfile;
-	ifa = hdd_lookup_ifaddr(pAdapter);
-
-	hdd_debug("FILS Roaming support: %d",
-		  pHddCtx->config->is_fils_roaming_supported);
-
-	if (ifa && pHddCtx->config->is_fils_roaming_supported)
-		sme_send_hlp_ie_info(pHddCtx->hHal,
-				pAdapter->sessionId,
-				roam_profile,
-				ifa->ifa_local);
 }
 
 /**
@@ -924,7 +903,7 @@ static int __wlan_hdd_ipv4_changed(struct notifier_block *nb,
 	ENTER_DEV(ndev);
 
 	if ((pAdapter == NULL) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-		hdd_debug("Adapter context is invalid %pK", pAdapter);
+		hdd_err("Adapter context is invalid %p", pAdapter);
 		return NOTIFY_DONE;
 	}
 
@@ -952,7 +931,7 @@ static int __wlan_hdd_ipv4_changed(struct notifier_block *nb,
 					  pAdapter->sessionId);
 
 		if (!pHddCtx->config->fhostArpOffload) {
-			hdd_debug("Offload not enabled ARPOffload=%d",
+			hdd_notice("Offload not enabled ARPOffload=%d",
 				pHddCtx->config->fhostArpOffload);
 			return NOTIFY_DONE;
 		}
@@ -1005,7 +984,7 @@ QDF_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, bool fenable)
 	tSirHostOffloadReq offLoadRequest;
 	hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
 
-	hdd_debug("fenable = %d", fenable);
+	hdd_info("fenable = %d", fenable);
 
 	/* In SAP/P2P Go mode, ARP/NS Offload feature capability
 	 * is controlled by one bit.
@@ -1013,7 +992,7 @@ QDF_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, bool fenable)
 	if ((QDF_SAP_MODE == pAdapter->device_mode ||
 		QDF_P2P_GO_MODE == pAdapter->device_mode) &&
 		!pHddCtx->ap_arpns_support) {
-		hdd_debug("ARP Offload is not supported in SAP/P2PGO mode");
+		hdd_notice("ARP Offload is not supported in SAP/P2PGO mode");
 		return QDF_STATUS_SUCCESS;
 	}
 
@@ -1025,7 +1004,7 @@ QDF_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, bool fenable)
 			hdd_wlan_offload_event(SIR_IPV4_ARP_REPLY_OFFLOAD,
 					       SIR_OFFLOAD_ENABLE);
 
-			hdd_debug("Enable ARP offload: filter programmed = %d",
+			hdd_notice("Enable ARP offload: filter programmed = %d",
 			       offLoadRequest.enableOrDisable);
 
 			/* converting u32 to IPV4 address */
@@ -1033,7 +1012,7 @@ QDF_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, bool fenable)
 				offLoadRequest.params.hostIpv4Addr[i] =
 					(ifa->ifa_local >> (i * 8)) & 0xFF;
 			}
-			hdd_debug(" Enable SME HostOffload: %d.%d.%d.%d",
+			hdd_notice(" Enable SME HostOffload: %d.%d.%d.%d",
 			       offLoadRequest.params.hostIpv4Addr[0],
 			       offLoadRequest.params.hostIpv4Addr[1],
 			       offLoadRequest.params.hostIpv4Addr[2],
@@ -1046,42 +1025,30 @@ QDF_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, bool fenable)
 				hdd_err("Failed to enable HostOffload feature");
 				return QDF_STATUS_E_FAILURE;
 			}
-
-			qdf_mutex_acquire(&pAdapter->arp_offload_info_lock);
-			pAdapter->arp_offload_info.offload = fenable;
-			qdf_mem_copy(pAdapter->arp_offload_info.ipv4,
-				     offLoadRequest.params.hostIpv4Addr,
-				     SIR_IPV4_ADDR_LEN);
-			qdf_mutex_release(&pAdapter->arp_offload_info_lock);
 		} else {
-			hdd_debug("IP Address is not assigned");
+			hdd_notice("IP Address is not assigned");
 		}
 
 		return QDF_STATUS_SUCCESS;
+	} else {
+		hdd_wlan_offload_event(SIR_IPV4_ARP_REPLY_OFFLOAD,
+			SIR_OFFLOAD_DISABLE);
+		qdf_mem_zero((void *)&offLoadRequest,
+			     sizeof(tSirHostOffloadReq));
+		offLoadRequest.enableOrDisable = SIR_OFFLOAD_DISABLE;
+		offLoadRequest.offloadType = SIR_IPV4_ARP_REPLY_OFFLOAD;
+
+		if (QDF_STATUS_SUCCESS !=
+		    sme_set_host_offload(WLAN_HDD_GET_HAL_CTX(pAdapter),
+					 pAdapter->sessionId, &offLoadRequest)) {
+			hdd_err("Failure to disable host " "offload feature");
+			return QDF_STATUS_E_FAILURE;
+		}
+		return QDF_STATUS_SUCCESS;
 	}
-	hdd_wlan_offload_event(SIR_IPV4_ARP_REPLY_OFFLOAD,
-		SIR_OFFLOAD_DISABLE);
-	qdf_mem_zero((void *)&offLoadRequest,
-			sizeof(tSirHostOffloadReq));
-	offLoadRequest.enableOrDisable = SIR_OFFLOAD_DISABLE;
-	offLoadRequest.offloadType = SIR_IPV4_ARP_REPLY_OFFLOAD;
-
-	if (QDF_STATUS_SUCCESS !=
-	    sme_set_host_offload(WLAN_HDD_GET_HAL_CTX(pAdapter),
-				 pAdapter->sessionId, &offLoadRequest)) {
-		hdd_err("Failure to disable host offload feature");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	qdf_mutex_acquire(&pAdapter->arp_offload_info_lock);
-	pAdapter->arp_offload_info.offload = fenable;
-	qdf_mutex_release(&pAdapter->arp_offload_info_lock);
-
-	return QDF_STATUS_SUCCESS;
 }
 
-int hdd_conf_hw_filter_mode(hdd_adapter_t *adapter, enum hw_filter_mode mode,
-			    bool filter_enable)
+int hdd_conf_hw_filter_mode(hdd_adapter_t *adapter, enum hw_filter_mode mode)
 {
 	QDF_STATUS status;
 
@@ -1091,8 +1058,7 @@ int hdd_conf_hw_filter_mode(hdd_adapter_t *adapter, enum hw_filter_mode mode,
 	}
 
 	status = sme_conf_hw_filter_mode(WLAN_HDD_GET_HAL_CTX(adapter),
-					 adapter->sessionId, mode,
-					 filter_enable);
+					 adapter->sessionId, mode);
 
 	return qdf_status_to_os_return(status);
 }
@@ -1134,13 +1100,13 @@ int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, uint8_t set)
 
 	/* Check if INI is enabled or not, other wise just return */
 	if (!pHddCtx->config->fEnableMCAddrList) {
-		hdd_warn("gMCAddrListEnable is not enabled in INI");
+		hdd_notice("gMCAddrListEnable is not enabled in INI");
 		return -EINVAL;
 	}
 	pMulticastAddrs = qdf_mem_malloc(sizeof(tSirRcvFltMcAddrList));
 	if (NULL == pMulticastAddrs) {
 		hdd_err("Could not allocate Memory");
-		return -ENOMEM;
+		return -EINVAL;
 	}
 	pMulticastAddrs->action = set;
 
@@ -1163,7 +1129,7 @@ int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, uint8_t set)
 				memcpy(pMulticastAddrs->multicastAddr[i].bytes,
 				       pAdapter->mc_addr_list.addr[i],
 				       sizeof(pAdapter->mc_addr_list.addr[i]));
-				hdd_debug("%s multicast filter: addr ="
+				hdd_info("%s multicast filter: addr ="
 				       MAC_ADDRESS_STR,
 				       set ? "setting" : "clearing",
 				       MAC_ADDR_ARRAY(pMulticastAddrs->
@@ -1173,7 +1139,7 @@ int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, uint8_t set)
 			sme_8023_multicast_list(hHal, pAdapter->sessionId,
 						pMulticastAddrs);
 		} else {
-			hdd_debug("MC address list not sent to FW, cnt: %d",
+			hdd_info("MC address list not sent to FW, cnt: %d",
 					pAdapter->mc_addr_list.mc_cnt);
 		}
 	} else {
@@ -1192,7 +1158,7 @@ int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, uint8_t set)
 
 	}
 	/* MAddrCnt is MulticastAddrCnt */
-	hdd_debug("smeSessionId:%d; set:%d; MCAdddrCnt :%d",
+	hdd_notice("smeSessionId:%d; set:%d; MCAdddrCnt :%d",
 	       pAdapter->sessionId, set,
 	       pMulticastAddrs->ulMulticastAddrCnt);
 
@@ -1222,7 +1188,7 @@ static void hdd_send_suspend_ind(hdd_context_t *pHddCtx,
 {
 	QDF_STATUS qdf_ret_status = QDF_STATUS_E_FAILURE;
 
-	hdd_debug("send wlan suspend indication");
+	hdd_info("send wlan suspend indication");
 
 	qdf_ret_status =
 		sme_configure_suspend_ind(pHddCtx->hHal, conn_state_mask,
@@ -1246,11 +1212,12 @@ static void hdd_conf_resume_ind(hdd_adapter_t *pAdapter)
 
 	qdf_ret_status = sme_configure_resume_req(pHddCtx->hHal, NULL);
 
-	if (QDF_STATUS_SUCCESS != qdf_ret_status)
-		hdd_err("sme_configure_resume_req return failure %d",
-			qdf_ret_status);
+	if (QDF_STATUS_SUCCESS != qdf_ret_status) {
+		hdd_err("sme_configure_resume_req return failure %d", qdf_ret_status);
 
-	hdd_debug("send wlan resume indication");
+	}
+
+	hdd_notice("send wlan resume indication");
 	/* Disable supported OffLoads */
 	hdd_conf_hostoffload(pAdapter, false);
 }
@@ -1268,9 +1235,7 @@ hdd_update_conn_state_mask(hdd_adapter_t *adapter, uint32_t *conn_state_mask)
 
 	eConnectionState connState;
 	hdd_station_ctx_t *sta_ctx;
-
 	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-
 	connState = sta_ctx->conn_info.connState;
 
 	if (connState == eConnectionState_Associated ||
@@ -1300,26 +1265,25 @@ hdd_suspend_wlan(void (*callback)(void *callbackContext, bool suspended),
 
 	pHddCtx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!pHddCtx) {
-		hdd_err("HDD context is Null");
+		hdd_alert("HDD context is Null");
 		return;
 	}
 
-	if (cds_is_driver_recovering() || cds_is_driver_in_bad_state()) {
-		hdd_info("Recovery in Progress. State: 0x%x Ignore suspend!!!",
+	if (cds_is_driver_recovering()) {
+		hdd_err("Recovery in Progress. State: 0x%x Ignore suspend!!!",
 			 cds_get_driver_state());
 		return;
 	}
+
 
 	status = hdd_get_front_adapter(pHddCtx, &pAdapterNode);
 	while (NULL != pAdapterNode && QDF_STATUS_SUCCESS == status) {
 		pAdapter = pAdapterNode->pAdapter;
 
 		/* stop all TX queues before suspend */
-		hdd_info("Disabling queues for dev mode %s",
-			 hdd_device_mode_to_string(pAdapter->device_mode));
-		wlan_hdd_netif_queue_control(pAdapter,
-					     WLAN_STOP_ALL_NETIF_QUEUE,
-					     WLAN_CONTROL_PATH);
+		hdd_notice("Disabling queues");
+		wlan_hdd_netif_queue_control(pAdapter, WLAN_STOP_ALL_NETIF_QUEUE,
+					   WLAN_CONTROL_PATH);
 
 		if (pAdapter->device_mode == QDF_STA_MODE)
 			status = hdd_enable_default_pkt_filters(pAdapter);
@@ -1338,6 +1302,8 @@ hdd_suspend_wlan(void (*callback)(void *callbackContext, bool suspended),
 
 	pHddCtx->hdd_wlan_suspended = true;
 	hdd_wlan_suspend_resume_event(HDD_WLAN_EARLY_SUSPEND);
+
+	return;
 }
 
 /**
@@ -1360,8 +1326,8 @@ static void hdd_resume_wlan(void)
 		return;
 	}
 
-	if (cds_is_driver_recovering() || cds_is_driver_in_bad_state()) {
-		hdd_info("Recovery in Progress. State: 0x%x Ignore resume!!!",
+	if (cds_is_driver_recovering()) {
+		hdd_err("Recovery in Progress. State: 0x%x Ignore resume!!!",
 			 cds_get_driver_state());
 		return;
 	}
@@ -1376,8 +1342,7 @@ static void hdd_resume_wlan(void)
 		pAdapter = pAdapterNode->pAdapter;
 
 		/* wake the tx queues */
-		hdd_info("Enabling queues for dev mode %s",
-			 hdd_device_mode_to_string(pAdapter->device_mode));
+		hdd_info("Enabling queues");
 		wlan_hdd_netif_queue_control(pAdapter,
 					WLAN_WAKE_ALL_NETIF_QUEUE,
 					WLAN_CONTROL_PATH);
@@ -1390,6 +1355,68 @@ static void hdd_resume_wlan(void)
 		pAdapterNode = pNext;
 	}
 	hdd_ipa_resume(pHddCtx);
+
+	return;
+}
+
+/**
+ * DOC: SSR Timer
+ *
+ * When SSR is initiated, an SSR timer is started.  Under normal
+ * circumstances SSR should complete amd the timer should be deleted
+ * before it fires.  If the SSR timer does fire, it indicates SSR has
+ * taken too long, and our only recourse is to invoke the QDF_BUG()
+ * API which can allow a crashdump to be captured.
+ */
+
+/**
+ * hdd_ssr_timer_init() - Initialize SSR Timer
+ *
+ * Return: None.
+ */
+static void hdd_ssr_timer_init(void)
+{
+	init_timer(&ssr_timer);
+}
+
+/**
+ * hdd_ssr_timer_del() - Delete SSR Timer
+ *
+ * Return: None.
+ */
+static void hdd_ssr_timer_del(void)
+{
+	del_timer(&ssr_timer);
+	ssr_timer_started = false;
+}
+
+/**
+ * hdd_ssr_timer_cb() - SSR Timer callback function
+ * @data: opaque data registered with timer infrastructure
+ *
+ * Return: None.
+ */
+static void hdd_ssr_timer_cb(unsigned long data)
+{
+	hdd_alert("HDD SSR timer expired!");
+	QDF_BUG(0);
+}
+
+/**
+ * hdd_ssr_timer_start() - Start SSR Timer
+ * @msec: Timer timeout value in milliseconds
+ *
+ * Return: None.
+ */
+static void hdd_ssr_timer_start(int msec)
+{
+	if (ssr_timer_started) {
+		hdd_alert("Trying to start SSR timer when " "it's running!");
+	}
+	ssr_timer.expires = jiffies + msecs_to_jiffies(msec);
+	ssr_timer.function = hdd_ssr_timer_cb;
+	add_timer(&ssr_timer);
+	ssr_timer_started = true;
 }
 
 /**
@@ -1435,7 +1462,7 @@ static void hdd_ssr_restart_sap(hdd_context_t *hdd_ctx)
 		adapter = adapter_node->pAdapter;
 		if (adapter && adapter->device_mode == QDF_SAP_MODE) {
 			if (test_bit(SOFTAP_INIT_DONE, &adapter->event_flags)) {
-				hdd_debug("Restart prev SAP session");
+				hdd_notice("Restart prev SAP session");
 				wlan_hdd_start_sap(adapter, true);
 			}
 		}
@@ -1459,45 +1486,34 @@ QDF_STATUS hdd_wlan_shutdown(void)
 	v_CONTEXT_t p_cds_context = NULL;
 	hdd_context_t *pHddCtx;
 	p_cds_sched_context cds_sched_context = NULL;
+	QDF_STATUS qdf_status;
 
-	hdd_info("WLAN driver shutting down!");
+	hdd_alert("WLAN driver shutting down!");
+
+	/* If SSR never completes, then do kernel panic. */
+	hdd_ssr_timer_init();
+	hdd_ssr_timer_start(HDD_SSR_BRING_UP_TIME);
 
 	/* Get the global CDS context. */
 	p_cds_context = cds_get_global_context();
 	if (!p_cds_context) {
-		hdd_err("Global CDS context is Null");
+		hdd_alert("Global CDS context is Null");
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	/* Get the HDD context. */
 	pHddCtx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!pHddCtx) {
-		hdd_err("HDD context is Null");
+		hdd_alert("HDD context is Null");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	pHddCtx->is_ssr_in_progress = true;
-	cds_set_connection_in_progress(false);
-
 	cds_clear_concurrent_session_count();
 
-	hdd_debug("Invoking packetdump deregistration API");
+	hdd_info("Invoking packetdump deregistration API");
 	wlan_deregister_txrx_packetdump();
 
-	/*
-	 * After SSR, FW clear its txrx stats. In host,
-	 * as adapter is intact so those counts are still
-	 * available. Now if agains Set stats command comes,
-	 * then host will increment its counts start from its
-	 * last saved value, i.e., count before SSR, and FW will
-	 * increment its count from 0. This will finally sends a
-	 * mismatch of packet counts b/w host and FW to framework
-	 * that will create ambiquity. Therfore, Resetting the host
-	 * counts here so that after SSR both FW and host start
-	 * increment their counts from 0.
-	 */
-	hdd_reset_all_adapters_connectivity_stats(pHddCtx);
-
+	hdd_cleanup_scan_queue(pHddCtx);
 	hdd_reset_all_adapters(pHddCtx);
 
 	/* Flush cached rx frame queue */
@@ -1512,7 +1528,6 @@ QDF_STATUS hdd_wlan_shutdown(void)
 	if (true == pHddCtx->isMcThreadSuspended) {
 		complete(&cds_sched_context->ResumeMcEvent);
 		pHddCtx->isMcThreadSuspended = false;
-		pHddCtx->isWiphySuspended = false;
 	}
 #ifdef QCA_CONFIG_SMP
 	if (true == pHddCtx->is_ol_rx_thread_suspended) {
@@ -1520,34 +1535,34 @@ QDF_STATUS hdd_wlan_shutdown(void)
 		pHddCtx->is_ol_rx_thread_suspended = false;
 	}
 #endif
-	if (cds_get_pktcap_mode_enable() &&
-	    pHddCtx->is_ol_mon_thread_suspended) {
-		complete(&cds_sched_context->ol_resume_mon_event);
-		pHddCtx->is_ol_mon_thread_suspended = false;
-	}
 
+	qdf_status = cds_sched_close(p_cds_context);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		hdd_err("Failed to close CDS Scheduler");
+		QDF_ASSERT(false);
+	}
 	hdd_ipa_uc_ssr_deinit();
 
 	qdf_mc_timer_stop(&pHddCtx->tdls_source_timer);
 
-	hdd_bus_bw_compute_timer_stop(pHddCtx);
+	hdd_bus_bandwidth_destroy(pHddCtx);
 
 	hdd_wlan_stop_modules(pHddCtx, false);
 
 	hdd_lpass_notify_stop(pHddCtx);
 
-	hdd_info("WLAN driver shutdown complete");
+	hdd_alert("WLAN driver shutdown complete");
 	return QDF_STATUS_SUCCESS;
 }
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 /**
- * hdd_wlan_ssr_reinit_event()- send ssr reinit state
- *
- * This Function send send ssr reinit state diag event
- *
- * Return: void.
- */
+* hdd_wlan_ssr_reinit_event()- send ssr reinit state
+*
+* This Function send send ssr reinit state diag event
+*
+* Return: void.
+*/
 static void hdd_wlan_ssr_reinit_event(void)
 {
 	WLAN_HOST_DIAG_EVENT_DEF(ssr_reinit, struct host_event_wlan_ssr_reinit);
@@ -1562,61 +1577,6 @@ static inline void hdd_wlan_ssr_reinit_event(void)
 
 }
 #endif
-
-/**
- * hdd_send_default_scan_ies - send default scan ies to fw
- *
- * This function is used to send default scan ies to fw
- * in case of wlan re-init
- *
- * Return: void
- */
-static void hdd_send_default_scan_ies(hdd_context_t *hdd_ctx)
-{
-	hdd_adapter_list_node_t *adapter_node, *next;
-	hdd_adapter_t *adapter;
-	QDF_STATUS status;
-
-	status = hdd_get_front_adapter(hdd_ctx, &adapter_node);
-	while (NULL != adapter_node && QDF_STATUS_SUCCESS == status) {
-		adapter = adapter_node->pAdapter;
-		if (hdd_is_interface_up(adapter) &&
-		    (adapter->device_mode == QDF_STA_MODE ||
-		    adapter->device_mode == QDF_P2P_DEVICE_MODE) &&
-		    adapter->scan_info.default_scan_ies) {
-			sme_set_default_scan_ie(hdd_ctx->hHal,
-				      adapter->sessionId,
-				      adapter->scan_info.default_scan_ies,
-				      adapter->scan_info.default_scan_ies_len);
-		}
-		status = hdd_get_next_adapter(hdd_ctx, adapter_node,
-					      &next);
-		adapter_node = next;
-	}
-}
-
-void hdd_is_interface_down_during_ssr(hdd_context_t *hdd_ctx)
-{
-	hdd_adapter_t *adapter = NULL;
-	hdd_adapter_list_node_t *adapternode = NULL, *pnext = NULL;
-	QDF_STATUS status;
-
-	ENTER();
-
-	status = hdd_get_front_adapter(hdd_ctx, &adapternode);
-	while (NULL != adapternode && QDF_STATUS_SUCCESS == status) {
-		adapter = adapternode->pAdapter;
-		if (test_bit(DOWN_DURING_SSR, &adapter->event_flags)) {
-			clear_bit(DOWN_DURING_SSR, &adapter->event_flags);
-			hdd_stop_adapter(hdd_ctx, adapter, true);
-			clear_bit(DEVICE_IFACE_OPENED, &adapter->event_flags);
-		}
-		status = hdd_get_next_adapter(hdd_ctx, adapternode, &pnext);
-		adapternode = pnext;
-	}
-
-	EXIT();
-}
 
 /**
  * hdd_wlan_re_init() - HDD SSR re-init function
@@ -1640,32 +1600,45 @@ QDF_STATUS hdd_wlan_re_init(void)
 	/* Get the CDS context */
 	p_cds_context = cds_get_global_context();
 	if (p_cds_context == NULL) {
-		hdd_err("Failed cds_get_global_context");
+		hdd_alert("Failed cds_get_global_context");
 		goto err_re_init;
 	}
 
 	/* Get the HDD context */
 	pHddCtx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!pHddCtx) {
-		hdd_err("HDD context is Null");
+		hdd_alert("HDD context is Null");
 		goto err_re_init;
 	}
 	bug_on_reinit_failure = pHddCtx->config->bug_on_reinit_failure;
 
-	pAdapter = hdd_get_first_valid_adapter();
-	if (!pAdapter)
-		hdd_err("Failed to get adapter");
+	/* The driver should always be initialized in STA mode after SSR */
+	hdd_set_conparam(0);
+	/* Try to get an adapter from mode ID */
+	pAdapter = hdd_get_adapter(pHddCtx, QDF_STA_MODE);
+	if (!pAdapter) {
+		pAdapter = hdd_get_adapter(pHddCtx, QDF_SAP_MODE);
+		if (!pAdapter) {
+			pAdapter = hdd_get_adapter(pHddCtx, QDF_IBSS_MODE);
+			if (!pAdapter) {
+				hdd_alert("Failed to get Adapter!");
+			}
+		}
+	}
 
 	if (pHddCtx->config->enable_dp_trace)
-		hdd_dp_trace_init(pHddCtx->config);
+		qdf_dp_trace_init();
+
+	hdd_bus_bandwidth_init(pHddCtx);
+
 
 	ret = hdd_wlan_start_modules(pHddCtx, pAdapter, true);
 	if (ret) {
 		hdd_err("Failed to start wlan after error");
-		goto err_re_init;
+		goto err_wiphy_unregister;
 	}
 
-	hdd_update_hw_sw_info(pHddCtx);
+	hdd_wlan_get_version(pHddCtx, NULL, NULL);
 
 	wlan_hdd_send_svc_nlink_msg(pHddCtx->radio_index,
 				WLAN_SVC_FW_CRASHED_IND, NULL, 0);
@@ -1673,8 +1646,9 @@ QDF_STATUS hdd_wlan_re_init(void)
 	/* Restart all adapters */
 	hdd_start_all_adapters(pHddCtx);
 
-	/* init the scan reject params */
-	hdd_init_scan_reject_params(pHddCtx);
+	pHddCtx->last_scan_reject_session_id = 0xFF;
+	pHddCtx->last_scan_reject_reason = 0;
+	pHddCtx->last_scan_reject_timestamp = 0;
 
 	hdd_set_roaming_in_progress(false);
 	complete(&pAdapter->roaming_comp_var);
@@ -1683,15 +1657,42 @@ QDF_STATUS hdd_wlan_re_init(void)
 	/* Allow the phone to go to sleep */
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_REINIT);
 
+	ret = hdd_register_cb(pHddCtx);
+	if (ret) {
+		hdd_err("Failed to register HDD callbacks!");
+		goto err_cds_disable;
+	}
+
+	hdd_lpass_notify_start(pHddCtx);
 	/* set chip power save failure detected callback */
 	sme_set_chip_pwr_save_fail_cb(pHddCtx->hHal,
 				      hdd_chip_pwr_save_fail_detected_cb);
 
-	hdd_send_default_scan_ies(pHddCtx);
-	hdd_info("WLAN host driver reinitiation completed!");
+	hdd_err("WLAN host driver reinitiation completed!");
 	goto success;
 
+err_cds_disable:
+	hdd_wlan_stop_modules(pHddCtx, false);
+
+err_wiphy_unregister:
+	if (bug_on_reinit_failure)
+		QDF_BUG(0);
+
+	if (pHddCtx) {
+		/* Unregister the Notifier's */
+		hdd_unregister_notifiers(pHddCtx);
+		ptt_sock_deactivate_svc();
+		nl_srv_exit();
+
+		hdd_close_all_adapters(pHddCtx, false);
+		wlan_hdd_cfg80211_deinit(pHddCtx->wiphy);
+		hdd_lpass_notify_stop(pHddCtx);
+		wlan_hdd_deinit_tx_rx_histogram(pHddCtx);
+		wiphy_unregister(pHddCtx->wiphy);
+	}
+
 err_re_init:
+	hdd_ssr_timer_del();
 	/* Allow the phone to go to sleep */
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_REINIT);
 	return -EPERM;
@@ -1699,23 +1700,28 @@ err_re_init:
 success:
 	if (pHddCtx->config->sap_internal_restart)
 		hdd_ssr_restart_sap(pHddCtx);
-	hdd_is_interface_down_during_ssr(pHddCtx);
-
-	pHddCtx->is_ssr_in_progress = false;
-
+	hdd_ssr_timer_del();
 	hdd_wlan_ssr_reinit_event();
 	return QDF_STATUS_SUCCESS;
 }
 
-int wlan_hdd_set_powersave(hdd_adapter_t *adapter,
+/**
+ * wlan_hdd_set_powersave() - Set powersave mode
+ * @adapter: adapter upon which the request was received
+ * @allow_power_save: is wlan allowed to go into power save mode
+ * @timeout: timeout period in ms
+ *
+ * Return: 0 on success, non-zero on any error
+ */
+static int wlan_hdd_set_powersave(hdd_adapter_t *adapter,
 	bool allow_power_save, uint32_t timeout)
 {
 	tHalHandle hal;
 	hdd_context_t *hdd_ctx;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	bool force_trigger = false;
 
 	if (NULL == adapter) {
-		hdd_err("Adapter NULL");
+		hdd_alert("Adapter NULL");
 		return -ENODEV;
 	}
 
@@ -1725,80 +1731,59 @@ int wlan_hdd_set_powersave(hdd_adapter_t *adapter,
 		return -EINVAL;
 	}
 
-	hdd_debug("Allow power save: %d", allow_power_save);
+	hdd_info("Allow power save: %d", allow_power_save);
 	hal = WLAN_HDD_GET_HAL_CTX(adapter);
 
-	/*
-	 * This is a workaround for defective AP's that send a disassoc
-	 * immediately after WPS connection completes. Defer powersave by a
-	 * small amount if the affected AP is detected.
-	 */
-	if (allow_power_save &&
-	    adapter->device_mode == QDF_STA_MODE &&
+	if ((QDF_STA_MODE == adapter->device_mode) &&
 	    !adapter->sessionCtx.station.ap_supports_immediate_power_save) {
-		timeout = AUTO_PS_DEFER_TIMEOUT_MS;
-		hdd_debug("Defer power-save due to AP spec non-conformance");
+		/* override user's requested flag */
+		force_trigger = allow_power_save;
+		allow_power_save = false;
+		timeout = AUTO_PS_ENTRY_USER_TIMER_DEFAULT_VALUE;
+		hdd_debug("Defer power-save for few seconds...");
 	}
 
 	if (allow_power_save) {
 		if (QDF_STA_MODE == adapter->device_mode ||
 		    QDF_P2P_CLIENT_MODE == adapter->device_mode) {
-			hdd_debug("Disabling Auto Power save timer");
-			status = sme_ps_disable_auto_ps_timer(
+			hdd_notice("Disabling Auto Power save timer");
+			sme_ps_disable_auto_ps_timer(
 				WLAN_HDD_GET_HAL_CTX(adapter),
 				adapter->sessionId);
-			if (status != QDF_STATUS_SUCCESS)
-				goto end;
 		}
 
 		if (hdd_ctx->config && hdd_ctx->config->is_ps_enabled) {
-			hdd_debug("Wlan driver Entering Power save");
+			hdd_notice("Wlan driver Entering Power save");
 
 			/*
 			 * Enter Power Save command received from GUI
 			 * this means DHCP is completed
 			 */
-			if (timeout) {
-				status = sme_ps_enable_auto_ps_timer(hal,
-							    adapter->sessionId,
-							    timeout);
-				if (status != QDF_STATUS_SUCCESS)
-					goto end;
-			} else {
-				status = sme_ps_enable_disable(hal,
-						adapter->sessionId,
-						SME_PS_ENABLE);
-				if (status != QDF_STATUS_SUCCESS)
-					goto end;
-			}
+			sme_ps_enable_disable(hal, adapter->sessionId,
+					SME_PS_ENABLE);
 		} else {
-			hdd_debug("Power Save is not enabled in the cfg");
+			hdd_info("Power Save is not enabled in the cfg");
 		}
 	} else {
-		hdd_debug("Wlan driver Entering Full Power");
+		hdd_info("Wlan driver Entering Full Power");
 
 		/*
 		 * Enter Full power command received from GUI
 		 * this means we are disconnected
 		 */
-		status = sme_ps_disable_auto_ps_timer(
-					WLAN_HDD_GET_HAL_CTX(adapter),
-					adapter->sessionId);
-		if (status != QDF_STATUS_SUCCESS)
-			goto end;
-		status = sme_ps_enable_disable(hal, adapter->sessionId,
-					       SME_PS_DISABLE);
+		sme_ps_disable_auto_ps_timer(WLAN_HDD_GET_HAL_CTX(adapter),
+			adapter->sessionId);
+		sme_ps_enable_disable(hal, adapter->sessionId, SME_PS_DISABLE);
+		sme_ps_enable_auto_ps_timer(WLAN_HDD_GET_HAL_CTX(adapter),
+			adapter->sessionId, timeout, force_trigger);
 	}
 
-end:
-	return qdf_status_to_os_return(status);
+	return 0;
 }
 
-#ifdef WLAN_DEBUG
 static void wlan_hdd_print_suspend_fail_stats(hdd_context_t *hdd_ctx)
 {
 	struct suspend_resume_stats *stats = &hdd_ctx->suspend_resume_stats;
-
 	hdd_err("ipa:%d, radar:%d, roam:%d, scan:%d, initial_wakeup:%d",
 		stats->suspend_fail[SUSPEND_FAIL_IPA],
 		stats->suspend_fail[SUSPEND_FAIL_RADAR],
@@ -1806,9 +1791,6 @@ static void wlan_hdd_print_suspend_fail_stats(hdd_context_t *hdd_ctx)
 		stats->suspend_fail[SUSPEND_FAIL_SCAN],
 		stats->suspend_fail[SUSPEND_FAIL_INITIAL_WAKEUP]);
 }
-#else
-#define wlan_hdd_print_suspend_fail_stats(hdd_ctx) (0)
-#endif
 
 void wlan_hdd_inc_suspend_stats(hdd_context_t *hdd_ctx,
 				enum suspend_fail_reason reason)
@@ -1817,20 +1799,6 @@ void wlan_hdd_inc_suspend_stats(hdd_context_t *hdd_ctx,
 	hdd_ctx->suspend_resume_stats.suspend_fail[reason]++;
 	wlan_hdd_print_suspend_fail_stats(hdd_ctx);
 }
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
-void
-hdd_sched_scan_results(struct wiphy *wiphy, uint64_t reqid)
-{
-	cfg80211_sched_scan_results(wiphy);
-}
-#else
-void
-hdd_sched_scan_results(struct wiphy *wiphy, uint64_t reqid)
-{
-	cfg80211_sched_scan_results(wiphy, reqid);
-}
-#endif
 
 /**
  * __wlan_hdd_cfg80211_resume_wlan() - cfg80211 resume callback
@@ -1853,7 +1821,7 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 	ENTER();
 
 	if (cds_is_driver_recovering()) {
-		hdd_debug("Driver is recovering; Skipping resume");
+		hdd_info("Driver is recovering; Skipping resume");
 		exit_code = 0;
 		goto exit_with_code;
 	}
@@ -1873,7 +1841,7 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 	mutex_lock(&pHddCtx->iface_change_lock);
 	if (pHddCtx->driver_status != DRIVER_MODULES_ENABLED) {
 		mutex_unlock(&pHddCtx->iface_change_lock);
-		hdd_debug("Driver is not enabled; Skipping resume");
+		hdd_info("Driver is not enabled; Skipping resume");
 		exit_code = 0;
 		goto exit_with_code;
 	}
@@ -1893,13 +1861,6 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 		pHddCtx->is_ol_rx_thread_suspended = false;
 	}
 #endif
-	/* Resume tlshim mon thread */
-	if (cds_get_pktcap_mode_enable() &&
-	    pHddCtx->is_ol_mon_thread_suspended) {
-		complete(&cds_sched_context->ol_resume_mon_event);
-		pHddCtx->is_ol_mon_thread_suspended = false;
-	}
-
 	hdd_resume_wlan();
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
@@ -1909,7 +1870,7 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 	pHddCtx->isWiphySuspended = false;
 	if (true != pHddCtx->isSchedScanUpdatePending) {
 		qdf_spin_unlock(&pHddCtx->sched_scan_lock);
-		hdd_debug("Return resume is not due to PNO indication");
+		hdd_info("Return resume is not due to PNO indication");
 		goto exit_with_success;
 	}
 	/* Reset flag to avoid updatating cfg80211 data old results again */
@@ -1933,12 +1894,12 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 				 * process the connect request to AP
 				 */
 				hdd_prevent_suspend_timeout(
-					HDD_WAKELOCK_TIMEOUT_RESUME,
+					HDD_WAKE_LOCK_RESUME_DURATION,
 					WIFI_POWER_EVENT_WAKELOCK_RESUME_WLAN);
-				hdd_sched_scan_results(pHddCtx->wiphy, 0);
+				cfg80211_sched_scan_results(pHddCtx->wiphy);
 			}
 
-			hdd_debug("cfg80211 scan result database updated");
+			hdd_info("cfg80211 scan result database updated");
 			goto exit_with_success;
 		}
 		status = hdd_get_next_adapter(pHddCtx, pAdapterNode, &pNext);
@@ -1965,7 +1926,6 @@ static void wlan_hdd_cfg80211_ready_to_suspend(void *callbackContext,
 						bool suspended)
 {
 	hdd_context_t *pHddCtx = (hdd_context_t *) callbackContext;
-
 	pHddCtx->suspended = suspended;
 	complete(&pHddCtx->ready_to_suspend);
 }
@@ -2002,7 +1962,9 @@ int wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 				     struct cfg80211_wowlan *wow)
 {
+#ifdef QCA_CONFIG_SMP
 #define RX_TLSHIM_SUSPEND_TIMEOUT 200   /* msecs */
+#endif
 	hdd_context_t *pHddCtx = wiphy_priv(wiphy);
 	p_cds_sched_context cds_sched_context = get_cds_sched_ctxt();
 	hdd_adapter_list_node_t *pAdapterNode = NULL, *pNext = NULL;
@@ -2023,24 +1985,12 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 		return rc;
 
 	mutex_lock(&pHddCtx->iface_change_lock);
-
-	if (pHddCtx->driver_status == DRIVER_MODULES_OPENED) {
-		mutex_unlock(&pHddCtx->iface_change_lock);
-		hdd_err("Driver open state,  can't suspend");
-		return -EAGAIN;
-	}
-
 	if (pHddCtx->driver_status != DRIVER_MODULES_ENABLED) {
 		mutex_unlock(&pHddCtx->iface_change_lock);
-		hdd_debug("Driver Modules not Enabled ");
+		hdd_info("Driver Modules not Enabled ");
 		return 0;
 	}
 	mutex_unlock(&pHddCtx->iface_change_lock);
-
-	if (cds_is_connection_in_progress(NULL, NULL)) {
-		hdd_err("Suspend rejected: conn in progress");
-		return -EINVAL;
-	}
 
 	/* If RADAR detection is in progress (HDD), prevent suspend. The flag
 	 * "dfs_cac_block_tx" is set to true when RADAR is found and stay true
@@ -2051,7 +2001,7 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 		pAdapter = pAdapterNode->pAdapter;
 
 		if (wlan_hdd_validate_session_id(pAdapter->sessionId)) {
-			hdd_debug("invalid session id: %d", pAdapter->sessionId);
+			hdd_err("invalid session id: %d", pAdapter->sessionId);
 			goto next_adapter;
 		}
 
@@ -2095,8 +2045,7 @@ next_adapter:
 		pScanInfo = &pAdapter->scan_info;
 
 		if (sme_neighbor_middle_of_roaming
-		   (pHddCtx->hHal, pAdapter->sessionId) ||
-		    hdd_is_roaming_in_progress(pHddCtx)) {
+			    (pHddCtx->hHal, pAdapter->sessionId)) {
 			hdd_err("Roaming in progress, do not allow suspend");
 			wlan_hdd_inc_suspend_stats(pHddCtx,
 						   SUSPEND_FAIL_ROAM);
@@ -2110,20 +2059,6 @@ next_adapter:
 
 		status = hdd_get_next_adapter(pHddCtx, pAdapterNode, &pNext);
 		pAdapterNode = pNext;
-	}
-
-	/* flush any pending powersave timers */
-	status = hdd_get_front_adapter(pHddCtx, &pAdapterNode);
-	while (pAdapterNode && QDF_IS_STATUS_SUCCESS(status)) {
-		pAdapter = pAdapterNode->pAdapter;
-
-		if (pAdapter->sessionId >= MAX_NUMBER_OF_ADAPTERS)
-			goto fetch_adapter;
-
-		sme_ps_timer_flush_sync(pHddCtx->hHal, pAdapter->sessionId);
-fetch_adapter:
-		status = hdd_get_next_adapter(pHddCtx, pAdapterNode,
-					      &pAdapterNode);
 	}
 
 	/*
@@ -2182,28 +2117,10 @@ fetch_adapter:
 		clear_bit(RX_SUSPEND_EVENT,
 			  &cds_sched_context->ol_rx_event_flag);
 		hdd_err("Failed to stop tl_shim rx thread");
-		goto resume_mc;
+		goto resume_all;
 	}
 	pHddCtx->is_ol_rx_thread_suspended = true;
 #endif
-	/* Suspend tlshim mon thread */
-	if (cds_get_pktcap_mode_enable()) {
-		set_bit(RX_SUSPEND_EVENT,
-			&cds_sched_context->ol_mon_event_flag);
-		wake_up_interruptible(&cds_sched_context->ol_mon_wait_queue);
-		rc = wait_for_completion_timeout(&cds_sched_context->
-						 ol_suspend_mon_event,
-						 msecs_to_jiffies
-						 (RX_TLSHIM_SUSPEND_TIMEOUT));
-		if (!rc) {
-			clear_bit(RX_SUSPEND_EVENT,
-				  &cds_sched_context->ol_mon_event_flag);
-			hdd_err("Failed to stop tl_shim mon thread");
-			goto resume_all;
-		}
-		pHddCtx->is_ol_mon_thread_suspended = true;
-	}
-
 	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
 			 TRACE_CODE_HDD_CFG80211_SUSPEND_WLAN,
 			 NO_SESSION, pHddCtx->isWiphySuspended));
@@ -2214,14 +2131,12 @@ fetch_adapter:
 	EXIT();
 	return 0;
 
-resume_all:
 #ifdef QCA_CONFIG_SMP
-	complete(&cds_sched_context->ol_resume_rx_event);
-	pHddCtx->is_ol_rx_thread_suspended = false;
-resume_mc:
-#endif
+resume_all:
+
 	complete(&cds_sched_context->ResumeMcEvent);
 	pHddCtx->isMcThreadSuspended = false;
+#endif
 
 resume_tx:
 
@@ -2264,12 +2179,12 @@ static void hdd_stop_dhcp_ind(hdd_adapter_t *adapter)
 {
 	hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
-	hdd_debug("DHCP stop indicated through power save");
+	hdd_warn("DHCP stop indicated through power save");
 	sme_dhcp_stop_ind(hdd_ctx->hHal, adapter->device_mode,
 			  adapter->macAddressCurrent.bytes,
 			  adapter->sessionId);
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DHCP);
-	qdf_runtime_pm_allow_suspend(&hdd_ctx->runtime_context.connect);
+	qdf_runtime_pm_allow_suspend(&adapter->connect_rpm_ctx.connect);
 }
 
 /**
@@ -2285,10 +2200,9 @@ static void hdd_start_dhcp_ind(hdd_adapter_t *adapter)
 {
 	hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
-	hdd_debug("DHCP start indicated through power save");
-	qdf_runtime_pm_prevent_suspend(&hdd_ctx->runtime_context.connect);
-	hdd_prevent_suspend_timeout(HDD_WAKELOCK_TIMEOUT_CONNECT,
-				    WIFI_POWER_EVENT_WAKELOCK_DHCP);
+	hdd_err("DHCP start indicated through power save");
+	qdf_runtime_pm_prevent_suspend(&adapter->connect_rpm_ctx.connect);
+	hdd_prevent_suspend_timeout(1000, WIFI_POWER_EVENT_WAKELOCK_DHCP);
 	sme_dhcp_start_ind(hdd_ctx->hHal, adapter->device_mode,
 			   adapter->macAddressCurrent.bytes,
 			   adapter->sessionId);
@@ -2316,9 +2230,9 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 	ENTER();
 
 	if (timeout < 0) {
-		hdd_debug("User space timeout: %d; Enter full power or power save",
-			  timeout);
-		timeout = 0;
+		hdd_notice("User space timeout: %d; Using default instead: %d",
+			timeout, AUTO_PS_ENTRY_USER_TIMER_DEFAULT_VALUE);
+		timeout = AUTO_PS_ENTRY_USER_TIMER_DEFAULT_VALUE;
 	}
 
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
@@ -2344,7 +2258,7 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 	mutex_lock(&pHddCtx->iface_change_lock);
 	if (pHddCtx->driver_status != DRIVER_MODULES_ENABLED) {
 		mutex_unlock(&pHddCtx->iface_change_lock);
-		hdd_debug("Driver Module not enabled return success");
+		hdd_info("Driver Module not enabled return success");
 		return 0;
 	}
 	mutex_unlock(&pHddCtx->iface_change_lock);
@@ -2354,10 +2268,11 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 	    pHddCtx->config->fhostArpOffload &&
 	    (eConnectionState_Associated ==
 	     (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState)) {
-		hdd_debug("offload: calling arp offload");
+		hdd_notice("offload: in cfg80211_set_power_mgmt, "
+			"calling arp offload");
 		qdf_status = hdd_conf_arp_offload(pAdapter, true);
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-			hdd_debug("Failed to enable ARPOFFLOAD Feature %d",
+			hdd_notice("Failed to enable ARPOFFLOAD Feature %d",
 				qdf_status);
 		}
 	}
@@ -2438,14 +2353,13 @@ static int __wlan_hdd_cfg80211_set_txpower(struct wiphy *wiphy,
 		return -EIO;
 	}
 
-	hdd_debug("Set tx power level %d dbm", dbm);
+	hdd_info("Set tx power level %d dbm", dbm);
 
 	switch (type) {
 	/* Automatically determine transmit power */
 	case NL80211_TX_POWER_AUTOMATIC:
 	/* Fall through */
-	case NL80211_TX_POWER_LIMITED:
-	/* Limit TX power by the mBm parameter */
+	case NL80211_TX_POWER_LIMITED:  /* Limit TX power by the mBm parameter */
 		if (sme_set_max_tx_power(hHal, bssid, selfMac, dbm) !=
 		    QDF_STATUS_SUCCESS) {
 			hdd_err("Setting maximum tx power failed");
@@ -2456,6 +2370,7 @@ static int __wlan_hdd_cfg80211_set_txpower(struct wiphy *wiphy,
 	case NL80211_TX_POWER_FIXED:    /* Fix TX power to the mBm parameter */
 		hdd_err("NL80211_TX_POWER_FIXED not supported");
 		return -EOPNOTSUPP;
+		break;
 
 	default:
 		hdd_err("Invalid power setting type %d", type);
@@ -2481,7 +2396,6 @@ int wlan_hdd_cfg80211_set_txpower(struct wiphy *wiphy,
 				  int dbm)
 {
 	int ret;
-
 	cds_ssr_protect(__func__);
 	ret = __wlan_hdd_cfg80211_set_txpower(wiphy,
 					      wdev,
@@ -2508,8 +2422,6 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	struct net_device *ndev = wdev->netdev;
 	hdd_adapter_t *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 	int status;
-	hdd_station_ctx_t *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-	static bool is_rate_limited;
 
 	ENTER();
 
@@ -2526,35 +2438,18 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 
 	/* Validate adapter sessionId */
 	if (wlan_hdd_validate_session_id(adapter->sessionId)) {
-		hdd_debug("invalid session id: %d", adapter->sessionId);
-		return -EINVAL;
+		return -ENOTSUPP;
 	}
-
-	if (sta_ctx->hdd_ReassocScenario) {
-		hdd_debug("Roaming is in progress, rej this req");
-		return -EINVAL;
-	}
-
-	HDD_IS_RATE_LIMIT_REQ(is_rate_limited,
-			      pHddCtx->config->nb_commands_interval);
 
 	mutex_lock(&pHddCtx->iface_change_lock);
-	if (pHddCtx->driver_status != DRIVER_MODULES_ENABLED ||
-	    is_rate_limited) {
+	if (pHddCtx->driver_status != DRIVER_MODULES_ENABLED) {
 		mutex_unlock(&pHddCtx->iface_change_lock);
-		hdd_debug("Modules not enabled/rate limited, use cached stats");
+		hdd_info("Driver Module not enabled return success");
 		/* Send cached data to upperlayer*/
 		*dbm = adapter->hdd_stats.ClassA_stat.max_pwr;
 		return 0;
 	}
 	mutex_unlock(&pHddCtx->iface_change_lock);
-
-	if (sta_ctx->conn_info.connState != eConnectionState_Associated) {
-		hdd_debug("Not associated");
-		/*To keep GUI happy */
-		*dbm = 0;
-		return 0;
-	}
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
 			 TRACE_CODE_HDD_CFG80211_GET_TXPOWER,
@@ -2585,7 +2480,9 @@ int wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	int ret;
 
 	cds_ssr_protect(__func__);
-	ret = __wlan_hdd_cfg80211_get_txpower(wiphy, wdev, dbm);
+	ret = __wlan_hdd_cfg80211_get_txpower(wiphy,
+						wdev,
+						dbm);
 	cds_ssr_unprotect(__func__);
 
 	return ret;
@@ -2609,7 +2506,7 @@ int hdd_set_qpower_config(hdd_context_t *hddctx, hdd_adapter_t *adapter,
 	}
 	if (adapter->device_mode != QDF_STA_MODE &&
 	    adapter->device_mode != QDF_P2P_CLIENT_MODE) {
-		hdd_debug(FL("QPOWER only allowed in STA/P2P-Client modes:%d "),
+		hdd_info(FL("QPOWER only allowed in STA/P2P-Client modes:%d "),
 			adapter->device_mode);
 		return -EINVAL;
 	}
@@ -2665,7 +2562,7 @@ static void __hdd_wlan_fake_apps_resume(struct wiphy *wiphy,
 	qdf_device_t qdf_dev;
 	int i, resume_err;
 
-	hdd_debug("Unit-test resume WLAN");
+	hdd_info("Unit-test resume WLAN");
 
 	qdf_dev = cds_get_context(QDF_MODULE_ID_QDF_DEVICE);
 	if (!qdf_dev) {
@@ -2675,7 +2572,7 @@ static void __hdd_wlan_fake_apps_resume(struct wiphy *wiphy,
 	}
 
 	if (!test_and_clear_bit(HDD_FA_SUSPENDED_BIT, &fake_apps_state)) {
-		hdd_debug("Not unit-test suspended; Nothing to do");
+		hdd_info("Not unit-test suspended; Nothing to do");
 		return;
 	}
 
@@ -2697,7 +2594,7 @@ static void __hdd_wlan_fake_apps_resume(struct wiphy *wiphy,
 
 	dev->watchdog_timeo = HDD_TX_TIMEOUT;
 
-	hdd_debug("Unit-test resume succeeded");
+	hdd_info("Unit-test resume succeeded");
 }
 
 /**
@@ -2711,7 +2608,7 @@ static void __hdd_wlan_fake_apps_resume(struct wiphy *wiphy,
  */
 static void hdd_wlan_fake_apps_resume_irq_callback(uint32_t val)
 {
-	hdd_debug("Trigger unit-test resume WLAN; val: 0x%x", val);
+	hdd_info("Trigger unit-test resume WLAN; val: 0x%x", val);
 
 	QDF_BUG(g_wiphy);
 	QDF_BUG(g_dev);
@@ -2727,7 +2624,7 @@ int hdd_wlan_fake_apps_suspend(struct wiphy *wiphy, struct net_device *dev)
 	pm_message_t state;
 	int i, resume_err, suspend_err;
 
-	hdd_debug("Unit-test suspend WLAN");
+	hdd_info("Unit-test suspend WLAN");
 
 	qdf_dev = cds_get_context(QDF_MODULE_ID_QDF_DEVICE);
 	if (!qdf_dev) {
@@ -2742,7 +2639,7 @@ int hdd_wlan_fake_apps_suspend(struct wiphy *wiphy, struct net_device *dev)
 	}
 
 	if (test_and_set_bit(HDD_FA_SUSPENDED_BIT, &fake_apps_state)) {
-		hdd_debug("Already unit-test suspended; Nothing to do");
+		hdd_info("Already unit-test suspended; Nothing to do");
 		return 0;
 	}
 
@@ -2777,7 +2674,7 @@ int hdd_wlan_fake_apps_suspend(struct wiphy *wiphy, struct net_device *dev)
 	 */
 	dev->watchdog_timeo = INT_MAX;
 
-	hdd_debug("Unit-test suspend succeeded");
+	hdd_info("Unit-test suspend succeeded");
 	return 0;
 
 enable_irqs_and_bus_resume:
@@ -2812,146 +2709,5 @@ int hdd_wlan_fake_apps_resume(struct wiphy *wiphy, struct net_device *dev)
 	__hdd_wlan_fake_apps_resume(wiphy, dev);
 
 	return 0;
-}
-#endif
-
-#ifdef FW_THERMAL_THROTTLE_SUPPORT
-void hdd_send_thermal_notification(hdd_context_t *hdd_ctx,
-				   enum hdd_thermal_states thermal_state)
-{
-	QDF_STATUS status;
-	hdd_adapter_t *sta_adapter;
-	bool is_sta_connected, is_sta_connecting, is_sta_disconnecting;
-
-	if (!hdd_ctx) {
-		hdd_err("hdd context is null");
-		return;
-	}
-
-	if (!hdd_ctx->is_thermal_system_registered) {
-		hdd_debug("Thermal system not registered! Ignore");
-		return;
-	}
-
-	sta_adapter = hdd_get_adapter(hdd_ctx, QDF_STA_MODE);
-	if (!sta_adapter) {
-		hdd_err("STA adapter not present");
-		return;
-	}
-
-	is_sta_connected = hdd_conn_is_connected(WLAN_HDD_GET_STATION_CTX_PTR(
-						 sta_adapter));
-	is_sta_connecting = hdd_is_connecting(WLAN_HDD_GET_STATION_CTX_PTR(
-					      sta_adapter));
-	is_sta_disconnecting =
-		hdd_is_disconnecting(WLAN_HDD_GET_STATION_CTX_PTR(sta_adapter));
-
-	if (cds_get_connection_count() > 1) {
-		hdd_debug("Concurrent sessions present ignoring thermal notif");
-		return;
-	}
-
-	if (is_sta_disconnecting) {
-		hdd_debug("STA disconnecting; send disable thermal notif");
-		thermal_state = 0;
-		goto send;
-	}
-
-	if (!is_sta_connected || is_sta_connecting) {
-		hdd_debug("STA not connected/connecting, ignore thermal notif");
-		return;
-	}
-
-	switch (thermal_state) {
-	case HDD_THERMAL_STATE_HIGH:
-		cds_set_driver_thermal_mitigated(true);
-		hdd_debug("STA connected, issue disconnect");
-		wlan_hdd_disconnect(sta_adapter, eCSR_DISCONNECT_REASON_DEAUTH);
-
-		/*
-		 * Sending the thermal notification after disconnection will be
-		 * taken care in the disconnect path, so return from here and
-		 * do not send the notification now.
-		 */
-		return;
-	case HDD_THERMAL_STATE_MEDIUM:
-	case HDD_THERMAL_STATE_NORMAL:
-		cds_set_driver_thermal_mitigated(false);
-		break;
-	default:
-		hdd_err("Invalid thermal state: %d", thermal_state);
-		return;
-	}
-
-send:
-	status = wma_update_thermal_mitigation_to_fw(thermal_state);
-	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("Failed to send thermal mitigation to FW");
-}
-
-/**
- * hdd_thermal_mitigation_disable() - Disable thermal mitigation
- * @hdd_ctx: The HDD context
- *
- * This function verifies whether driver is already performing any sort of
- * thermal mitigation in connected STA scenario. If that is the case, then it
- * disables the thermal mitigation by sending command to FW.
- *
- * Return: None
- */
-void hdd_thermal_mitigation_disable(hdd_context_t *hdd_ctx)
-{
-	if (cds_is_sta_active_connection_exists() &&
-	    hdd_ctx->is_thermal_system_registered) {
-		hdd_debug("Disabling thermal mitigation; STA+ concr not supp");
-		hdd_send_thermal_notification(hdd_ctx,
-					      HDD_THERMAL_STATE_NORMAL);
-	}
-}
-
-/**
- * hdd_thermal_mitigation_enable() - Enable thermal mitigation
- * @hdd_ctx: The HDD context
- *
- * This function verifies whether driver is connected in STA with no concurrent
- * sessions active. If yes then it sends the current thermal state notification
- * to the firmware.
- *
- * Return: None
- */
-void hdd_thermal_mitigation_enable(hdd_context_t *hdd_ctx)
-{
-	uint16_t thermal_state = HDD_THERMAL_STATE_NORMAL;
-
-	if (cds_is_sta_active_connection_exists() &&
-	    cds_get_connection_count() == 1 &&
-	    hdd_ctx->is_thermal_system_registered) {
-		hdd_debug("Re-enabling thermal mitigation");
-		if (!pld_get_thermal_state(hdd_ctx->parent_dev, &thermal_state))
-			hdd_send_thermal_notification(hdd_ctx,
-						      hdd_map_thermal_states(
-						      thermal_state));
-	}
-}
-
-/**
- * hdd_map_thermal_states() - Return thermal state enum from int value
- * @state: The state that is to be mapped
- *
- * Return: enum hdd_thermal_states value for the corresponding state
- */
-enum hdd_thermal_states hdd_map_thermal_states(uint16_t state)
-{
-	switch (state) {
-	case 0:
-		return HDD_THERMAL_STATE_NORMAL;
-	case 1:
-		return HDD_THERMAL_STATE_MEDIUM;
-	case 2:
-		return HDD_THERMAL_STATE_HIGH;
-	default:
-		hdd_err("Invalid thermal state");
-		return HDD_THERMAL_STATE_INVAL;
-	}
 }
 #endif

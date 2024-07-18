@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -45,14 +54,6 @@
 #define IS_5G_CH(__chNum) ((__chNum >= 36) && (__chNum <= 165))
 #define IS_2X2_CHAIN(__chain) ((__chain & 0x3) == 0x3)
 #define DISABLE_NSS2_MCS 0xC
-#define VHT_1x1_MCS9_MAP 0x2
-#define VHT_2x2_MCS9_MAP 0xA
-#define VHT_1x1_MCS8_VAL 0xFFFD
-#define VHT_2x2_MCS8_VAL 0xFFF5
-#define VHT_1x1_MCS_MASK 0x3
-#define VHT_2x2_MCS_MASK 0xF
-#define DISABLE_VHT_MCS_9(mcs, nss) \
-	(mcs = (nss > 1) ? VHT_2x2_MCS8_VAL : VHT_1x1_MCS8_VAL)
 
 #define NSS_1x1_MODE 1
 #define NSS_2x2_MODE 2
@@ -107,160 +108,6 @@ typedef struct sSirQCNIE {
 	uint8_t version;
 	uint8_t sub_version;
 } tSirQCNIE, *tpSirQCNIE;
-
-#ifdef WLAN_FEATURE_FILS_SK
-#define SIR_MAX_IDENTIFIER_CNT 7
-#define SIR_CACHE_IDENTIFIER_LEN 2
-#define SIR_HESSID_LEN 6
-#define SIR_MAX_KEY_CNT 7
-#define SIR_MAX_KEY_LEN 48
-
-/*
- * struct public_key_identifier: structure for public key identifier
- * present in fils indication element
- * @is_present: if Key info is present
- * @key_cnt:  number of keys present
- * @key_type: type of key used
- * @length: length of key
- * @key: key data
- */
-struct public_key_identifier {
-	bool is_present;
-	uint8_t key_cnt;
-	uint8_t key_type;
-	uint8_t length;
-	uint8_t key[SIR_MAX_KEY_CNT][SIR_MAX_KEY_LEN];
-};
-
-/*
- * struct fils_cache_identifier: structure for fils cache identifier
- * present in fils indication element
- * @is_present: if cache identifier is present
- * @identifier: cache identifier
- */
-struct fils_cache_identifier {
-	bool is_present;
-	uint8_t identifier[SIR_CACHE_IDENTIFIER_LEN];
-};
-
-/*
- * struct fils_hessid: structure for fils hessid
- * present in fils indication element
- * @is_present: if hessid info is present
- * @hessid: hessid data
- */
-struct fils_hessid {
-	bool is_present;
-	uint8_t hessid[SIR_HESSID_LEN];
-};
-
-/*
- * struct fils_realm_identifier: structure for fils_realm_identifier
- * present in fils indication element
- * @is_present: if realm info is present
- * @realm_cnt: realm count
- * @realm: realm data
- */
-struct fils_realm_identifier {
-	bool is_present;
-	uint8_t realm_cnt;
-	uint8_t realm[SIR_MAX_REALM_COUNT][SIR_REALM_LEN];
-};
-
-/*
- * struct sir_fils_indication: structure for fils indication element
- * @is_present: if indication element is present
- * @is_ip_config_supported: if IP config is supported
- * @is_fils_sk_auth_supported: if fils sk suppprted
- * @is_fils_sk_auth_pfs_supported: if fils sk with pfs supported
- * @is_pk_auth_supported: if fils public key supported
- * @cache_identifier: fils cache idenfier info
- * @hessid: fils hessid info
- * @realm_identifier: fils realm info
- * @key_identifier: fils key identifier info
- */
-struct sir_fils_indication {
-	bool is_present;
-	uint8_t is_ip_config_supported;
-	uint8_t is_fils_sk_auth_supported;
-	uint8_t is_fils_sk_auth_pfs_supported;
-	uint8_t is_pk_auth_supported;
-	struct fils_cache_identifier cache_identifier;
-	struct fils_hessid hessid;
-	struct fils_realm_identifier realm_identifier;
-	struct public_key_identifier key_identifier;
-};
-#endif
-#define ESP_INFORMATION_LIST_LENGTH 3
-/*
- * enum access_category: tells about access category in ESP paramameter
- * @ESP_AC_BK: ESP access category for background
- * @ESP_AC_BE: ESP access category for best effort
- * @ESP_AC_VI: ESP access category for video
- * @ESP_AC_VO: ESP access category for Voice
- */
-enum access_category {
-	ESP_AC_BK,
-	ESP_AC_BE,
-	ESP_AC_VI,
-	ESP_AC_VO,
-
-};
-/*
- * struct sir_esp_info: structure for Esp information parameter
- * @access_category: access category info
- * @reserved: reserved
- * @data_format: two bits in length and tells about data format
- * i.e. 0 = No aggregation is expected to be performed for MSDUs or MPDUs with
- * the Type subfield equal to Data for the corresponding AC
- * 1 = A-MSDU aggregation is expected to be performed for MSDUs for the
- * corresponding AC, but A-MPDU aggregation is not expected to be performed
- * for MPDUs with the Type subfield equal to Data for the corresponding AC
- * 2 = A-MPDU aggregation is expected to be performed for MPDUs with the Type
- * subfield equal to Data for the corresponding AC, but A-MSDU aggregation is
- * not expected to be performed for MSDUs for the corresponding AC
- * 3 = A-MSDU aggregation is expected to be performed for MSDUs for the
- * corresponding AC and A-MPDU aggregation is expected to be performed for
- * MPDUs with the Type subfield equal to Data for the corresponding AC
- * @ba_window_size: BA Window Size subfield is three bits in length and
- * indicates the size of the Block Ack window that is
- * expected for the corresponding access category
- * @estimated_air_fraction: Estimated Air Time Fraction subfield is 8 bits in
- * length and contains an unsigned integer that represents
- * the predicted percentage of time, linearly scaled with 255 representing
- * 100%, that a new STA joining the
- * BSS will be allocated for PPDUs that contain only MPDUs with the Type
- * subfield equal to Data of the
- * corresponding access category for that STA.
- * @ppdu_duration: Data PPDU Duration Target field is 8 bits in length and is
- * an unsigned integer that indicates the
- * expected target duration of PPDUs that contain only MPDUs with the Type
- * subfield equal to Data for the
- * corresponding access category in units of 50 μs.
- */
-struct sir_esp_info {
-	uint8_t access_category:2;
-	uint8_t reserved:1;
-	uint8_t data_format:2;
-	uint8_t ba_window_size:3;
-	uint8_t estimated_air_fraction;
-	uint8_t ppdu_duration;
-};
-/*
- * struct sir_esp_information: struct for ESP information
- * @is_present: If ESP information is present or not
- * @esp_info_AC_BK: ESP information related to BK category
- * @esp_info_AC_BE: ESP information related to BE category
- * @esp_info_AC_VI: ESP information related to VI category
- * @esp_info_AC_VO: ESP information related to VO category
- */
-struct sir_esp_information {
-	bool is_present;
-	struct sir_esp_info esp_info_AC_BK;
-	struct sir_esp_info esp_info_AC_BE;
-	struct sir_esp_info esp_info_AC_VI;
-	struct sir_esp_info esp_info_AC_VO;
-};
 
 /* Structure common to Beacons & Probe Responses */
 typedef struct sSirProbeRespBeacon {
@@ -350,13 +197,7 @@ typedef struct sSirProbeRespBeacon {
 	uint8_t MBO_capability;
 	bool assoc_disallowed;
 	uint8_t assoc_disallowed_reason;
-	bool oce_wan_present;
-	uint8_t oce_wan_downlink_av_cap;
 	tSirQCNIE QCN_IE;
-#ifdef WLAN_FEATURE_FILS_SK
-	struct sir_fils_indication fils_ind;
-#endif
-	struct sir_esp_information esp_information;
 } tSirProbeRespBeacon, *tpSirProbeRespBeacon;
 
 /* probe Request structure */
@@ -425,7 +266,6 @@ typedef struct sSirAssocReq {
 	tDot11fIEExtCap ExtCap;
 	tDot11fIEvendor_vht_ie vendor_vht_ie;
 	tDot11fIEhs20vendor_ie hs20vendor_ie;
-	bool is_sae_authenticated;
 } tSirAssocReq, *tpSirAssocReq;
 
 /* / Association Response structure (one day to be replaced by */
@@ -476,17 +316,7 @@ typedef struct sSirAssocRsp {
 #endif
 	tDot11fIEvendor_vht_ie vendor_vht_ie;
 	tDot11fIEOBSSScanParameters obss_scanparams;
-	tDot11fTLVrssi_assoc_rej rssi_assoc_rej;
 	tSirQCNIE QCN_IE;
-#ifdef WLAN_FEATURE_FILS_SK
-	tDot11fIEfils_session fils_session;
-	tDot11fIEfils_key_confirmation fils_key_auth;
-	tDot11fIEfils_kde fils_kde;
-	struct qdf_mac_addr dst_mac;
-	struct qdf_mac_addr src_mac;
-	uint16_t hlp_data_len;
-	uint8_t hlp_data[FILS_MAX_HLP_DATA_LEN];
-#endif
 } tSirAssocRsp, *tpSirAssocRsp;
 
 #ifdef FEATURE_WLAN_ESE
@@ -597,10 +427,12 @@ struct s_ext_cap {
 
 uint8_t sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, uint32_t bitnum);
 
+void dot11f_log(tpAniSirGlobal pMac, int nSev, const char *lpszFormat, ...);
+
 #define CFG_GET_INT(nStatus, pMac, nItem, cfg)  do { \
 		(nStatus) = wlan_cfg_get_int((pMac), (nItem), &(cfg)); \
 		if (eSIR_SUCCESS != (nStatus)) { \
-			pe_err("Failed to retrieve nItem from CFG status: %d", (nStatus)); \
+			dot11f_log((pMac), LOGP, FL("Failed to retrieve nItem from CFG (%d)."), (nStatus)); \
 			return nStatus; \
 		} \
 } while (0)
@@ -608,7 +440,7 @@ uint8_t sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, uint32_t bitnum);
 #define CFG_GET_INT_NO_STATUS(nStatus, pMac, nItem, cfg) do { \
 		(nStatus) = wlan_cfg_get_int((pMac), (nItem), &(cfg)); \
 		if (eSIR_SUCCESS != (nStatus)) { \
-			pe_err("Failed to retrieve nItem from CFG status: %d", (nStatus)); \
+			dot11f_log((pMac), LOGP, FL("Failed to retrieve nItem  from CFG (%d)."), (nStatus)); \
 			return; \
 		} \
 } while (0)
@@ -617,7 +449,7 @@ uint8_t sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, uint32_t bitnum);
 		(nCfg) = (nMaxCfg); \
 		(nStatus) = wlan_cfg_get_str((pMac), (nItem), (cfg), &(nCfg)); \
 		if (eSIR_SUCCESS != (nStatus)) { \
-			pe_err("Failed to retrieve nItem from CFG status: %d", (nStatus)); \
+			dot11f_log((pMac), LOGP, FL("Failed to retrieve nItem  from CFG (%d)."), (nStatus)); \
 			return nStatus; \
 		} \
 } while (0)
@@ -626,7 +458,7 @@ uint8_t sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, uint32_t bitnum);
 		(nCfg) = (nMaxCfg); \
 		(nStatus) = wlan_cfg_get_str((pMac), (nItem), (cfg), &(nCfg)); \
 		if (eSIR_SUCCESS != (nStatus)) { \
-			pe_err("Failed to retrieve nItem from CFG status: %d", (nStatus)); \
+			dot11f_log((pMac), LOGP, FL("Failed to retrieve nItem  from CFG (%d)."), (nStatus)); \
 			return; \
 		} \
 } while (0)
@@ -652,7 +484,6 @@ sir_convert_assoc_req_frame2_struct(struct sAniSirGlobal *pMac,
 
 tSirRetStatus
 sir_convert_assoc_resp_frame2_struct(struct sAniSirGlobal *pMac,
-				tpPESession session_entry,
 				uint8_t *frame, uint32_t len,
 				tpSirAssocRsp assoc);
 
@@ -796,20 +627,10 @@ populate_dot11f_ext_supp_rates(tpAniSirGlobal pMac,
 			uint8_t nChannelNum, tDot11fIEExtSuppRates *pDot11f,
 			tpPESession psessionEntry);
 
-/**
- * populate_dot11f_beacon_report() - Populate the Beacon Report IE
- * @pMac: Pointer to the global MAC context
- * @pDot11f: Pointer to the measurement report structure
- * @pBeaconReport: Pointer to the Beacon Report structure
- * @is_last_frame: is the current report last or more reports to follow
- *
- * Return: Ret Status
- */
 tSirRetStatus
 populate_dot11f_beacon_report(tpAniSirGlobal pMac,
 			tDot11fIEMeasurementReport *pDot11f,
-			tSirMacBeaconReport *pBeaconReport,
-			bool is_last_frame);
+			tSirMacBeaconReport *pBeaconReport);
 
 /**
  * \brief Populate a tDot11fIEExtSuppRates
@@ -1149,27 +970,6 @@ populate_dot11f_ext_cap(tpAniSirGlobal pMac, bool isVHTEnabled,
 
 void populate_dot11f_qcn_ie(tDot11fIEQCN_IE *pDot11f);
 
-#ifdef WLAN_FEATURE_FILS_SK
-/**
- * populate_dot11f_fils_params() - Populate FILS IE to frame
- * @mac_ctx: global mac context
- * @frm: Assoc request frame
- * @pe_session: PE session
- *
- * This API is used to populate FILS IE to Association request
- *
- * Return: None
- */
-void populate_dot11f_fils_params(tpAniSirGlobal mac_ctx,
-				 tDot11fAssocRequest *frm,
-				 tpPESession pe_session);
-#else
-static inline void populate_dot11f_fils_params(tpAniSirGlobal mac_ctx,
-				 tDot11fAssocRequest *frm,
-				 tpPESession pe_session)
-{ }
-#endif
-
 tSirRetStatus
 populate_dot11f_operating_mode(tpAniSirGlobal pMac,
 			tDot11fIEOperatingMode *pDot11f,
@@ -1202,18 +1002,5 @@ sir_validate_and_rectify_ies(tpAniSirGlobal mac_ctx,
 				uint8_t *mgmt_frame,
 				uint32_t frame_bytes,
 				uint32_t *missing_rsn_bytes);
-/**
- * sir_copy_caps_info() - Copy Caps info from tDot11fFfCapabilities to
- *                        beacon/probe response structure.
- * @mac_ctx: MAC Context
- * @caps: tDot11fFfCapabilities structure
- * @pProbeResp: beacon/probe response structure
- *
- * Copy the caps info to beacon/probe response structure
- *
- * Return: None
- */
-void sir_copy_caps_info(tpAniSirGlobal mac_ctx, tDot11fFfCapabilities caps,
-			tpSirProbeRespBeacon pProbeResp);
 
 #endif /* __PARSE_H__ */

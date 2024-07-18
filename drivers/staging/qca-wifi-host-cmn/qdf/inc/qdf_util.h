@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -158,7 +167,6 @@ static inline bool qdf_is_macaddr_equal(struct qdf_mac_addr *mac_addr1,
 static inline bool qdf_is_macaddr_zero(struct qdf_mac_addr *mac_addr)
 {
 	struct qdf_mac_addr zero_mac_addr = QDF_MAC_ADDR_ZERO_INITIALIZER;
-
 	return qdf_is_macaddr_equal(mac_addr, &zero_mac_addr);
 }
 
@@ -396,7 +404,6 @@ static inline uint8_t *qdf_get_u32(uint8_t *ptr, uint32_t *value)
 static inline int qdf_get_pwr2(int value)
 {
 	int log2;
-
 	if (QDF_IS_PWR2(value))
 		return value;
 
@@ -531,16 +538,4 @@ uint64_t qdf_do_mod(uint64_t dividend, uint32_t divisor)
 {
 	return __qdf_do_mod(dividend, divisor);
 }
-
-#ifdef ENABLE_SMMU_S1_TRANSLATION
-/**
- * qdf_get_ipa_smmu_status() - to get IPA SMMU status
- *
- * Return: IPA SMMU status
- */
-static inline bool qdf_get_ipa_smmu_status(void)
-{
-	return __qdf_get_ipa_smmu_status();
-}
-#endif
 #endif /*_QDF_UTIL_H*/

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2015, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #if !defined(__SAP_CH_SELECT_H)
@@ -51,14 +60,8 @@
 #define SOFTAP_MAX_RSSI         (0)
 #define SOFTAP_MIN_COUNT        (0)
 #define SOFTAP_MAX_COUNT        (60)
-
-#define SOFTAP_MIN_NF           (-120)
-#define SOFTAP_MAX_NF           (-60)
-#define SOFTAP_MIN_CHNFREE      (0)
-#define SOFTAP_MAX_CHNFREE      (1)
-#define SOFTAP_MIN_TXPWR        (0)
-#define SOFTAP_MAX_TXPWR        (63)
-
+#define SOFTAP_RSSI_WEIGHT      (20)
+#define SOFTAP_COUNT_WEIGHT     (20)
 
 #define SAP_DEFAULT_24GHZ_CHANNEL     (6)
 #define SAP_DEFAULT_5GHZ_CHANNEL      (40)

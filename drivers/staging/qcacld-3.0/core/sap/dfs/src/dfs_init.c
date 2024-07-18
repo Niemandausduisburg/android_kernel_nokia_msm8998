@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2002-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2002-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*===========================================================================
@@ -78,25 +87,24 @@ void dfs_reset_alldelaylines(struct ath_dfs *dfs, int seg_id)
 
 	if (pl == NULL) {
 		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_ERROR,
-			  "%s[%d]:  pl==NULL, dfs=%pK", __func__, __LINE__, dfs);
+			  "%s[%d]:  pl==NULL, dfs=%p", __func__, __LINE__, dfs);
 		return;
 	}
 
 	if (dfs->ic->dfs_hw_bd_id !=  DFS_HWBD_QCA6174) {
-		if (dfs->dfs_rinfo.rn_numbin5radars && (((seg_id == 0) ?
-		    dfs->dfs_b5radars : dfs->dfs_b5radars_ext_seg) == NULL)) {
+		if (((seg_id == 0) ?
+		    dfs->dfs_b5radars : dfs->dfs_b5radars_ext_seg) == NULL) {
 			DFS_DPRINTK(dfs, ATH_DEBUG_DFS,
-				    "%s: pl==NULL, b5radars=%pK\n",
+				    "%s: pl==NULL, b5radars=%p\n",
 				    __func__,
 				    (seg_id == 0) ? dfs->dfs_b5radars :
 						    dfs->dfs_b5radars_ext_seg);
 			return;
 		}
 	} else {
-		if (dfs->dfs_rinfo.rn_numbin5radars &&
-				(dfs->dfs_b5radars == NULL)) {
+		if (dfs->dfs_b5radars == NULL) {
 			QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_ERROR,
-				"%s[%d]: pl==NULL, b5radars=%pK", __func__, __LINE__,
+				"%s[%d]: pl==NULL, b5radars=%p", __func__, __LINE__,
 				dfs->dfs_b5radars);
 			return;
 		}
@@ -175,7 +183,6 @@ void dfs_reset_delayline(struct dfs_delayline *dl)
 void dfs_reset_radarq(struct ath_dfs *dfs)
 {
 	struct dfs_event *event;
-
 	if (dfs == NULL) {
 		DFS_DPRINTK(dfs, ATH_DEBUG_DFS, "%s: sc_dfs is NULL", __func__);
 		return;
@@ -227,7 +234,7 @@ int dfs_init_radar_filters(struct ieee80211com *ic,
 	 * the rest of the radar configuration as suspect.
 	 */
 	if (radar_info == NULL || radar_info->dfsdomain == 0) {
-		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_ERROR,
 			  "%s[%d]: Unknown dfs domain %d ",
 			  __func__, __LINE__, dfs->dfsdomain);
 		/* Disable radar detection since we don't have a radar domain */
@@ -238,7 +245,7 @@ int dfs_init_radar_filters(struct ieee80211com *ic,
 		return DFS_STATUS_SUCCESS;
 	}
 
-	QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+	QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
 		  "%s[%d]:dfsdomain=%d, numradars=%d, numb5radars=%d",
 		  __func__, __LINE__, radar_info->dfsdomain,
 		  radar_info->numradars, radar_info->numb5radars);
@@ -303,7 +310,6 @@ int dfs_init_radar_filters(struct ieee80211com *ic,
 				max_pulsedur = ft->ft_maxdur;
 			for (i = ft->ft_mindur; i <= ft->ft_maxdur; i++) {
 				uint32_t stop = 0, tableindex = 0;
-
 				while ((tableindex < DFS_MAX_RADAR_OVERLAP)
 				       && (!stop)) {
 					if ((dfs->
@@ -336,8 +342,6 @@ int dfs_init_radar_filters(struct ieee80211com *ic,
 
 		rf->rf_numpulses = numpulses;
 		rf->rf_patterntype = dfs_radars[p].rp_patterntype;
-		rf->rf_sidx_spread = dfs_radars[p].rp_sidx_spread;
-		rf->rf_check_delta_peak = dfs_radars[p].rp_check_delta_peak;
 		rf->rf_pulseid = dfs_radars[p].rp_pulseid;
 		rf->rf_mindur = dfs_radars[p].rp_mindur;
 		rf->rf_maxdur = dfs_radars[p].rp_maxdur;
@@ -364,12 +368,12 @@ int dfs_init_radar_filters(struct ieee80211com *ic,
 		rf->rf_threshold = dfs_radars[p].rp_threshold;
 		rf->rf_filterlen = rf->rf_maxpri * rf->rf_numpulses;
 
-		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
 			  "%s[%d]: minprf = %d maxprf = %d pulsevar = %d thresh=%d",
 			  __func__, __LINE__, dfs_radars[p].rp_pulsefreq,
 			  dfs_radars[p].rp_max_pulsefreq,
 			  dfs_radars[p].rp_pulsevar, rf->rf_threshold);
-		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
 			  "%s[%d]:minpri = %d maxpri = %d filterlen = %d filterID = %d",
 			  __func__, __LINE__, rf->rf_minpri, rf->rf_maxpri,
 			  rf->rf_filterlen, rf->rf_pulseid);
@@ -467,10 +471,10 @@ int dfs_init_radar_filters(struct ieee80211com *ic,
 		dfs_round((int32_t) ((max_pulsedur * 100 / 80) * 100));
 	/* relax the max pulse duration a little bit due to inaccuracy caused by chirping. */
 	dfs->dfs_rinfo.rn_maxpulsedur = dfs->dfs_rinfo.rn_maxpulsedur + 20;
-	QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+	QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
 		  "%s[%d]: DFS min filter rssiThresh = %d",
 		  __func__, __LINE__, min_rssithresh);
-	QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+	QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
 		  "%s[%d]:DFS max pulse dur = %d ticks",
 		  __func__, __LINE__, dfs->dfs_rinfo.rn_maxpulsedur);
 	return DFS_STATUS_SUCCESS;
@@ -482,7 +486,6 @@ bad4:
 void dfs_clear_stats(struct ieee80211com *ic)
 {
 	struct ath_dfs *dfs = (struct ath_dfs *)ic->ic_dfs;
-
 	if (dfs == NULL)
 		return;
 	OS_MEMZERO(&dfs->ath_dfs_stats, sizeof(struct dfs_stats));

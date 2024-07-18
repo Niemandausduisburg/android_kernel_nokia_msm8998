@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*========================================================================
@@ -45,7 +54,7 @@
 static int epping_start_adapter(epping_adapter_t *pAdapter);
 static void epping_stop_adapter(epping_adapter_t *pAdapter);
 
-static void epping_timer_expire(unsigned long data)
+static void epping_timer_expire(void *data)
 {
 	struct net_device *dev = (struct net_device *)data;
 	epping_adapter_t *pAdapter;
@@ -135,8 +144,7 @@ end:
 
 }
 
-static netdev_tx_t epping_hard_start_xmit(struct sk_buff *skb,
-					  struct net_device *dev)
+static int epping_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	epping_adapter_t *pAdapter;
 	int ret = 0;
@@ -145,13 +153,12 @@ static netdev_tx_t epping_hard_start_xmit(struct sk_buff *skb,
 	if (NULL == pAdapter) {
 		EPPING_LOG(QDF_TRACE_LEVEL_FATAL,
 			   "%s: EPPING adapter context is Null", __func__);
-		kfree_skb(skb);
 		ret = -ENODEV;
 		goto end;
 	}
 	ret = epping_tx_send(skb, pAdapter);
 end:
-	return NETDEV_TX_OK;
+	return ret;
 }
 
 static struct net_device_stats *epping_get_stats(struct net_device *dev)
@@ -212,7 +219,6 @@ static int epping_set_mac_address(struct net_device *dev, void *addr)
 {
 	epping_adapter_t *pAdapter = netdev_priv(dev);
 	struct sockaddr *psta_mac_addr = addr;
-
 	qdf_mem_copy(&pAdapter->macAddressCurrent,
 		     psta_mac_addr->sa_data, ETH_ALEN);
 	qdf_mem_copy(dev->dev_addr, psta_mac_addr->sa_data, ETH_ALEN);
@@ -230,7 +236,7 @@ static void epping_stop_adapter(epping_adapter_t *pAdapter)
 	}
 
 	if (pAdapter && pAdapter->started) {
-		EPPING_LOG(QDF_TRACE_LEVEL_INFO, FL("Disabling queues"));
+		EPPING_LOG(LOG1, FL("Disabling queues"));
 		netif_tx_disable(pAdapter->dev);
 		netif_carrier_off(pAdapter->dev);
 		pAdapter->started = false;
@@ -258,12 +264,12 @@ static int epping_start_adapter(epping_adapter_t *pAdapter)
 		pld_request_bus_bandwidth(qdf_ctx->dev,
 					  PLD_BUS_WIDTH_HIGH);
 		netif_carrier_on(pAdapter->dev);
-		EPPING_LOG(QDF_TRACE_LEVEL_INFO, FL("Enabling queues"));
+		EPPING_LOG(LOG1, FL("Enabling queues"));
 		netif_tx_start_all_queues(pAdapter->dev);
 		pAdapter->started = true;
 	} else {
 		EPPING_LOG(QDF_TRACE_LEVEL_WARN,
-			   "%s: pAdapter %pK already started\n", __func__,
+			   "%s: pAdapter %p already started\n", __func__,
 			   pAdapter);
 	}
 	return 0;
@@ -320,7 +326,6 @@ void epping_destroy_adapter(epping_adapter_t *pAdapter)
 
 	while (qdf_nbuf_queue_len(&pAdapter->nodrop_queue)) {
 		qdf_nbuf_t tmp_nbuf = NULL;
-
 		tmp_nbuf = qdf_nbuf_queue_remove(&pAdapter->nodrop_queue);
 		if (tmp_nbuf)
 			qdf_nbuf_free(tmp_nbuf);
@@ -384,7 +389,7 @@ epping_adapter_t *epping_add_adapter(epping_context_t *pEpping_ctx,
 	dev->watchdog_timeo = 5 * HZ;   /* XXX */
 	dev->tx_queue_len = EPPING_TXBUF - 1;      /* 1 for mgmt frame */
 	if (epping_register_adapter(pAdapter) == 0) {
-		EPPING_LOG(QDF_TRACE_LEVEL_INFO, FL("Disabling queues"));
+		EPPING_LOG(LOG1, FL("Disabling queues"));
 		netif_tx_disable(dev);
 		netif_carrier_off(dev);
 		return pAdapter;
@@ -397,18 +402,18 @@ epping_adapter_t *epping_add_adapter(epping_context_t *pEpping_ctx,
 int epping_connect_service(epping_context_t *pEpping_ctx)
 {
 	int status, i;
-	struct htc_service_connect_req connect;
-	struct htc_service_connect_resp response;
+	HTC_SERVICE_CONNECT_REQ connect;
+	HTC_SERVICE_CONNECT_RESP response;
 
 	qdf_mem_zero(&connect, sizeof(connect));
 	qdf_mem_zero(&response, sizeof(response));
 
 	/* these fields are the same for all service endpoints */
 	connect.EpCallbacks.pContext = pEpping_ctx;
-	connect.EpCallbacks.EpTxCompleteMultiple = NULL;
+	connect.EpCallbacks.EpTxCompleteMultiple = epping_tx_complete_multiple;
 	connect.EpCallbacks.EpRecv = epping_rx;
 	/* epping_tx_complete use Multiple version */
-	connect.EpCallbacks.EpTxComplete  = epping_tx_complete;
+	connect.EpCallbacks.EpTxComplete = NULL;
 	connect.MaxSendQueueDepth = 64;
 
 #ifdef HIF_SDIO

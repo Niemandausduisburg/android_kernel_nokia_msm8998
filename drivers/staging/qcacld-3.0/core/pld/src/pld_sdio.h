@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -19,19 +19,7 @@
 #ifndef __PLD_SDIO_H__
 #define __PLD_SDIO_H__
 
-#ifdef CONFIG_PLD_SDIO_CNSS
-#include <net/cnss.h>
-#endif
 #include "pld_common.h"
-
-#ifdef MULTI_IF_NAME
-#define PREFIX MULTI_IF_NAME "/"
-#else
-#define PREFIX ""
-#endif
-
-#define PLD_QCA9377_REV1_1_VERSION          0x5020001
-#define TOTAL_DUMP_SIZE                     0x0200000
 
 #ifndef CONFIG_CNSS
 #define PLD_AR6004_VERSION_REV1_3           0x31c8088a
@@ -43,7 +31,13 @@
 #define PLD_AR6320_REV3_VERSION             0x5020000
 #define PLD_AR6320_REV3_2_VERSION           0x5030000
 #define PLD_AR6320_DEV_VERSION              0x1000000
+#define PLD_QCA9377_REV1_1_VERSION          0x5020001
 
+#ifdef MULTI_IF_NAME
+#define PREFIX MULTI_IF_NAME
+#else
+#define PREFIX ""
+#endif
 
 struct pld_fw_files fw_files_qca6174_fw_1_1 = {
 	PREFIX "qwlan11.bin", PREFIX  "bdwlan11.bin", PREFIX "otp11.bin",
@@ -101,46 +95,4 @@ static inline uint8_t *pld_sdio_get_wlan_mac_address(struct device *dev,
 }
 #endif
 
-#ifdef CONFIG_PLD_SDIO_CNSS
-static inline void *pld_sdio_get_virt_ramdump_mem(struct device *dev,
-		unsigned long *size)
-{
-	return cnss_common_get_virt_ramdump_mem(dev, size);
-}
-
-static inline void pld_sdio_device_crashed(struct device *dev)
-{
-	cnss_common_device_crashed(dev);
-}
-static inline bool pld_sdio_is_fw_dump_skipped(void)
-{
-	return cnss_get_restart_level() == CNSS_RESET_SUBSYS_COUPLED;
-}
-
-static inline void pld_sdio_device_self_recovery(struct device *dev)
-{
-	cnss_common_device_self_recovery(dev);
-}
-#else
-static inline void *pld_sdio_get_virt_ramdump_mem(struct device *dev,
-		unsigned long *size)
-{
-	return NULL;
-}
-
-static inline void pld_sdio_device_crashed(struct device *dev)
-{
-}
-static inline bool pld_sdio_is_fw_dump_skipped(void)
-{
-	return false;
-}
-
-static inline void pld_sdio_device_self_recovery(struct device *dev)
-{
-}
-#endif
-void *pld_hif_sdio_get_virt_ramdump_mem(struct device *dev,
-						unsigned long *size);
-void pld_hif_sdio_release_ramdump_mem(unsigned long *address);
 #endif

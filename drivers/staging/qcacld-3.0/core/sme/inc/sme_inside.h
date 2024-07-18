@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #if !defined(__SMEINSIDE_H)
@@ -192,73 +201,13 @@ tSmeCmd *sme_get_command_buffer(tpAniSirGlobal pMac);
 void sme_push_command(tpAniSirGlobal pMac, tSmeCmd *pCmd, bool fHighPriority);
 void sme_process_pending_queue(tpAniSirGlobal pMac);
 void sme_release_command(tpAniSirGlobal pMac, tSmeCmd *pCmd);
-
-/**
- * purge_sme_session_cmd_list: API to remove command from sme list
- * @pMac: mac context
- * @sessionId: session id
- * @pList: list from which commands needs to be removed
- * @flush_all_cmd: whether all commands needs to be removed
- *
- * Return: None
- */
 void purge_sme_session_cmd_list(tpAniSirGlobal pMac, uint32_t sessionId,
-		tDblLinkList *pList, bool flush_all_cmd);
+		tDblLinkList *pList);
 bool sme_command_pending(tpAniSirGlobal pMac);
 bool qos_process_command(tpAniSirGlobal pMac, tSmeCmd *pCommand);
 void qos_release_command(tpAniSirGlobal pMac, tSmeCmd *pCommand);
-/**
- * csr_remove_same_ap_reassoc_cmd() - to remove self reassociation command
- *					 issued for STA 2G Rx LDPC case
- * @mac_ctx: pointer to mac context
- * @sme_cmd: pointer to sme command which needs to be removed, this should be
- *		self reassociation command
- *
- * This API will take care of removing self reassociation command which is
- * queued up in sme queue.
- *
- * Return: none
- */
-void csr_remove_same_ap_reassoc_cmd(tpAniSirGlobal mac_ctx,
-				tSmeCmd *sme_cmd);
-/**
- * csr_find_self_reassoc_cmd() - to find self reassociation command for given
- *				 session_id
- * @mac_ctx: pointer to mac context
- * @session_id: current session_id value
- *
- * This API will help to find any self reassociation command present in ACTIVE
- * queue for the given session_id. it won't find command in PENDING queue.
- *
- * Return: pointer to sme_cmd
- */
-tSmeCmd *csr_find_self_reassoc_cmd(tpAniSirGlobal mac_ctx, uint32_t session_id);
-/**
- * csr_process_same_ap_reassoc_cmd() - to process same ap reassociation command
- * @mac_ctx: pointer to mac context
- * @sme_cmd: pointer to sme command
- *
- * This API will process the self reassociation command which is currently being
- * queued up in active sme queue
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS csr_process_same_ap_reassoc_cmd(tpAniSirGlobal mac_ctx,
-					tSmeCmd *sme_cmd);
 QDF_STATUS csr_process_scan_command(tpAniSirGlobal pMac, tSmeCmd *pCommand);
 QDF_STATUS csr_roam_process_command(tpAniSirGlobal pMac, tSmeCmd *pCommand);
-
-/**
- * csr_roam_wm_status_change_complete() - Remove WM status change command
- *                                        from SME active command list
- * @mac_ctx: global mac context
- *
- * This API removes WM status change command from SME active command list
- * if present.
- *
- * Return: void
- */
-void csr_roam_wm_status_change_complete(tpAniSirGlobal mac_ctx);
 void csr_roam_process_wm_status_change_command(tpAniSirGlobal pMac,
 		tSmeCmd *pCommand);
 void csr_reinit_roam_cmd(tpAniSirGlobal pMac, tSmeCmd *pCommand);
@@ -268,14 +217,6 @@ QDF_STATUS csr_roam_process_set_key_command(tpAniSirGlobal pMac,
 		tSmeCmd *pCommand);
 void csr_release_command_set_key(tpAniSirGlobal pMac, tSmeCmd *pCommand);
 void csr_abort_command(tpAniSirGlobal pMac, tSmeCmd *pCommand, bool fStopping);
-
-/**
- * csr_is_disconnect_cmd() - Check if command is for disconnect
- * @command: command to check
- *
- * Return: true if disconnect or full power command else false
- */
-bool csr_is_disconnect_cmd(tSmeCmd *command);
 
 QDF_STATUS csr_is_valid_channel(tpAniSirGlobal pMac, uint8_t chnNum);
 bool csr_roam_is_valid40_mhz_channel(tpAniSirGlobal pmac, uint8_t channel);
@@ -328,7 +269,7 @@ QDF_STATUS csr_create_roam_scan_channel_list(tpAniSirGlobal pMac,
 		uint8_t sessionId,
 		uint8_t *pChannelList,
 		uint8_t numChannels,
-		const tSirRFBand eBand);
+		const eCsrBand eBand);
 #endif
 
 QDF_STATUS p2p_process_remain_on_channel_cmd(tpAniSirGlobal pMac,
@@ -339,5 +280,8 @@ void csr_process_set_dual_mac_config(tpAniSirGlobal mac, tSmeCmd *command);
 void csr_process_set_antenna_mode(tpAniSirGlobal mac, tSmeCmd *command);
 void csr_process_set_hw_mode(tpAniSirGlobal mac, tSmeCmd *command);
 void csr_process_nss_update_req(tpAniSirGlobal mac, tSmeCmd *command);
+
+QDF_STATUS sme_check_ch_in_band(tpAniSirGlobal mac_ctx, uint8_t start_ch,
+				uint8_t ch_cnt);
 
 #endif /* #if !defined( __SMEINSIDE_H ) */

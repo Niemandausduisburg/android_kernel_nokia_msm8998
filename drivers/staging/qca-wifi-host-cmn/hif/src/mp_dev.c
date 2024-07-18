@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2013-2014, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #include "hif_io32.h"
@@ -74,7 +83,6 @@ static inline void set_target_reg_bits(void __iomem *mem, uint32_t reg,
 {
 	uint32_t value = hif_read32_mb(mem + (reg));
 	uint32_t shift = 0;
-
 	value &= ~(bitmask);
 	while (!((bitmask >> shift) & 0x01))
 		shift++;
@@ -88,7 +96,6 @@ static inline uint32_t get_target_reg_bits(void __iomem *mem,
 {
 	uint32_t value = hif_read32_mb(mem + (reg));
 	uint32_t shift = 0;
-
 	while (!((bitmask >> shift) & 0x01))
 		shift++;
 
@@ -171,9 +178,9 @@ void priv_dump_chaninfo(struct hif_softc *scn)
 					hif_read32_mb(scn->mem +
 						     BB_chn_tables_intf_data) &
 					0x0000ffff;
-				qdf_debug("0x%x\t", val);
+				qdf_print("0x%x\t", val);
 				if (i % 4 == 0)
-					qdf_debug("\n");
+					qdf_print("\n");
 			}
 		} else {
 			len = (bw == 2) ? 59 : 60;
@@ -181,10 +188,10 @@ void priv_dump_chaninfo(struct hif_softc *scn)
 				tmp =
 					hif_read32_mb(scn->mem +
 						     BB_chn_tables_intf_data);
-				qdf_debug("0x%x\t", ((tmp >> 16) & 0x0000ffff));
-				qdf_debug("0x%x\t", (tmp & 0x0000ffff));
+				qdf_print("0x%x\t", ((tmp >> 16) & 0x0000ffff));
+				qdf_print("0x%x\t", (tmp & 0x0000ffff));
 				if (i % 2 == 0)
-					qdf_debug("\n");
+					qdf_print("\n");
 			}
 			if (bw > 2) {
 				/* bw == 3 for vht80 */
@@ -196,11 +203,11 @@ void priv_dump_chaninfo(struct hif_softc *scn)
 					tmp =
 						hif_read32_mb(scn->mem +
 						     BB_chn_tables_intf_data);
-					qdf_debug("0x%x\t",
+					qdf_print("0x%x\t",
 					       ((tmp >> 16) & 0x0000ffff));
-					qdf_debug("0x%x\t", (tmp & 0x0000ffff));
+					qdf_print("0x%x\t", (tmp & 0x0000ffff));
 					if (i % 2 == 0)
-						qdf_debug("\n");
+						qdf_print("\n");
 				}
 			}
 		}
@@ -213,9 +220,9 @@ void priv_dump_chaninfo(struct hif_softc *scn)
 					hif_read32_mb(scn->mem +
 						BB_chn1_tables_intf_data) &
 					0x0000ffff;
-				qdf_debug("0x%x\t", val);
+				qdf_print("0x%x\t", val);
 				if (i % 4 == 0)
-					qdf_debug("\n");
+					qdf_print("\n");
 			}
 		} else {
 			len = (bw == 2) ? 59 : 60;
@@ -223,10 +230,10 @@ void priv_dump_chaninfo(struct hif_softc *scn)
 				tmp =
 					hif_read32_mb(scn->mem +
 						     BB_chn1_tables_intf_data);
-				qdf_debug("0x%x\n", (tmp >> 16) & 0x0000ffff);
-				qdf_debug("0x%x\n", tmp & 0x0000ffff);
+				qdf_print("0x%x\n", (tmp >> 16) & 0x0000ffff);
+				qdf_print("0x%x\n", tmp & 0x0000ffff);
 				if (i % 2 == 0)
-					qdf_debug("\n");
+					qdf_print("\n");
 			}
 			if (bw > 2) {
 				/* bw == 3 for vht80 */
@@ -238,11 +245,11 @@ void priv_dump_chaninfo(struct hif_softc *scn)
 					tmp =
 						hif_read32_mb(scn->mem +
 						     BB_chn1_tables_intf_data);
-					qdf_debug("0x%x\t",
+					qdf_print("0x%x\t",
 					       ((tmp >> 16) & 0x0000ffff));
-					qdf_debug("0x%x\t", (tmp & 0x0000ffff));
+					qdf_print("0x%x\t", (tmp & 0x0000ffff));
 					if (i % 2 == 0)
-						qdf_debug("\n");
+						qdf_print("\n");
 				}
 			}
 		}
@@ -278,9 +285,9 @@ void priv_dump_agc(struct hif_softc *scn)
 				BB_chaninfo_tab_b0 + i * 4);
 			val = hif_read32_mb(scn->mem +
 				PHY_BB_CHN_TABLES_INTF_DATA);
-			qdf_debug("0x%x\t", val);
+			qdf_print("0x%x\t", val);
 			if (i % 4 == 0)
-				qdf_debug("\n");
+				qdf_print("\n");
 		}
 	}
 	if (chain1) {
@@ -290,9 +297,9 @@ void priv_dump_agc(struct hif_softc *scn)
 				BB_chaninfo_tab_b0 + i * 4);
 			val = hif_read32_mb(scn->mem +
 				PHY_BB_CHN1_TABLES_INTF_DATA);
-			qdf_debug("0x%x\t", val);
+			qdf_print("0x%x\t", val);
 			if (i % 4 == 0)
-				qdf_debug("\n");
+				qdf_print("\n");
 		}
 	}
 	HIF_TRACE("%s: AGC history buffer dump X", __func__);
@@ -302,6 +309,7 @@ void priv_dump_agc(struct hif_softc *scn)
 
 	Q_TARGET_ACCESS_END(scn);
 
+	return;
 }
 
 void priv_dump_bbwatchdog(struct hif_softc *scn)
@@ -310,12 +318,12 @@ void priv_dump_bbwatchdog(struct hif_softc *scn)
 
 	HIF_TRACE("%s: BB watchdog dump E", __func__);
 	val = hif_read32_mb(scn->mem + BB_watchdog_status);
-	qdf_debug("0x%x\t", val);
+	qdf_print("0x%x\t", val);
 	val = hif_read32_mb(scn->mem + BB_watchdog_ctrl_1);
-	qdf_debug("0x%x\t", val);
+	qdf_print("0x%x\t", val);
 	val = hif_read32_mb(scn->mem + BB_watchdog_ctrl_2);
-	qdf_debug("0x%x\t", val);
+	qdf_print("0x%x\t", val);
 	val = hif_read32_mb(scn->mem + BB_watchdog_status_B);
-	qdf_debug("0x%x", val);
+	qdf_print("0x%x", val);
 	HIF_TRACE("%s: BB watchdog dump X", __func__);
 }

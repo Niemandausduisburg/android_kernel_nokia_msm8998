@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -66,7 +75,6 @@
 #define WMI_ROAM_SCAN_PSK_SIZE    32
 #endif
 #define WMI_NOISE_FLOOR_DBM_DEFAULT      (-96)
-#define WMI_INVALID_PER_CHAIN_RSSI       0x80
 #define WMI_MAC_IPV6_ADDR_LEN                            16
 #define WMI_OFFLOAD_DISABLE                         0
 #define WMI_OFFLOAD_ENABLE                          1
@@ -251,19 +259,6 @@
 #define MAX_ASSOC_IE_LENGTH 1024
 typedef uint32_t TARGET_INIT_STATUS;
 
-/**
- * @brief Opaque handle of wmi structure
- */
-struct wmi_unified;
-typedef struct wmi_unified *wmi_unified_t;
-
-typedef void *ol_scn_t;
-/**
- * @wmi_event_handler function prototype
- */
-typedef int (*wmi_unified_event_handler)(ol_scn_t scn_handle,
-		 uint8_t *event_buf, uint32_t len);
-
 typedef enum {
 	WMI_HOST_MODE_11A	= 0,   /* 11a Mode */
 	WMI_HOST_MODE_11G	= 1,   /* 11b/g Mode */
@@ -285,28 +280,6 @@ typedef enum {
 	WMI_HOST_MODE_MAX	= 16
 } WMI_HOST_WLAN_PHY_MODE;
 
-/**
- * enum wmi_host_channel_width: Channel operating width. Maps to
- *               wmi_channel_width used in firmware header file(s).
- * @WMI_HOST_CHAN_WIDTH_20: 20 MHz channel operating width
- * @WMI_HOST_CHAN_WIDTH_40: 40 MHz channel operating width
- * @WMI_HOST_CHAN_WIDTH_80: 80 MHz channel operating width
- * @WMI_HOST_CHAN_WIDTH_160: 160 MHz channel operating width
- * @WMI_HOST_CHAN_WIDTH_80P80: 80+80 MHz channel operating width
- * @WMI_HOST_CHAN_WIDTH_5: 5 MHz channel operating width
- * @WMI_HOST_CHAN_WIDTH_10: 10 MHz channel operating width
- * @WMI_HOST_CHAN_WIDTH_165: 165 MHz channel operating width
- */
-typedef enum {
-	WMI_HOST_CHAN_WIDTH_20    = 0,
-	WMI_HOST_CHAN_WIDTH_40    = 1,
-	WMI_HOST_CHAN_WIDTH_80    = 2,
-	WMI_HOST_CHAN_WIDTH_160   = 3,
-	WMI_HOST_CHAN_WIDTH_80P80 = 4,
-	WMI_HOST_CHAN_WIDTH_5     = 5,
-	WMI_HOST_CHAN_WIDTH_10    = 6,
-	WMI_HOST_CHAN_WIDTH_165   = 7,
-} wmi_host_channel_width;
 
 /**
  * enum wmi_dwelltime_adaptive_mode: dwelltime_mode
@@ -440,24 +413,6 @@ struct mac_ssid {
 } qdf_packed;
 
 /**
- * enum wmi_bcn_tx_rate_code - beacon tx rate code
- */
-enum wmi_bcn_tx_rate_code {
-	WMI_BCN_TX_RATE_CODE_1_M = 0x43,
-	WMI_BCN_TX_RATE_CODE_2_M = 0x42,
-	WMI_BCN_TX_RATE_CODE_5_5_M = 0x41,
-	WMI_BCN_TX_RATE_CODE_6_M = 0x03,
-	WMI_BCN_TX_RATE_CODE_9_M = 0x07,
-	WMI_BCN_TX_RATE_CODE_11M = 0x40,
-	WMI_BCN_TX_RATE_CODE_12_M = 0x02,
-	WMI_BCN_TX_RATE_CODE_18_M = 0x06,
-	WMI_BCN_TX_RATE_CODE_24_M = 0x01,
-	WMI_BCN_TX_RATE_CODE_36_M = 0x05,
-	WMI_BCN_TX_RATE_CODE_48_M = 0x00,
-	WMI_BCN_TX_RATE_CODE_54_M = 0x04,
-};
-
-/**
  * struct vdev_start_params - vdev start cmd parameter
  * @vdev_id: vdev id
  * @chan_freq: channel frequency
@@ -489,7 +444,6 @@ enum wmi_bcn_tx_rate_code {
  * @dot11_mode: Phy mode (VHT20/VHT80...)
  * @disable_hw_ack: Disable hw ack if chan is dfs channel for cac
  * @channel_param: Channel params required by target.
- * @bcn_tx_rate_code: Beacon tx rate code.
  */
 struct vdev_start_params {
 	uint8_t vdev_id;
@@ -520,8 +474,6 @@ struct vdev_start_params {
 	uint8_t disable_hw_ack;
 	struct channel_param channel;
 #endif
-	enum wmi_bcn_tx_rate_code bcn_tx_rate_code;
-	bool ldpc_rx_enabled;
 };
 
 /**
@@ -810,8 +762,6 @@ struct beacon_tmpl_params {
  * struct beacon_params - beacon cmd parameter
  * @vdev_id: vdev id
  * @tim_ie_offset: tim ie offset
- * @csa_count_offset: Offset of Switch count field in CSA IE
- * @ecsa_count_offset: Offset of Switch count field in ECSA IE
  * @tmpl_len: beacon template length
  * @tmpl_len_aligned: beacon template alignment
  * @frm: beacon template parameter
@@ -819,8 +769,6 @@ struct beacon_tmpl_params {
 struct beacon_params {
 	uint8_t vdev_id;
 	uint32_t tim_ie_offset;
-	uint32_t csa_count_offset;
-	uint32_t ecsa_count_offset;
 	uint32_t tmpl_len;
 	uint32_t tmpl_len_aligned;
 	uint8_t *frm;
@@ -1008,6 +956,16 @@ struct ap_ps_params {
 	uint32_t value;
 };
 
+/**
+ * struct vendor_oui - probe request ie vendor oui information
+ * @oui_type: type of the vendor oui (3 valid octets)
+ * @oui_subtype: subtype of the vendor oui (1 valid octet)
+ */
+struct vendor_oui {
+	uint32_t oui_type;
+	uint32_t oui_subtype;
+};
+
 #define WMI_HOST_SCAN_CHAN_FREQ_SHIFT	0
 #define WMI_HOST_SCAN_CHAN_FREQ_MASK	0xffff
 #define WMI_HOST_SCAN_CHAN_MODE_SHIFT	16
@@ -1116,7 +1074,6 @@ struct scan_start_params {
 	uint32_t num_vendor_oui;
 	uint32_t oui_field_len;
 	uint8_t *voui;
-	uint32_t scan_ctrl_flags_ext;
 };
 
 /**
@@ -1148,7 +1105,6 @@ struct scan_stop_params {
 /**
  * struct scan_chan_list_params  - scan channel list cmd parameter
  * @num_scan_chans: no of scan channels
- * @max_bw_support_present: max BW support present
  * @chan_info: pointer to wmi channel info
  */
 #ifdef CONFIG_MCL
@@ -1172,7 +1128,6 @@ typedef struct {
 
 struct scan_chan_list_params {
 	uint8_t num_scan_chans;
-	bool max_bw_support_present;
 	wmi_channel_param *chan_info;
 };
 #else
@@ -1844,39 +1799,7 @@ typedef struct {
 	uint32_t wmm_caps;
 	/* since this is 4 byte aligned, we don't declare it as tlv array */
 	uint32_t mcsset[WMI_HOST_ROAM_OFFLOAD_NUM_MCS_SET >> 2];
-	uint32_t ho_delay_for_rx;
-	uint32_t roam_preauth_retry_count;
-	uint32_t roam_preauth_no_ack_timeout;
 } roam_offload_param;
-
-#define WMI_FILS_MAX_RRK_LENGTH 64
-#define WMI_FILS_MAX_RIK_LENGTH WMI_FILS_MAX_RRK_LENGTH
-#define WMI_FILS_MAX_REALM_LENGTH 256
-#define WMI_FILS_MAX_USERNAME_LENGTH 16
-
-/**
- * struct roam_fils_params - Roam FILS params
- * @username: username
- * @username_length: username length
- * @next_erp_seq_num: next ERP sequence number
- * @rrk: RRK
- * @rrk_length: length of @rrk
- * @rik: RIK
- * @rik_length: length of @rik
- * @realm: realm
- * @realm_len: length of @realm
- */
-struct roam_fils_params {
-	uint8_t username[WMI_FILS_MAX_USERNAME_LENGTH];
-	uint32_t username_length;
-	uint32_t next_erp_seq_num;
-	uint8_t rrk[WMI_FILS_MAX_RRK_LENGTH];
-	uint32_t rrk_length;
-	uint8_t rik[WMI_FILS_MAX_RIK_LENGTH];
-	uint32_t rik_length;
-	uint8_t realm[WMI_FILS_MAX_REALM_LENGTH];
-	uint32_t realm_len;
-};
 
 /* struct roam_offload_scan_params - structure
  *     containing roaming offload scan parameters
@@ -1890,8 +1813,6 @@ struct roam_fils_params {
  * @prefer_5ghz: prefer select 5G candidate
  * @roam_rssi_cat_gap: gap for every category bucket
  * @select_5ghz_margin: select 5 Ghz margin
- * @min_delay_btw_roam_scans: Delay btw two roam scans
- * @roam_trigger_reason_bitmask: Roam reason bitmark
  * @krk: KRK
  * @btk: BTK
  * @reassoc_failure_timeout: reassoc failure timeout
@@ -1904,10 +1825,6 @@ struct roam_fils_params {
  * @is_ese_assoc: flag to determine ese assoc
  * @mdid: mobility domain info
  * @roam_offload_params: roam offload tlv params
- * @assoc_ie_length: Assoc IE length
- * @assoc_ie: Assoc IE buffer
- * @add_fils_tlv: add FILS TLV boolean
- * @roam_fils_params: roam fils params
  */
 struct roam_offload_scan_params {
 	uint8_t is_roam_req_valid;
@@ -1930,10 +1847,7 @@ struct roam_offload_scan_params {
 	bool fw_okc;
 	bool fw_pmksa_cache;
 #endif
-	uint32_t min_delay_btw_roam_scans;
-	uint32_t roam_trigger_reason_bitmask;
 	bool is_ese_assoc;
-	bool is_11r_assoc;
 	struct mobility_domain_info mdid;
 #ifndef WMI_NON_TLV_SUPPORT
 	/* THis is not available in non tlv target.
@@ -1943,10 +1857,6 @@ struct roam_offload_scan_params {
 #endif
 	uint32_t assoc_ie_length;
 	uint8_t  assoc_ie[MAX_ASSOC_IE_LENGTH];
-	bool add_fils_tlv;
-#ifdef WLAN_FEATURE_FILS_SK
-	struct roam_fils_params roam_fils_params;
-#endif
 };
 
 /* struct roam_offload_scan_rssi_params - structure containing
@@ -1974,12 +1884,6 @@ struct roam_offload_scan_params {
  * @dense_min_aps_cnt: dense roam minimum APs
  * @initial_dense_status: dense status detected by host
  * @traffic_threshold: dense roam RSSI threshold
- * @bg_scan_bad_rssi_thresh: Bad RSSI threshold to perform bg scan
- * @roam_bad_rssi_thresh_offset_2g: Offset from Bad RSSI threshold for 2G to 5G Roam
- * @bg_scan_client_bitmap: Bitmap used to identify the client scans to snoop
- * @flags: Flags for Background Roaming
- *	Bit 0 : BG roaming enabled when we connect to 2G AP only and roaming to 5G AP only.
- *	Bit 1-31: Reserved
  */
 struct roam_offload_scan_rssi_params {
 	int8_t rssi_thresh;
@@ -2002,171 +1906,6 @@ struct roam_offload_scan_rssi_params {
 	int dense_min_aps_cnt;
 	int initial_dense_status;
 	int traffic_threshold;
-	int8_t bg_scan_bad_rssi_thresh;
-	uint8_t roam_bad_rssi_thresh_offset_2g;
-	uint32_t bg_scan_client_bitmap;
-	int32_t rssi_thresh_offset_5g;
-	uint32_t flags;
-};
-
-/**
- * struct ap_profile - Structure ap profile to match candidate
- * @flags: flags
- * @rssi_threshold: the value of the the candidate AP should higher by this
- *                  threshold than the rssi of the currrently associated AP
- * @ssid: ssid vlaue to be matched
- * @rsn_authmode: security params to be matched
- * @rsn_ucastcipherset: unicast cipher set
- * @rsn_mcastcipherset: mcast/group cipher set
- * @rsn_mcastmgmtcipherset: mcast/group management frames cipher set
- * @rssi_abs_thresh: the value of the candidate AP should higher than this
- *                   absolute RSSI threshold. Zero means no absolute minimum
- *                   RSSI is required. units are the offset from the noise
- *                   floor in dB
- */
-struct ap_profile {
-	uint32_t flags;
-	uint32_t rssi_threshold;
-	struct mac_ssid  ssid;
-	uint32_t rsn_authmode;
-	uint32_t rsn_ucastcipherset;
-	uint32_t rsn_mcastcipherset;
-	uint32_t rsn_mcastmgmtcipherset;
-	uint32_t rssi_abs_thresh;
-};
-
-/**
- * struct rssi_scoring - rssi scoring param to sortlist selected AP
- * @best_rssi_threshold: Roamable AP RSSI equal or better than this threshold,
- *                      full rssi score 100. Units in dBm.
- * @good_rssi_threshold: Below threshold, scoring linear percentage between
- *                      rssi_good_pnt and 100. Units in dBm.
- * @bad_rssi_threshold: Between good and bad rssi threshold, scoring linear
- *                      % between rssi_bad_pcnt and rssi_good_pct in dBm.
- * @good_rssi_pcnt: Used to assigned scoring percentage of each slot between
- *                 best to good rssi threshold. Units in percentage.
- * @bad_rssi_pcnt: Used to assigned scoring percentage of each slot between good
- *                to bad rssi threshold. Unites in percentage.
- * @good_bucket_size : bucket size of slot in good zone
- * @bad_bucket_size : bucket size of slot in bad zone
- * @rssi_pref_5g_rssi_thresh: Below rssi threshold, 5G AP have given preference
- *                           of band percentage. Units in dBm.
- */
-struct rssi_scoring {
-	int32_t best_rssi_threshold;
-	int32_t good_rssi_threshold;
-	int32_t  bad_rssi_threshold;
-	uint32_t good_rssi_pcnt;
-	uint32_t bad_rssi_pcnt;
-	uint32_t good_bucket_size;
-	uint32_t bad_bucket_size;
-	int32_t  rssi_pref_5g_rssi_thresh;
-};
-
-/**
- * struct param_slot_scoring - define % score for differents slots for a
- *                             scoring param.
- * @num_slot: number of slots in which the param will be divided.
- *           Max 15. index 0 is used for 'not_present. Num_slot will
- *           equally divide 100. e.g, if num_slot = 4 slot 0 = 0-25%, slot
- *           1 = 26-50% slot 2 = 51-75%, slot 3 = 76-100%
- * @score_pcnt3_to_0: Conatins score percentage for slot 0-3
- *             BITS 0-7   :- the scoring pcnt when not present
- *             BITS 8-15  :- SLOT_1
- *             BITS 16-23 :- SLOT_2
- *             BITS 24-31 :- SLOT_3
- * @score_pcnt7_to_4: Conatins score percentage for slot 4-7
- *             BITS 0-7   :- SLOT_4
- *             BITS 8-15  :- SLOT_5
- *             BITS 16-23 :- SLOT_6
- *             BITS 24-31 :- SLOT_7
- * @score_pcnt11_to_8: Conatins score percentage for slot 8-11
- *             BITS 0-7   :- SLOT_8
- *             BITS 8-15  :- SLOT_9
- *             BITS 16-23 :- SLOT_10
- *             BITS 24-31 :- SLOT_11
- * @score_pcnt15_to_12: Conatins score percentage for slot 12-15
- *             BITS 0-7   :- SLOT_12
- *             BITS 8-15  :- SLOT_13
- *             BITS 16-23 :- SLOT_14
- *             BITS 24-31 :- SLOT_15
- */
-struct param_slot_scoring {
-	uint32_t num_slot;
-	uint32_t score_pcnt3_to_0;
-	uint32_t score_pcnt7_to_4;
-	uint32_t score_pcnt11_to_8;
-	uint32_t score_pcnt15_to_12;
-};
-
-/**
- * struct scoring_param - scoring param to sortlist selected AP
- * @disable_bitmap: Each bit will be either allow(0)/disallow(1) to
- *                 considered the roam score param.
- * @rssi_weightage: RSSI weightage out of total score in %
- * @ht_weightage: HT weightage out of total score in %.
- * @vht_weightage: VHT weightage out of total score in %.
- * @he_weightaget: 11ax weightage out of total score in %.
- * @bw_weightage: Bandwidth weightage out of total score in %.
- * @band_weightage: Band(2G/5G) weightage out of total score in %.
- * @nss_weightage: NSS(1x1 / 2x2)weightage out of total score in %.
- * @esp_qbss_weightage: ESP/QBSS weightage out of total score in %.
- * @beamforming_weightage: Beamforming weightage out of total score in %.
- * @pcl_weightage: PCL weightage out of total score in %.
- * @oce_wan_weightage OCE WAN metrics weightage out of total score in %.
- * @bw_index_score: channel BW scoring percentage information.
- *                 BITS 0-7   :- It contains scoring percentage of 20MHz   BW
- *                 BITS 8-15  :- It contains scoring percentage of 40MHz   BW
- *                 BITS 16-23 :- It contains scoring percentage of 80MHz   BW
- *                 BITS 24-31 :- It contains scoring percentage of 1600MHz BW
- *                 The value of each index must be 0-100
- * @band_index_score: band scording percentage information.
- *                   BITS 0-7   :- It contains scoring percentage of 2G
- *                   BITS 8-15  :- It contains scoring percentage of 5G
- *                   BITS 16-23 :- reserved
- *                   BITS 24-31 :- reserved
- *                   The value of each index must be 0-100
- * @nss_index_score: NSS scoring percentage information.
- *                  BITS 0-7   :- It contains scoring percentage of 1x1
- *                  BITS 8-15  :- It contains scoring percentage of 2x2
- *                  BITS 16-23 :- It contains scoring percentage of 3x3
- *                  BITS 24-31 :- It contains scoring percentage of 4x4
- *                  The value of each index must be 0-100
- * @rssi_scoring: RSSI scoring information.
- * @esp_qbss_scoring: ESP/QBSS scoring percentage information
- * @oce_wan_scoring: OCE WAN metrics percentage information
-*/
-struct scoring_param {
-	uint32_t disable_bitmap;
-	int32_t rssi_weightage;
-	int32_t ht_weightage;
-	int32_t vht_weightage;
-	int32_t he_weightage;
-	int32_t bw_weightage;
-	int32_t band_weightage;
-	int32_t nss_weightage;
-	int32_t esp_qbss_weightage;
-	int32_t beamforming_weightage;
-	int32_t pcl_weightage;
-	int32_t oce_wan_weightage;
-	uint32_t bw_index_score;
-	uint32_t band_index_score;
-	uint32_t nss_index_score;
-	struct rssi_scoring rssi_scoring;
-	struct param_slot_scoring esp_qbss_scoring;
-	struct param_slot_scoring oce_wan_scoring;
-};
-
-/**
- * struct ap_profile_params - ap profile params
- * @vdev_id: vdev id
- * @profile: ap profile to match candidate
- * @param: scoring params to short candidate
- */
-struct ap_profile_params {
-	uint8_t vdev_id;
-	struct ap_profile profile;
-	struct scoring_param param;
 };
 
 /**
@@ -2390,17 +2129,6 @@ struct pno_nw_type {
 };
 
 /**
- * struct connected_pno_band_rssi_pref - BSS preference based on band
- * and RSSI
- * @band: band preference
- * @rssi_pref: RSSI preference
- */
-struct cpno_band_rssi_pref {
-	int8_t band;
-	int8_t rssi;
-};
-
-/**
  * struct pno_scan_req_params - PNO Scan request structure
  * @enable: flag to enable or disable
  * @modePNO: PNO Mode
@@ -2412,7 +2140,6 @@ struct cpno_band_rssi_pref {
  * @slow_scan_period: Slow scan period
  * @delay_start_time: delay in seconds to use before starting the first scan
  * @fast_scan_max_cycles: Fast scan max cycles
- * @scan_backoff_multiplier: multiply fast scan period by this after max cycles
  * @us24GProbeTemplateLen: 2.4G probe template length
  * @p24GProbeTemplate: 2.4G probe template
  * @us5GProbeTemplateLen: 5G probe template length
@@ -2429,20 +2156,11 @@ struct cpno_band_rssi_pref {
  * @mac_addr_mask: MAC address mask used with randomization, bits that
  *	are 0 in the mask should be randomized, bits that are 1 should
  *	be taken from the @mac_addr
- * @relative_rssi_set: Flag to check whether realtive_rssi is set or not
- * @relative_rssi: Relative rssi threshold, used for connected pno
- * @band_rssi_pref: Band and RSSI preference that can be given to one BSS
- *	over the other BSS
  * @ie_whitelist: set to true for enabling ie whitelisting
  * @probe_req_ie_bitmap: contains IEs to be included in probe req
  * @num_vendor_oui: number of vendor OUIs
  * @oui_field_len: size of total number of OUIs
  * @voui: pointer to OUI buffer
- *
- * E.g.
- *	{ fast_scan_period=120, fast_scan_max_cycles=2,
- *	  slow_scan_period=1800, scan_backoff_multiplier=2 }
- *	Result: 120s x2, 240s x2, 480s x2, 960s x2, 1800s xN
  */
 struct pno_scan_req_params {
 	uint8_t enable;
@@ -2455,7 +2173,6 @@ struct pno_scan_req_params {
 	uint32_t slow_scan_period;
 	uint32_t delay_start_time;
 	uint8_t fast_scan_max_cycles;
-	uint8_t scan_backoff_multiplier;
 	uint32_t        active_min_time;
 	uint32_t        active_max_time;
 	uint32_t        passive_min_time;
@@ -2476,10 +2193,6 @@ struct pno_scan_req_params {
 	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
 	uint8_t mac_addr_mask[QDF_MAC_ADDR_SIZE];
 
-	bool relative_rssi_set;
-	int8_t relative_rssi;
-	struct cpno_band_rssi_pref band_rssi_pref;
-
 	/* probe req ie whitelisting attrs */
 	bool ie_whitelist;
 	uint32_t probe_req_ie_bitmap[PROBE_REQ_BITMAP_LEN];
@@ -2487,24 +2200,6 @@ struct pno_scan_req_params {
 	uint32_t oui_field_len;
 	uint8_t *voui;
 };
-
-/**
- * struct nlo_mawc_params - Motion Aided Wireless Connectivity based
- *                          Network List Offload configuration
- * @vdev_id: VDEV ID on which the configuration needs to be applied
- * @enable: flag to enable or disable
- * @exp_backoff_ratio: ratio of exponential backoff
- * @init_scan_interval: initial scan interval(msec)
- * @max_scan_interval:  max scan interval(msec)
- */
-struct nlo_mawc_params {
-	uint8_t vdev_id;
-	bool enable;
-	uint32_t exp_backoff_ratio;
-	uint32_t init_scan_interval;
-	uint32_t max_scan_interval;
-};
-
 
 #define WMI_WLAN_EXTSCAN_MAX_CHANNELS                 36
 #define WMI_WLAN_EXTSCAN_MAX_BUCKETS                  16
@@ -2683,7 +2378,7 @@ struct plm_req_params {
 #define MAX_SSID_ALLOWED_LIST    4
 #define MAX_BSSID_AVOID_LIST     16
 #define MAX_BSSID_FAVORED      16
-#define MAX_RSSI_AVOID_BSSID_LIST 10
+
 
 /**
  * struct mac_ts_info_tfc - mac ts info parameters
@@ -2905,7 +2600,6 @@ struct ll_stats_get_params {
  * @sta_id: Per STA stats request must contain valid
  * @stats_mask: categories of stats requested
  * @session_id: wsm ts spec flag
- * @pdev_id: PDEV id
  */
 struct pe_stats_req {
 	/* Common for all types are requests */
@@ -2915,7 +2609,6 @@ struct pe_stats_req {
 	/* categories of stats requested. look at ePEStatsMask */
 	uint32_t stats_mask;
 	uint8_t session_id;
-	uint8_t pdev_id;
 };
 
 /**
@@ -2955,7 +2648,6 @@ struct dhcp_stop_ind_params {
  * @tspec: tspec value
  * @status: CDF status
  * @sessionId: session id
- * @vdev_id: vdev-id
  */
 struct aggr_add_ts_param {
 	uint16_t staIdx;
@@ -2963,46 +2655,6 @@ struct aggr_add_ts_param {
 	struct mac_tspec_ie tspec[WMI_QOS_NUM_AC_MAX];
 	QDF_STATUS status[WMI_QOS_NUM_AC_MAX];
 	uint8_t sessionId;
-	uint8_t vdev_id;
-};
-
-
-/**
- * struct wlm_latency_level_param - WLM parameters
- * @wlm_latency_level: wlm latency level to set
- *  0 - normal, 1 - moderate, 2 - low, 3 - ultralow
- * @wlm_latency_flags: wlm latency flags to set
- *  |31  12|  11  |  10  |9    8|7    6|5    4|3    2|  1  |  0  |
- *  +------+------+------+------+------+------+------+-----+-----+
- *  | RSVD | SSLP | CSLP | RSVD | Roam | RSVD | DWLT | DFS | SUP |
- *  +------+-------------+-------------+-------------------------+
- *  |  WAL |      PS     |     Roam    |         Scan            |
- *
- *  bit 0: Avoid scan request from HLOS if setting
- *  bit 1: Skip DFS channel SCAN if setting
- *  bit 2-3: Define policy of dwell time/duration for each foreign channel
- *     (b2 b3)
- *     (0  0 ): Default scan dwell time
- *     (0  1 ): Reserve
- *     (1  0 ): Shrink off channel dwell time
- *     (1  1 ): Reserve
- *  bit 4-5: Reserve for scan
- *  bit 6-7: Define roaming policy
- *     (b6 b7)
- *     (0  0 ): Default roaming behavior, allow roaming in all scenarios
- *     (0  1 ): Disallow all roaming
- *     (1  0 ): Allow roaming when final bmissed
- *     (1  1 ): Reserve
- *  bit 8-9: Reserve for roaming
- *  bit 10: Disable css power collapse if setting
- *  bit 11: Disable sys sleep if setting
- *  bit 12-31: Reserve for future useage
- * @vdev_id: vdev id
- */
-struct wlm_latency_level_param {
-	uint16_t wlm_latency_level;
-	uint32_t wlm_latency_flags;
-	uint16_t vdev_id;
 };
 
 #define    WMI_MAX_FILTER_TEST_DATA_LEN       8
@@ -3261,7 +2913,6 @@ struct wmi_tdls_params {
 	uint32_t puapsd_rx_frame_threshold;
 	uint32_t teardown_notification_ms;
 	uint32_t tdls_peer_kickout_threshold;
-	uint32_t tdls_discovery_wake_timeout;
 };
 
 /**
@@ -3421,42 +3072,25 @@ struct periodic_tx_pattern {
 	uint8_t ucPattern[WMI_PERIODIC_TX_PTRN_MAX_SIZE];
 };
 
-#define WMI_GTK_OFFLOAD_KEK_BYTES_LEGACY 16
-#define WMI_GTK_OFFLOAD_KEK_BYTES        64
-#define WMI_GTK_OFFLOAD_KCK_BYTES        16
-#define WMI_GTK_OFFLOAD_ENABLE            0
-#define WMI_GTK_OFFLOAD_DISABLE           1
+#define WMI_GTK_OFFLOAD_KEK_BYTES       16
+#define WMI_GTK_OFFLOAD_KCK_BYTES       16
+#define WMI_GTK_OFFLOAD_ENABLE          0
+#define WMI_GTK_OFFLOAD_DISABLE         1
 
 /**
  * struct gtk_offload_params - gtk offload parameters
  * @ulFlags: optional flags
  * @aKCK: Key confirmation key
  * @aKEK: key encryption key
- * @kek_len: Kek length
  * @ullKeyReplayCounter: replay counter
  * @bssid: bss id
- * @is_fils_connection: Whether the present connection with the AP is FILS
  */
 struct gtk_offload_params {
 	uint32_t ulFlags;
 	uint8_t aKCK[WMI_GTK_OFFLOAD_KCK_BYTES];
 	uint8_t aKEK[WMI_GTK_OFFLOAD_KEK_BYTES];
-	uint32_t kek_len;
 	uint64_t ullKeyReplayCounter;
 	struct qdf_mac_addr bssid;
-	bool is_fils_connection;
-};
-
-/**
- * struct mcast_filter_params - mcast filter parameters
- * @multicast_addr_cnt: num of addresses
- * @multicast_addr: address array
- * @action: operation to perform
- */
-struct mcast_filter_params {
-	uint32_t multicast_addr_cnt;
-	struct qdf_mac_addr multicast_addr[WMI_MAX_NUM_MULTICAST_ADDRESS];
-	uint8_t action;
 };
 
 /**
@@ -3682,19 +3316,6 @@ struct ssid_hotlist_param {
 };
 
 /**
- * struct rssi_disallow_bssid - Structure holding Rssi based avoid candidate
- * @bssid: BSSID of the AP
- * @remaining_duration: remaining disallow duration in ms
- * @expected_rssi: RSSI at which STA can initate in dBm
- */
-struct rssi_disallow_bssid {
-	struct qdf_mac_addr bssid;
-	uint32_t remaining_duration;
-	int8_t expected_rssi;
-};
-
-
-/**
  * struct roam_scan_filter_params - Structure holding roaming scan
  *                                  parameters
  * @op_bitmap:                bitmap to determine reason of roaming
@@ -3739,21 +3360,6 @@ struct roam_scan_filter_params {
 	uint32_t disallow_duration;
 	uint32_t rssi_channel_penalization;
 	uint32_t num_disallowed_aps;
-	uint32_t num_rssi_rejection_ap;
-	struct rssi_disallow_bssid rssi_rejection_ap[MAX_RSSI_AVOID_BSSID_LIST];
-};
-
-#define WMI_MAX_HLP_IE_LEN 2048
-/**
- * struct hlp_params - HLP info params
- * @vdev_id: vdev id
- * @hlp_ie_len: HLP IE length
- * @hlp_ie: HLP IE
- */
-struct hlp_params {
-	uint8_t vdev_id;
-	uint32_t  hlp_ie_len;
-	uint8_t hlp_ie[WMI_MAX_HLP_IE_LEN];
 };
 
 /**
@@ -3794,7 +3400,6 @@ struct wmi_unit_test_cmd {
  * @channel: channel
  * @frame_len: frame length, includs mac header, fixed params and ies
  * @frame_buf: buffer contaning probe response or beacon
- * @is_same_bssid: flag to indicate if roaming is requested for same bssid
  */
 struct wmi_roam_invoke_cmd {
 	uint32_t vdev_id;
@@ -3802,7 +3407,6 @@ struct wmi_roam_invoke_cmd {
 	uint32_t channel;
 	uint32_t frame_len;
 	uint8_t *frame_buf;
-	uint8_t is_same_bssid;
 };
 
 /**
@@ -3988,14 +3592,12 @@ typedef struct {
  * @enable: Enable/Disable Thermal mitigation
  * @dc: DC
  * @dc_per_event: DC per event
- * @num_thermal_conf: Number of thermal configurations to be sent
  * @tt_level_config: TT level config params
  */
 struct thermal_mitigation_params {
 	uint32_t enable;
 	uint32_t dc;
 	uint32_t dc_per_event;
-	uint8_t num_thermal_conf;
 	tt_level_config levelconf[THERMAL_LEVELS];
 };
 
@@ -5275,7 +4877,6 @@ typedef enum {
 	wmi_ba_rsp_ssn_event_id,
 	wmi_aggr_state_trig_event_id,
 	wmi_roam_synch_event_id,
-	wmi_roam_synch_frame_event_id,
 	wmi_p2p_disc_event_id,
 	wmi_p2p_noa_event_id,
 	wmi_pdev_resume_event_id,
@@ -5334,10 +4935,7 @@ typedef enum {
 	wmi_tx_data_traffic_ctrl_event_id,
 	wmi_update_rcpi_event_id,
 	wmi_get_arp_stats_req_id,
-	wmi_sar_get_limits_event_id,
-	wmi_roam_scan_stats_event_id,
-	wmi_wlan_sar2_result_event_id,
-	wmi_roam_pmkid_request_event_id,
+
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -7148,8 +6746,6 @@ struct wmi_adaptive_dwelltime_params {
  *     for PER based roam in tx path
  * @rx_per_mon_time: Minimum time required to be considered as valid scenario
  *     for PER based roam in rx path
- * @min_candidate_rssi: Minimum RSSI threshold for candidate AP to be used for
- *     PER based roaming
  */
 struct wmi_per_roam_config {
 	uint32_t enable;
@@ -7251,15 +6847,12 @@ struct encrypt_decrypt_req_params {
 
 #define MAX_SAR_LIMIT_ROWS_SUPPORTED 64
 /**
- * struct sar_limit_cmd_row - sar limits row
+ * struct sar_limit_cmd_row - sar limts row
  * @band_id: Optional param for frequency band
- *           See %enum wmi_sar_band_id_flags for possible values
  * @chain_id: Optional param for antenna chain id
  * @mod_id: Optional param for modulation scheme
- *          See %enum wmi_sar_mod_id_flags for possible values
  * @limit_value: Mandatory param providing power limits in steps of 0.5 dbm
  * @validity_bitmap: bitmap of valid optional params in sar_limit_cmd_row struct
- *                   See WMI_SAR_*_VALID_MASK for possible values
  */
 struct sar_limit_cmd_row {
 	uint32_t band_id;
@@ -7270,9 +6863,8 @@ struct sar_limit_cmd_row {
 };
 
 /**
- * struct sar_limit_cmd_params - sar limits params
+ * struct sar_limit_cmd_params - sar limts params
  * @sar_enable: flag to enable SAR
- *              See %enum wmi_sar_feature_state_flags for possible values
  * @num_limit_rows: number of items in sar_limits
  * @commit_limits: indicates firmware to start apply new SAR values
  * @sar_limit_row_list: pointer to array of sar limit rows
@@ -7282,72 +6874,6 @@ struct sar_limit_cmd_params {
 	uint32_t num_limit_rows;
 	uint32_t commit_limits;
 	struct sar_limit_cmd_row *sar_limit_row_list;
-};
-
-/**
- * struct sar_limit_event_row - sar limits row
- * @band_id: Frequency band.
- *           See %enum wmi_sar_band_id_flags for possible values
- * @chain_id: Chain id
- * @mod_id: Modulation scheme
- *          See %enum wmi_sar_mod_id_flags for possible values
- * @limit_value: Power limits in steps of 0.5 dbm that is currently active for
- *     the given @band_id, @chain_id, and @mod_id
- */
-struct sar_limit_event_row {
-	uint32_t band_id;
-	uint32_t chain_id;
-	uint32_t mod_id;
-	uint32_t limit_value;
-};
-
-/**
- * struct sar_limit_event - sar limits params
- * @sar_enable: Current status of SAR enablement.
- *              See %enum wmi_sar_feature_state_flags for possible values
- * @num_limit_rows: number of items in sar_limits
- * @sar_limit_row: array of sar limit rows. Only @num_limit_rows
- *                 should be considered valid.
- */
-struct sar_limit_event {
-	uint32_t sar_enable;
-	uint32_t num_limit_rows;
-	struct sar_limit_event_row
-			sar_limit_row[MAX_SAR_LIMIT_ROWS_SUPPORTED];
-};
-
-/**
- * enum coex_config_type - For identifying coex config type params
- * COEX_CONFIG_TX_POWER: To set wlan total tx power when bt coex
- * COEX_CONFIG_HANDOVER_RSSI: To set WLAN RSSI (dBm units)
- * COEX_CONFIG_BTC_MODE: To set BTC mode
- * COEX_CONFIG_ANTENNA_ISOLATION: To set solation between BT and WLAN antenna
- * COEX_CONFIG_BT_LOW_RSSI_THRESHOLD: To set BT low rssi threshold (dbm units)
- * COEX_CONFIG_BT_INTERFERENCE_LEVEL: To set BT interference level (dbm units)
- */
-enum coex_config_type {
-	COEX_CONFIG_TX_POWER = 0x01,
-	COEX_CONFIG_HANDOVER_RSSI = 0x02,
-	COEX_CONFIG_BTC_MODE = 0x03,
-	COEX_CONFIG_ANTENNA_ISOLATION = 0x04,
-	COEX_CONFIG_BT_LOW_RSSI_THRESHOLD = 0x05,
-	COEX_CONFIG_BT_INTERFERENCE_LEVEL = 0x06
-};
-
-#define MAX_COEX_CONFIG_TYPE_ARGS 6
-/**
- * struct coex_config_params - COEX config params
- * @vdev_id: Virtual device Id
- * @config_type: Type of config type from enum coex_config_type
- * @config_value: config type values for enum coex_config_type,
- *                only config type COEX_CONFIG_BT_INTERFERENCE_LEVEL
- *                will use all arguments remaining will use only
- *                0th argument.
- */
-struct coex_config_params {
-	uint32_t vdev_id;
-	enum coex_config_type config_type;
-	uint32_t config_value[MAX_COEX_CONFIG_TYPE_ARGS];
 };
 
 /**
@@ -7386,13 +6912,11 @@ struct rcpi_req {
  * @operation: 0 reset to fw default, 1 set the bits,
  *    2 add the setting bits, 3 delete the setting bits
  * @action_category_map: bit mapping.
- * @action_per_category: action id bitmask per category
  */
 struct action_wakeup_set_param {
 	uint32_t vdev_id;
 	uint32_t operation;
 	uint32_t action_category_map[WMI_SUPPORTED_ACTION_CATEGORY_ELE_LIST];
-	uint32_t action_per_category[WMI_SUPPORTED_ACTION_CATEGORY];
 };
 
 /*
@@ -7448,21 +6972,13 @@ struct action_wakeup_set_param {
  * @WMI_ACTION_OUI_CONNECT_1X1: for 1x1 connection only
  * @WMI_ACTION_OUI_ITO_EXTENSION: for extending inactivity time of station
  * @WMI_ACTION_OUI_CCKM_1X1: for TX with CCKM 1x1 only
- * @WMI_ACTION_OUI_ITO_ALTERNATE: for alternate inactivity time of station
- * @WMI_ACTION_OUI_SWITCH_TO_11N_MODE: for switching to 11n mode connection
- * @WMI_ACTION_OUI_CONNECT_1x1_WITH_1_CHAIN: for 1x1 connection with 1 Chain
- * @WMI_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA: disable aggressive EDCA with the ap
- * @WMI_ACTION_OUI_MAXIMUM_ID: maximum number of action oui types
+ * @WMI_ACTION_OUI_MAXIMUM_ID: maximun number of action oui types
  */
 enum wmi_action_oui_id {
 	WMI_ACTION_OUI_CONNECT_1X1 = 0,
 	WMI_ACTION_OUI_ITO_EXTENSION = 1,
 	WMI_ACTION_OUI_CCKM_1X1 = 2,
-	WMI_ACTION_OUI_ITO_ALTERNATE = 3,
-	WMI_ACTION_OUI_SWITCH_TO_11N_MODE = 4,
-	WMI_ACTION_OUI_CONNECT_1x1_WITH_1_CHAIN = 5,
-	WMI_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA = 6,
-	WMI_ACTION_OUI_MAXIMUM_ID = 7,
+	WMI_ACTION_OUI_MAXIMUM_ID = 3,
 };
 
 /**
@@ -7545,297 +7061,27 @@ struct wmi_action_oui {
 
 /**
  * struct set_arp_stats - set/reset arp stats
- * @vdev_id: session id
+ * @vdev_id: vdev_id
  * @flag: enable/disable stats
  * @pkt_type: type of packet(1 - arp)
  * @ip_addr: subnet ipv4 address in case of encrypted packets
- * @pkt_type_bitmap: pkt bitmap
- * @tcp_src_port: tcp src port for pkt tracking
- * @tcp_dst_port: tcp dst port for pkt tracking
- * @icmp_ipv4: target ipv4 address to track ping packets
- * @reserved: reserved
  */
 struct set_arp_stats {
 	uint32_t vdev_id;
 	uint8_t flag;
 	uint8_t pkt_type;
 	uint32_t ip_addr;
-	uint32_t pkt_type_bitmap;
-	uint32_t tcp_src_port;
-	uint32_t tcp_dst_port;
-	uint32_t icmp_ipv4;
-	uint32_t reserved;
 };
 
 /**
  * struct get_arp_stats - get arp stats from firmware
  * @pkt_type: packet type(1 - ARP)
- * @vdev_id: session id
+ * @vdev_id: vdev_id
  */
 struct get_arp_stats {
 	uint8_t pkt_type;
 	uint32_t vdev_id;
 };
 
-#define WMI_SCAN_CLIENT_MAX        7
-
-/**
- * struct wmi_dbs_scan_sel_params - DBS scan selection params
- * @num_clients: Number of scan clients dutycycle
- * @pdev_id: pdev_id for identifying the MAC
- * @module_id: scan client module id
- * @num_dbs_scans: number of DBS scans
- * @num_non_dbs_scans: number of non-DBS scans
- */
-struct wmi_dbs_scan_sel_params {
-	uint32_t num_clients;
-	uint32_t pdev_id;
-	uint32_t module_id[WMI_SCAN_CLIENT_MAX];
-	uint32_t num_dbs_scans[WMI_SCAN_CLIENT_MAX];
-	uint32_t num_non_dbs_scans[WMI_SCAN_CLIENT_MAX];
-};
-
-/**
- * struct wmi_limit_off_chan_param - limit off channel parameters
- * @vdev_id: vdev id
- * @status: status of the command (enable/disable)
- * @max_offchan_time: max off channel time
- * @rest_time: home channel time
- * @skip_dfs_chans: skip dfs channels during scan
- */
-struct wmi_limit_off_chan_param {
-	uint32_t vdev_id;
-	bool status;
-	uint32_t max_offchan_time;
-	uint32_t rest_time;
-	bool skip_dfs_chans;
-};
-
-/**
- * struct wmi_mawc_roam_params - Motion Aided wireless connectivity params
- * @vdev_id: VDEV on which the parameters should be applied
- * @enable: MAWC roaming feature enable/disable
- * @traffic_load_threshold: Traffic threshold in kBps for MAWC roaming
- * @best_ap_rssi_threshold: AP RSSI Threshold for MAWC roaming
- * @rssi_stationary_high_adjust: High RSSI adjustment value to supress scan
- * @rssi_stationary_low_adjust: Low RSSI adjustment value to supress scan
- */
-struct wmi_mawc_roam_params {
-	uint8_t vdev_id;
-	bool enable;
-	uint32_t traffic_load_threshold;
-	uint32_t best_ap_rssi_threshold;
-	uint8_t rssi_stationary_high_adjust;
-	uint8_t rssi_stationary_low_adjust;
-};
-/**
- * struct wmi_btm_config - BSS Transition Management offload params
- * @vdev_id: VDEV on which the parameters should be applied
- * @btm_offload_config: BTM config
- * @btm_solicited_timeout: Timeout value for waiting BTM request
- * @btm_max_attempt_cnt: Maximum attempt for sending BTM query to ESS
- * @btm_sticky_time: Stick time after roaming to new AP by BTM
- * @btm_query_bitmask: roam trigger reasons to trigger BTM Query
- */
-struct wmi_btm_config {
-	uint8_t vdev_id;
-	uint32_t btm_offload_config;
-	uint32_t btm_solicited_timeout;
-	uint32_t btm_max_attempt_cnt;
-	uint32_t btm_sticky_time;
-	uint32_t btm_query_bitmask;
-};
-
-/**
- * @time_offset: time offset after 11k offload command to trigger a neighbor
- *	report request (in seconds)
- * @low_rssi_offset: Offset from rssi threshold to trigger a neighbor
- *	report request (in dBm)
- * @bmiss_count_trigger: Number of beacon miss events to trigger neighbor
- *	report request
- * @per_threshold_offset: offset from PER threshold to trigger neighbor
- *	report request (in %)
- * @neighbor_report_cache_timeout: timeout after which new trigger can enable
- *	sending of a neighbor report request (in seconds)
- * @max_neighbor_report_req_cap: max number of neighbor report requests that
- *	can be sent to the peer in the current session
- * @ssid: Current connect SSID info
- */
-struct wmi_11k_offload_neighbor_report_params {
-	uint32_t time_offset;
-	uint32_t low_rssi_offset;
-	uint32_t bmiss_count_trigger;
-	uint32_t per_threshold_offset;
-	uint32_t neighbor_report_cache_timeout;
-	uint32_t max_neighbor_report_req_cap;
-	struct mac_ssid ssid;
-};
-
-/**
- * struct wmi_11k_offload_params - offload 11k features to FW
- * @vdev_id: vdev id
- * @offload_11k_bitmask: bitmask to specify offloaded features
- *	B0: Neighbor Report Request offload
- *	B1-B31: Reserved
- * @neighbor_report_params: neighbor report offload params
- */
-struct wmi_11k_offload_params {
-	uint32_t vdev_id;
-	uint32_t offload_11k_bitmask;
-	struct wmi_11k_offload_neighbor_report_params neighbor_report_params;
-};
-
-/**
- * struct wmi_invoke_neighbor_report_params - Invoke neighbor report request
- *	from IW to FW
- * @vdev_id: vdev id
- * @send_resp_to_host: bool to send response to host or not
- * @ssid: ssid given from the IW command
- */
-struct wmi_invoke_neighbor_report_params {
-	uint32_t vdev_id;
-	uint32_t send_resp_to_host;
-	struct mac_ssid ssid;
-};
-
-/**
- * struct wmi_apf_write_memory_params - Android Packet Filter write memory
- * params
- * @vdev_id: VDEV on which APF memory is to be written
- * @apf_version: APF version number
- * @program_len: Length reserved for program in the APF work memory
- * @addr_offset: Relative address in APF work memory to start writing
- * @length: Size of the write
- * @buf: Pointer to the buffer
- */
-struct wmi_apf_write_memory_params {
-	uint8_t vdev_id;
-	uint32_t apf_version;
-	uint32_t program_len;
-	uint32_t addr_offset;
-	uint32_t length;
-	uint8_t *buf;
-};
-
-/**
- * struct wmi_apf_read_memory_params - Android Packet Filter read memory params
- * @vdev_id: vdev id
- * @addr_offset: Relative address in APF work memory to read from
- * @length: Size of the memory fetch
- */
-struct wmi_apf_read_memory_params {
-	uint8_t vdev_id;
-	uint32_t addr_offset;
-	uint32_t length;
-};
-
-/**
- * struct wmi_apf_read_memory_resp_event_params - Event containing read Android
- *	Packet Filter memory response
- * @vdev_id: vdev id
- * @offset: Read memory offset
- * @length: Read memory length
- * @more_data: Indicates more data to come
- * @data: Pointer to the data
- */
-struct wmi_apf_read_memory_resp_event_params {
-	uint32_t vdev_id;
-	uint32_t offset;
-	uint32_t length;
-	bool more_data;
-	uint8_t *data;
-};
-
-/* Begin of roam scan stats definitions */
-
-#define WMI_ROAM_SCAN_STATS_MAX             5
-#define WMI_ROAM_SCAN_STATS_CANDIDATES_MAX  4
-#define WMI_ROAM_SCAN_STATS_CHANNELS_MAX    50
-
-/**
- * struct wmi_roam_scan_stats_req - Structure to hold roam scan stats request
- * @vdev_id: interface id
- */
-struct wmi_roam_scan_stats_req {
-	uint32_t vdev_id;
-};
-
-/**
- * struct wmi_roam_scan_cand - Roam scan candidates
- * @score: score of AP
- * @rssi: rssi of the AP
- * @freq: center frequency
- * @bssid: bssid of AP
- */
-struct wmi_roam_scan_cand {
-	uint32_t score;
-	uint32_t rssi;
-	uint32_t freq;
-	uint8_t  bssid[QDF_MAC_ADDR_SIZE];
-};
-
-/**
- * struct wmi_roam_scan_stats_params - Roam scan details
- * @time_stamp: time at which this roam scan happened
- * @client_id: id of client which triggered this scan
- * @num_scan_chans: number of channels that were scanned as part of this scan
- * @scan_freqs: frequencies of the channels that were scanned
- * @is_roam_successful: whether a successful roaming happened after this scan
- * @old_bssid: bssid to which STA is connected just before this scan
- * @new_bssid: bssid to which STA is roamed to in case of successful roaming
- * @num_roam_candidates: no.of roam candidates that are being reported
- * @roam_candidate: roam scan candidate details
- * @trigger_id: reason for triggering this roam or roam scan
- * @trigger_value: threshold value related to trigger_id
- */
-struct wmi_roam_scan_stats_params {
-	uint64_t time_stamp;
-	uint32_t client_id;
-	uint32_t num_scan_chans;
-	uint32_t scan_freqs[WMI_ROAM_SCAN_STATS_CHANNELS_MAX];
-	uint32_t is_roam_successful;
-
-	/* Bssid to which STA is connected when the roam scan is triggered */
-	uint8_t  old_bssid[QDF_MAC_ADDR_SIZE];
-
-	/*
-	 * Bssid to which STA is connected after roaming. Will be valid only
-	 * if is_roam_successful is true.
-	 */
-	uint8_t  new_bssid[QDF_MAC_ADDR_SIZE];
-
-	/* Number of roam candidates that are being reported in the stats */
-	uint32_t num_roam_candidates;
-	struct wmi_roam_scan_cand cand[WMI_ROAM_SCAN_STATS_CANDIDATES_MAX];
-	uint32_t trigger_id;
-	uint32_t trigger_value;
-};
-
-/**
- * struct wmi_roam_scan_stats_res - Roam scan stats response from firmware
- * @num_roam_scan: number of roam scans triggered
- * @roam_scan: place holder to indicate the array of
- *             wmi_roam_scan_stats_params followed by this structure
- */
-struct wmi_roam_scan_stats_res {
-	uint32_t num_roam_scans;
-	struct wmi_roam_scan_stats_params roam_scan[0];
-};
-
-/* End of roam scan stats definitions */
-
-/**
- * struct wmi_hw_filter_req_params - HW Filter mode parameters
- * @vdev: VDEV id
- * @enable: True: Enable HW filter, False: Disable
- * @mode_bitmap: the hardware filter mode to configure
- * @bssid: bss_id for get session.
- */
-struct wmi_hw_filter_req_params {
-	uint8_t vdev_id;
-	bool enable;
-	uint8_t mode_bitmap;
-	struct qdf_mac_addr bssid;
-};
 #endif /* _WMI_UNIFIED_PARAM_H_ */
 

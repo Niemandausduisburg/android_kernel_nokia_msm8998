@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifndef EPPING_INTERNAL_H
@@ -158,12 +167,11 @@ void epping_set_kperf_flag(epping_adapter_t *pAdapter,
 
 /* epping_tx signatures */
 void epping_tx_timer_expire(epping_adapter_t *pAdapter);
-void epping_tx_complete(void *ctx, HTC_PACKET *htc_pkt);
+void epping_tx_complete_multiple(void *ctx, HTC_PACKET_QUEUE *pPacketQueue);
 int epping_tx_send(qdf_nbuf_t skb, epping_adapter_t *pAdapter);
 
 #ifdef HIF_SDIO
-enum htc_send_full_action epping_tx_queue_full(void *Context,
-						HTC_PACKET *pPacket);
+HTC_SEND_FULL_ACTION epping_tx_queue_full(void *Context, HTC_PACKET *pPacket);
 #endif
 void epping_tx_dup_pkt(epping_adapter_t *pAdapter,
 		       HTC_ENDPOINT_ID eid, qdf_nbuf_t skb);

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #if !defined(__SMEINTERNAL_H)
@@ -84,7 +93,6 @@ typedef enum eSmeCommandType {
 	e_sme_command_nss_update,
 	e_sme_command_set_dual_mac_config,
 	e_sme_command_set_antenna_mode,
-	e_sme_command_issue_self_reassoc,
 	eSmeCommandNdpInitiatorRequest,
 	eSmeCommandNdpResponderRequest,
 	eSmeCommandNdpDataEndInitiatorRequest,
@@ -114,16 +122,6 @@ typedef struct sStatsExtEvent {
 	uint32_t event_data_len;
 	uint8_t event_data[];
 } tStatsExtEvent, *tpStatsExtEvent;
-
-/**
- * struct stats_ext2_event - stats ext2 event
- * @hole_cnt: hole counter
- * @hole_info_array: hole informaton
- */
-struct stats_ext2_event {
-	uint32_t hole_cnt;
-	uint32_t hole_info_array[];
-};
 
 #define MAX_ACTIVE_CMD_STATS    16
 
@@ -182,11 +180,8 @@ typedef struct tagSmeStruct {
 	void (*pChAvoidNotificationCb)(void *hdd_context, void *indi_param);
 #endif /* FEATURE_WLAN_CH_AVOID */
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
-	void *ll_stats_context;
 	void (*pLinkLayerStatsIndCallback)(void *callbackContext,
-			int indType, void *pRsp, void *context);
-	void (*link_layer_stats_ext_cb)(tHddHandle callback_ctx,
-					tSirLLStatsResults *rsp);
+			int indType, void *pRsp);
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
 #ifdef WLAN_POWER_DEBUGFS
@@ -206,12 +201,9 @@ typedef struct tagSmeStruct {
 	void *pLinkSpeedCbContext;
 	/* get peer info callback */
 	void (*pget_peer_info_ind_cb)(struct sir_peer_info_resp *param,
-		void *pcontext);
+		  void *pcontext);
 	void *pget_peer_info_cb_context;
-	/* get extended peer info callback */
-	void (*pget_peer_info_ext_ind_cb)(struct sir_peer_info_ext_resp *param,
-		void *pcontext);
-	void *pget_peer_info_ext_cb_context;
+
 #ifdef FEATURE_WLAN_EXTSCAN
 	void (*pExtScanIndCb)(void *, const uint16_t, void *);
 #endif /* FEATURE_WLAN_EXTSCAN */
@@ -255,32 +247,21 @@ typedef struct tagSmeStruct {
 	ocb_callback dcc_stats_event_callback;
 	sme_set_thermal_level_callback set_thermal_level_cb;
 	void *saved_scan_cmd;
-	void (*papf_get_offload_cb)(void *context,
-			struct sir_apf_get_offload *);
+	void (*pbpf_get_offload_cb)(void *context,
+			struct sir_bpf_get_offload *);
 	p2p_lo_callback p2p_lo_event_callback;
 	void *p2p_lo_event_context;
 	sme_send_oem_data_rsp_msg oem_data_rsp_callback;
-	void *encrypt_decrypt_context;
-	void (*encrypt_decrypt_cb)(void *cookie,
-				   struct sir_encrypt_decrypt_rsp_params *rsp);
+	void (*encrypt_decrypt_cb)(void *,
+			struct sir_encrypt_decrypt_rsp_params *);
 	void (*lost_link_info_cb)(void *context,
 			struct sir_lost_link_info *lost_link_info);
 	void (*rso_cmd_status_cb)(void *hdd_context,
 			 struct rso_cmd_status *rso_status);
-	void *get_arp_stats_context;
-	void (*get_arp_stats_cb)(void *, struct rsp_stats *, void *);
-	void (*bt_activity_info_cb)(void *context, uint32_t bt_activity);
+	void (*get_arp_stats_cb)(void *, struct rsp_stats *);
 	void (*chip_power_save_fail_cb)(void *,
 			struct chip_pwr_save_fail_detected_params *);
-	void *pchain_rssi_ind_ctx;
-	void (*pchain_rssi_ind_cb)(void *hdd_ctx, void *pmsg, void *context);
-	void (*spectral_scan_cb)(void *context,
-			struct spectral_samp_msg *samp_msg);
-	void (*stats_ext2_cb)(void *, struct stats_ext2_event *);
 	void (*congestion_cb)(void *, uint32_t congestion, uint32_t vdev_id);
-	void (*apf_read_mem_cb)(void *context,
-			struct wmi_apf_read_memory_resp_event_params *params);
 } tSmeStruct, *tpSmeStruct;
-
 
 #endif /* #if !defined( __SMEINTERNAL_H ) */

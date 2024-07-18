@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011, 2013-2017, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2013-2016, 2021 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #include <qdf_nbuf.h>           /* qdf_nbuf_t */
@@ -84,7 +93,7 @@ int ol_rx_pn_wapi_cmp(union htt_rx_pn_t *new_pn,
 qdf_nbuf_t
 ol_rx_pn_check_base(struct ol_txrx_vdev_t *vdev,
 		    struct ol_txrx_peer_t *peer,
-		    unsigned int tid, qdf_nbuf_t msdu_list, bool strict_chk)
+		    unsigned tid, qdf_nbuf_t msdu_list, bool strict_chk)
 {
 	struct ol_txrx_pdev_t *pdev = vdev->pdev;
 	union htt_rx_pn_t *last_pn;
@@ -129,8 +138,8 @@ ol_rx_pn_check_base(struct ol_txrx_vdev_t *vdev,
 
 		/* Don't check the PN replay for non-encrypted frames */
 		if (!htt_rx_mpdu_is_encrypted(pdev->htt_pdev, rx_desc)) {
-			ADD_MPDU_TO_LIST(out_list_head, out_list_tail,
-					       mpdu, mpdu_tail);
+			ADD_MPDU_TO_LIST(out_list_head, out_list_tail, mpdu,
+					 mpdu_tail);
 			mpdu = next_mpdu;
 			continue;
 		}
@@ -151,6 +160,7 @@ ol_rx_pn_check_base(struct ol_txrx_vdev_t *vdev,
 		if (pn_is_replay) {
 			qdf_nbuf_t msdu;
 			static uint32_t last_pncheck_print_time /* = 0 */;
+			int log_level;
 			uint32_t current_time_ms;
 
 			/*
@@ -165,26 +175,12 @@ ol_rx_pn_check_base(struct ol_txrx_vdev_t *vdev,
 			if (TXRX_PN_CHECK_FAILURE_PRINT_PERIOD_MS <
 			    (current_time_ms - last_pncheck_print_time)) {
 				last_pncheck_print_time = current_time_ms;
-				ol_txrx_warn(
-				   "PN check failed - TID %d, peer %pK "
-				   "(%02x:%02x:%02x:%02x:%02x:%02x) %s\n"
-				   "    old PN (u64 x2)= 0x%08llx %08llx (LSBs = %lld)\n"
-				   "    new PN (u64 x2)= 0x%08llx %08llx (LSBs = %lld)\n"
-				   "    new seq num = %d\n",
-				   tid, peer,
-				   peer->mac_addr.raw[0], peer->mac_addr.raw[1],
-				   peer->mac_addr.raw[2], peer->mac_addr.raw[3],
-				   peer->mac_addr.raw[4], peer->mac_addr.raw[5],
-				   (index ==
-				    txrx_sec_ucast) ? "ucast" : "mcast",
-				   last_pn->pn128[1], last_pn->pn128[0],
-				   last_pn->pn128[0] & 0xffffffffffffULL,
-				   new_pn.pn128[1], new_pn.pn128[0],
-				   new_pn.pn128[0] & 0xffffffffffffULL,
-				   htt_rx_mpdu_desc_seq_num(pdev->htt_pdev,
-							    rx_desc));
+				log_level = TXRX_PRINT_LEVEL_WARN;
 			} else {
-				ol_txrx_dbg(
+				log_level = TXRX_PRINT_LEVEL_INFO2;
+			}
+
+			TXRX_PRINT(log_level,
 				   "PN check failed - TID %d, peer %pK "
 				   "(%02x:%02x:%02x:%02x:%02x:%02x) %s\n"
 				   "    old PN (u64 x2)= 0x%08llx %08llx (LSBs = %lld)\n"
@@ -202,7 +198,6 @@ ol_rx_pn_check_base(struct ol_txrx_vdev_t *vdev,
 				   new_pn.pn128[0] & 0xffffffffffffULL,
 				   htt_rx_mpdu_desc_seq_num(pdev->htt_pdev,
 							    rx_desc));
-			}
 #if defined(ENABLE_RX_PN_TRACE)
 			ol_rx_pn_trace_display(pdev, 1);
 #endif /* ENABLE_RX_PN_TRACE */
@@ -214,18 +209,18 @@ ol_rx_pn_check_base(struct ol_txrx_vdev_t *vdev,
 			/* free all MSDUs within this MPDU */
 			do {
 				qdf_nbuf_t next_msdu;
-
 				OL_RX_ERR_STATISTICS_1(pdev, vdev, peer,
 						       rx_desc, OL_RX_ERR_PN);
 				next_msdu = qdf_nbuf_next(msdu);
 				htt_rx_desc_frame_free(pdev->htt_pdev, msdu);
 				if (msdu == mpdu_tail)
 					break;
-				msdu = next_msdu;
+				else
+					msdu = next_msdu;
 			} while (1);
 		} else {
-			ADD_MPDU_TO_LIST(out_list_head, out_list_tail,
-					       mpdu, mpdu_tail);
+			ADD_MPDU_TO_LIST(out_list_head, out_list_tail, mpdu,
+					 mpdu_tail);
 			/*
 			 * Remember the new PN.
 			 * For simplicity, just do 2 64-bit word copies to
@@ -233,21 +228,10 @@ ol_rx_pn_check_base(struct ol_txrx_vdev_t *vdev,
 			 * of the PN.
 			 * This is more efficient than doing a conditional
 			 * branch to copy only the relevant portion.
-
-			 * IWNCOM AP will send 1 packet with old PN after USK
-			 * rekey, don't update last_pn when recv the packet, or
-			 * PN check failed for later packets
 			 */
-			if ((peer->security[index].sec_type
-				== htt_sec_type_wapi) &&
-			    (peer->tids_rekey_flag[tid] == 1) &&
-			    (index == txrx_sec_ucast)) {
-				peer->tids_rekey_flag[tid] = 0;
-			} else {
-				last_pn->pn128[0] = new_pn.pn128[0];
-				last_pn->pn128[1] = new_pn.pn128[1];
-				OL_RX_PN_TRACE_ADD(pdev, peer, tid, rx_desc);
-			}
+			last_pn->pn128[0] = new_pn.pn128[0];
+			last_pn->pn128[1] = new_pn.pn128[1];
+			OL_RX_PN_TRACE_ADD(pdev, peer, tid, rx_desc);
 		}
 
 		mpdu = next_mpdu;
@@ -261,8 +245,7 @@ ol_rx_pn_check_base(struct ol_txrx_vdev_t *vdev,
 
 void
 ol_rx_pn_check(struct ol_txrx_vdev_t *vdev,
-	       struct ol_txrx_peer_t *peer, unsigned int tid,
-	       qdf_nbuf_t msdu_list)
+	       struct ol_txrx_peer_t *peer, unsigned tid, qdf_nbuf_t msdu_list)
 {
 	msdu_list = ol_rx_pn_check_base(vdev, peer, tid, msdu_list, false);
 	ol_rx_fwd_check(vdev, peer, tid, msdu_list);
@@ -271,7 +254,7 @@ ol_rx_pn_check(struct ol_txrx_vdev_t *vdev,
 void
 ol_rx_pn_check_only(struct ol_txrx_vdev_t *vdev,
 		    struct ol_txrx_peer_t *peer,
-		    unsigned int tid, qdf_nbuf_t msdu_list)
+		    unsigned tid, qdf_nbuf_t msdu_list)
 {
 	msdu_list = ol_rx_pn_check_base(vdev, peer, tid, msdu_list, false);
 	ol_rx_deliver(vdev, peer, tid, msdu_list);
@@ -349,7 +332,6 @@ void ol_rx_pn_trace_display(ol_txrx_pdev_handle pdev, int just_once)
 	elems = (end - 1 - start) & pdev->rx_pn_trace.mask;
 	if (limit > 0 && elems > limit) {
 		int delta;
-
 		delta = elems - limit;
 		start += delta;
 		start &= pdev->rx_pn_trace.mask;

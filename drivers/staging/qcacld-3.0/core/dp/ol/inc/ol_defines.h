@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,14 +19,29 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
- * DOC: i_qdf_threads
- * Header file for linux-specific thead abstractions
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
-#if !defined(__I_QDF_THREADS_H)
-#define __I_QDF_THREADS_H
+/*
+ * Offload specific Opaque Data types.
+ */
+#ifndef _DEV_OL_DEFINES_H
+#define _DEV_OL_DEFINES_H
 
-typedef struct task_struct __qdf_thread_t;
+/**
+ * @brief Opaque handle of wmi structure
+ */
+struct wmi_unified;
+typedef struct wmi_unified *wmi_unified_t;
 
-#endif /* __I_QDF_THREADS_H */
+typedef void *ol_scn_t;
+/**
+ * @wmi_event_handler function prototype
+ */
+typedef int (*wmi_unified_event_handler)(ol_scn_t scn_handle,
+					 uint8_t *event_buf, uint32_t len);
+
+#endif /* _DEV_OL_DEFINES_H */

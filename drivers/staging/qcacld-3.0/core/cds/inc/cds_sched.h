@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #if !defined(__CDS_SCHED_H)
@@ -42,8 +51,6 @@
 #include "qdf_mc_timer.h"
 #include "cds_config.h"
 #include "cds_reg_service.h"
-#include "qdf_cpuhp.h"
-#include "ol_txrx.h"
 
 #define TX_POST_EVENT               0x001
 #define TX_SUSPEND_EVENT            0x002
@@ -78,23 +85,9 @@
 ** OL Rx thread.
 */
 #define CDS_MAX_OL_RX_PKT 4000
-#endif
-
-/*
-** Maximum number of cds messages to be allocated for
-** OL MON thread.
-*/
-#define CDS_MAX_OL_MON_PKT 4000
 
 typedef void (*cds_ol_rx_thread_cb)(void *context, void *rxpkt, uint16_t staid);
-
-typedef void (*cds_ol_mon_thread_cb)(
-			void *context, void *monpkt,
-			uint8_t vdev_id, uint8_t tid,
-			struct ol_mon_tx_status pkt_tx_status,
-			bool pkt_format);
-
-typedef int (*send_mode_change_event_cb)(void);
+#endif
 
 /*
 ** QDF Message queue definition.
@@ -108,6 +101,7 @@ typedef struct _cds_mq_type {
 
 } cds_mq_type, *p_cds_mq_type;
 
+#ifdef QCA_CONFIG_SMP
 /*
 ** CDS message wrapper for data rx from TXRX
 */
@@ -125,31 +119,7 @@ struct cds_ol_rx_pkt {
 	cds_ol_rx_thread_cb callback;
 
 };
-
-/*
-** CDS message wrapper for mon data from TXRX
-*/
-struct cds_ol_mon_pkt {
-	struct list_head list;
-	void *context;
-
-	/* mon skb */
-	void *monpkt;
-
-	/* vdev id to which this packet is destined */
-	uint8_t vdev_id;
-
-	uint8_t tid;
-
-	/* Tx packet status */
-	struct ol_mon_tx_status pkt_tx_status;
-
-	/* 0 = 802.3 format , 1 = 802.11 format */
-	bool pkt_format;
-
-	/* Call back to further send this packet to txrx layer */
-	cds_ol_mon_thread_cb callback;
-};
+#endif
 
 /*
 ** CDS Scheduler context
@@ -230,8 +200,8 @@ typedef struct _cds_sched_context {
 	/* Free message queue for OL Rx processing */
 	struct list_head cds_ol_rx_pkt_freeq;
 
-	/* The CPU hotplug event registration handle, used to unregister */
-	struct qdf_cpuhp_handler *cpuhp_event_handle;
+	/* cpu hotplug notifier */
+	struct notifier_block *cpu_hot_plug_notifier;
 
 	/* affinity lock */
 	struct mutex affinity_lock;
@@ -242,46 +212,6 @@ typedef struct _cds_sched_context {
 	/* high throughput required */
 	bool high_throughput_required;
 #endif
-	/* MON thread lock */
-	spinlock_t ol_mon_thread_lock;
-
-	/* OL MON thread handle */
-	struct task_struct *ol_mon_thread;
-
-	/* Handle of Event for MON thread to signal startup */
-	struct completion ol_mon_start_event;
-
-	/* Completion object to suspend OL MON thread */
-	struct completion ol_suspend_mon_event;
-
-	/* Completion objext to resume OL MON thread */
-	struct completion ol_resume_mon_event;
-
-	/* Completion object for OL MON thread shutdown */
-	struct completion ol_mon_shutdown;
-
-	/* Waitq for OL MON thread */
-	wait_queue_head_t ol_mon_wait_queue;
-
-	unsigned long ol_mon_event_flag;
-
-	/* MON buffer queue */
-	struct list_head ol_mon_thread_queue;
-
-	/* Spinlock to synchronize between tasklet and thread */
-	spinlock_t ol_mon_queue_lock;
-
-	/* MON queue length */
-	unsigned int ol_mon_queue_len;
-
-	/* Lock to synchronize free buffer queue access */
-	spinlock_t cds_ol_mon_pkt_freeq_lock;
-
-	/* Free message queue for OL MON processing */
-	struct list_head cds_ol_mon_pkt_freeq;
-
-	/* MON thread affinity cpu */
-	unsigned long mon_thread_cpu;
 } cds_sched_context, *p_cds_sched_context;
 
 /**
@@ -318,7 +248,6 @@ typedef struct _cds_msg_wrapper {
 
 /* forward-declare hdd_context_s as it is used ina function type */
 struct hdd_context_s;
-struct hdd_adapter_s;
 typedef struct _cds_context_type {
 	/* Messages buffers */
 	cds_msg_t aMsgBuffers[CDS_CORE_MAX_MESSAGES];
@@ -340,9 +269,9 @@ typedef struct _cds_context_type {
 	qdf_event_t ProbeEvent;
 
 	uint32_t driver_state;
-	unsigned long fw_state;
 
 	qdf_event_t wmaCompleteEvent;
+	unsigned long fw_state;
 
 	/* WMA Context */
 	void *pWMAContext;
@@ -378,10 +307,8 @@ typedef struct _cds_context_type {
 	qdf_event_t connection_update_done_evt;
 	qdf_mutex_t qdf_conc_list_lock;
 	qdf_mc_timer_t dbs_opportunistic_timer;
-	qdf_event_t opportunistic_update_done_evt;
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
-	void (*sap_restart_chan_switch_cb)(struct hdd_adapter_s *,
-					   uint32_t, uint32_t);
+	void (*sap_restart_chan_switch_cb)(void *, uint32_t, uint32_t);
 #endif
 	QDF_STATUS (*sme_get_valid_channels)(void*, uint16_t cfg_id,
 		uint8_t *, uint32_t *);
@@ -389,11 +316,10 @@ typedef struct _cds_context_type {
 		uint8_t *, uint8_t *);
 
 	/* Datapath callback functions */
-	void (*ol_txrx_update_mac_id_cb)(uint8_t, uint8_t);
+	void (*ol_txrx_update_mac_id_cb)(uint8_t , uint8_t);
 	void (*hdd_en_lro_in_cc_cb)(struct hdd_context_s *);
 	void (*hdd_disable_lro_in_cc_cb)(struct hdd_context_s *);
 	void (*hdd_set_rx_mode_rps_cb)(struct hdd_context_s *, void *, bool);
-	void (*hdd_ipa_set_mcc_mode_cb)(bool);
 
 	/* This list is not sessionized. This mandatory channel list would be
 	 * as per OEMs preference as per the regulatory/other considerations.
@@ -408,15 +334,11 @@ typedef struct _cds_context_type {
 
 	/* This is to track if HW mode change is in progress */
 	uint32_t hw_mode_change_in_progress;
-	uint16_t unsafe_channel_count;
-	uint16_t unsafe_channel_list[NUM_CHANNELS];
-	/* current system preference */
-	uint8_t cur_conc_system_pref;
 	qdf_work_t cds_recovery_work;
 	qdf_workqueue_t *cds_recovery_wq;
 	enum cds_hang_reason recovery_reason;
-	qdf_event_t channel_switch_complete;
-	send_mode_change_event_cb mode_change_cb;
+	uint16_t unsafe_channel_count;
+	uint16_t unsafe_channel_list[NUM_CHANNELS];
 } cds_context_type, *p_cds_contextType;
 
 extern struct _cds_sched_context *gp_cds_sched_context;
@@ -452,26 +374,6 @@ void cds_drop_rxpkt_by_staid(p_cds_sched_context pSchedContext, uint16_t staId);
    -------------------------------------------------------------------------*/
 void cds_indicate_rxpkt(p_cds_sched_context pSchedContext,
 			struct cds_ol_rx_pkt *pkt);
-
-/**
- * cds_wakeup_rx_thread() - wakeup rx thread
- * @Arg: Pointer to the global CDS Sched Context
- *
- * This api wake up cds_ol_rx_thread() to process pkt
- *
- * Return: none
- */
-void cds_wakeup_rx_thread(p_cds_sched_context pSchedContext);
-
-/**
- * cds_close_rx_thread() - close the Tlshim Rx thread
- * @p_cds_context: Pointer to the global CDS Context
- *
- * This api closes the Tlshim Rx thread:
- *
- * Return: qdf status
- */
-QDF_STATUS cds_close_rx_thread(void *p_cds_context);
 
 /*---------------------------------------------------------------------------
    \brief cds_alloc_ol_rx_pkt() - API to return next available cds message
@@ -537,33 +439,6 @@ void cds_indicate_rxpkt(p_cds_sched_context pSchedContext,
 }
 
 /**
- * cds_wakeup_rx_thread() - wakeup rx thread
- * @Arg: Pointer to the global CDS Sched Context
- *
- * This api wake up cds_ol_rx_thread() to process pkt
- *
- * Return: none
- */
-static inline
-void cds_wakeup_rx_thread(p_cds_sched_context pSchedContext)
-{
-}
-
-/**
- * cds_close_rx_thread() - close the Tlshim Rx thread
- * @p_cds_context: Pointer to the global CDS Context
- *
- * This api closes the Tlshim Rx thread:
- *
- * Return: qdf status
- */
-static inline
-QDF_STATUS cds_close_rx_thread(void *p_cds_context)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
  * cds_alloc_ol_rx_pkt() - API to return next available cds message
  * @pSchedContext: pointer to  CDS Sched Context
  *
@@ -572,7 +447,6 @@ QDF_STATUS cds_close_rx_thread(void *p_cds_context)
 static inline
 struct cds_ol_rx_pkt *cds_alloc_ol_rx_pkt(p_cds_sched_context pSchedContext)
 {
-	return NULL;
 }
 
 /**
@@ -607,79 +481,6 @@ static inline int cds_sched_handle_throughput_req(
 }
 
 #endif
-
-/**
- * cds_drop_monpkt() - API to drop pending mon packets
- * @pschedcontext: Pointer to the global CDS Sched Context
- *
- * This api drops all the pending packets in the queue.
- *
- * Return: none
- */
-void cds_drop_monpkt(p_cds_sched_context pschedcontext);
-
-/**
- * cds_indicate_monpkt() - API to Indicate rx data packet
- * @pschedcontext: pointer to  CDS Sched Context
- * @pkt: CDS OL MON pkt pointer containing to mon data message buffer
- *
- * Return: none
- */
-void cds_indicate_monpkt(p_cds_sched_context pschedcontext,
-			 struct cds_ol_mon_pkt *pkt);
-
-/**
- * cds_wakeup_mon_thread() - wakeup mon thread
- * @Arg: Pointer to the global CDS Sched Context
- *
- * This api wake up cds_ol_mon_thread() to process pkt
- *
- * Return: none
- */
-void cds_wakeup_mon_thread(p_cds_sched_context pschedcontext);
-
-/**
- * cds_close_mon_thread() - close the Tlshim MON thread
- * @p_cds_context: Pointer to the global CDS Context
- *
- * This api closes the Tlshim MON thread:
- *
- * Return: qdf status
- */
-QDF_STATUS cds_close_mon_thread(void *p_cds_context);
-
-/**
- * cds_alloc_ol_mon_pkt() - API to return next available cds message
- * @pSchedContext: Pointer to the global CDS Sched Context
- *
- * This api returns next available cds message buffer used for mon data
- * processing
- *
- * Return: Pointer to cds message buffer
- */
-struct cds_ol_mon_pkt *cds_alloc_ol_mon_pkt(p_cds_sched_context pschedcontext);
-
-/**
- * cds_free_ol_mon_pkt() - api to release cds message to the freeq
- * This api returns the cds message used for mon data to the free queue
- * @pSchedContext: Pointer to the global CDS Sched Context
- * @pkt: CDS message buffer to be returned to free queue.
- *
- * Return: none
- */
-void cds_free_ol_mon_pkt(p_cds_sched_context pschedcontext,
-			 struct cds_ol_mon_pkt *pkt);
-
-/**
- * cds_free_ol_mon_pkt_freeq() - free cds buffer free queue
- * @pSchedContext - pointer to the global CDS Sched Context
- *
- * This API does mem free of the buffers available in free cds buffer
- * queue which is used for mon Data processing.
- *
- * Return: none
- */
-void cds_free_ol_mon_pkt_freeq(p_cds_sched_context pschedcontext);
 
 /*---------------------------------------------------------------------------
 
@@ -811,16 +612,4 @@ void cds_shutdown_notifier_purge(void);
  * shutdown.
  */
 void cds_shutdown_notifier_call(void);
-
-/**
- * cds_remove_timer_from_sys_msg() - Flush timer message from sys msg queue
- * @timer_cookie: Unique cookie of the timer message to be flushed
- *
- * Find the timer message in the sys msg queue for the unique cookie
- * and flush the message from the queue.
- *
- * Return: None
- */
-void cds_remove_timer_from_sys_msg(uint32_t timer_cookie);
-
 #endif /* #if !defined __CDS_SCHED_H */

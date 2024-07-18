@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -46,11 +55,9 @@ typedef struct sAniSirGlobal *tpAniSirGlobal;
 #include "cds_regdomain.h"
 #include "wmi_unified.h"
 #include "wmi_unified_param.h"
-#include "ol_txrx_htt_api.h"
 #include <dot11f.h>
 
 #define MAX_PEERS 32
-#define SIR_MAX_SUPPORTED_BSS 5
 
 #define OFFSET_OF(structType, fldName)   (&((structType *)0)->fldName)
 
@@ -59,8 +66,6 @@ typedef struct sAniSirGlobal *tpAniSirGlobal;
 
 #define SIR_MDIE_ELEMENT_ID         54
 #define SIR_MDIE_SIZE               3   /* MD ID(2 bytes), Capability(1 byte) */
-
-#define SIR_MAX_ELEMENT_ID         255
 
 /* Increase dwell time for P2P search in ms */
 #define P2P_SEARCH_DWELL_TIME_INCREASE   20
@@ -111,29 +116,11 @@ typedef uint8_t tSirVersionString[SIR_VERSION_STRING_LEN];
 	(QOS_MAP_LEN_MIN + 2 * QOS_MAP_MAX_EX)
 #define NUM_CHAINS_MAX  2
 
-#ifdef ACS_FW_REPORT_PARAM
-#define SIR_MAX_SUPPORTED_ACS_CHANNEL_LIST SIR_MAX_SUPPORTED_CHANNEL_LIST
-#define ACS_FW_REPORT_PARAM_CONFIGURED true
-#else
-#define SIR_MAX_SUPPORTED_ACS_CHANNEL_LIST 1
-#define ACS_FW_REPORT_PARAM_CONFIGURED false
-#endif
-
 #define MAX_LEN_UDP_RESP_OFFLOAD 128
-
-#define MAX_RSSI_AVOID_BSSID_LIST    10
-
-/* Maximum number of realms present in fils indication element */
-#define SIR_MAX_REALM_COUNT 7
-/* Realm length */
-#define SIR_REALM_LEN 2
-/* Cache ID length */
-#define CACHE_ID_LEN 2
 
 /* Maximum peer station number query one time */
 #define MAX_PEER_STA 12
 
-#define SIR_NAN_CH_INFO_MAX_CHANNELS 4
 /**
  * enum sir_conn_update_reason: Reason for conc connection update
  * @SIR_UPDATE_REASON_SET_OPER_CHAN: Set probable operating channel
@@ -159,18 +146,6 @@ enum sir_conn_update_reason {
 	SIR_UPDATE_REASON_CHANNEL_SWITCH,
 	SIR_UPDATE_REASON_CHANNEL_SWITCH_STA,
 	SIR_UPDATE_REASON_PRE_CAC,
-};
-
-/**
- * enum force_1x1_type - enum to specify the type of forced 1x1 ini provided.
- * @FORCE_1X1_DISABLED: even if the AP is present in OUI, 1x1 will not be forced
- * @FORCE_1X1_ENABLED_FOR_AS: If antenna sharing supported, then only do 1x1.
- * @FORCE_1X1_ENABLED_FORCED: If AP present in OUI, force 1x1 connection.
- */
-enum force_1x1_type {
-	FORCE_1X1_DISABLED,
-	FORCE_1X1_ENABLED_FOR_AS,
-	FORCE_1X1_ENABLED_FORCED,
 };
 
 typedef enum {
@@ -205,10 +180,7 @@ typedef enum {
 #define SIR_BTK_KEY_LEN 32
 #define SIR_KCK_KEY_LEN 16
 #define SIR_KEK_KEY_LEN 16
-#define SIR_KEK_KEY_LEN_FILS 64
 #define SIR_REPLAY_CTR_LEN 8
-#define SIR_PMK_LEN  48
-#define SIR_PMKID_LEN 16
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 #define SIR_UAPSD_BITOFFSET_ACVO     0
 #define SIR_UAPSD_BITOFFSET_ACVI     1
@@ -222,18 +194,6 @@ typedef enum {
 #define SIR_UAPSD_GET(ac, mask)      (((mask) & (SIR_UAPSD_FLAG_ ## ac)) >> SIR_UAPSD_BITOFFSET_ ## ac)
 
 #endif
-
-/* RSN capabilities structure */
-
-struct rsn_caps {
-	uint16_t PreAuthSupported:1;
-	uint16_t NoPairwise:1;
-	uint16_t PTKSAReplayCounter:2;
-	uint16_t GTKSAReplayCounter:2;
-	uint16_t MFPRequired:1;
-	uint16_t MFPCapable:1;
-	uint16_t Reserved:8;
-};
 
 /**
  * enum sir_roam_op_code - Operation to be done by the callback.
@@ -294,7 +254,7 @@ typedef enum eSirScanType {
 /* / Result codes Firmware return to Host SW */
 typedef enum eSirResultCodes {
 	eSIR_SME_SUCCESS,
-	eSIR_LOGE_EXCEPTION,
+	eSIR_LOGP_EXCEPTION,
 	eSIR_SME_INVALID_PARAMETERS = 500,
 	eSIR_SME_UNEXPECTED_REQ_RESULT_CODE,
 	eSIR_SME_RESOURCES_UNAVAILABLE,
@@ -360,28 +320,8 @@ typedef enum eSirResultCodes {
 	eSIR_SME_SEND_ACTION_FAIL,
 	eSIR_SME_DEAUTH_STATUS,
 	eSIR_PNO_SCAN_SUCCESS,
-	eSIR_SME_INVALID_SESSION,
-	eSIR_SME_PEER_CREATE_FAILED,
 	eSIR_DONOT_USE_RESULT_CODE = SIR_MAX_ENUM_SIZE
 } tSirResultCodes;
-
-#ifdef WLAN_FEATURE_FILS_SK
-struct fils_join_rsp_params {
-	uint8_t *fils_pmk;
-	uint8_t fils_pmk_len;
-	uint8_t fils_pmkid[PMKID_LEN];
-	uint8_t kek[MAX_KEK_LEN];
-	uint8_t kek_len;
-	uint8_t tk[MAX_TK_LEN];
-	uint8_t tk_len;
-	uint8_t gtk_len;
-	uint8_t gtk[MAX_GTK_LEN];
-	struct qdf_mac_addr dst_mac;
-	struct qdf_mac_addr src_mac;
-	uint16_t hlp_data_len;
-	uint8_t hlp_data[FILS_MAX_HLP_DATA_LEN];
-};
-#endif
 
 #define RMENABLEDCAP_MAX_LEN 5
 
@@ -436,41 +376,11 @@ typedef struct sSirSupportedRates {
 	uint16_t vhtTxHighestDataRate;
 } tSirSupportedRates, *tpSirSupportedRates;
 
-/**
- * enum eSirRFBand
- * @SIR_BAND_ALL:all bands
- * @SIR_BAND_2_4_GHZ: 2G band
- * @SIR_BAND_5_GHZ: 5G band
- * @SIR_BAND_UNKNOWN: Unsupported band
- * @SIR_BAND_MAX: Max number of band
- */
 typedef enum eSirRFBand {
-	SIR_BAND_ALL,
+	SIR_BAND_UNKNOWN,
 	SIR_BAND_2_4_GHZ,
 	SIR_BAND_5_GHZ,
-	SIR_BAND_UNKNOWN,
-	SIR_BAND_MAX = SIR_BAND_UNKNOWN,
 } tSirRFBand;
-
-/**
- * enum set_hw_mode_status - Status of set HW mode command
- * @SET_HW_MODE_STATUS_OK: command successful
- * @SET_HW_MODE_STATUS_EINVAL: Requested invalid hw_mode
- * @SET_HW_MODE_STATUS_ECANCELED: HW mode change cancelled
- * @SET_HW_MODE_STATUS_ENOTSUP: HW mode not supported
- * @SET_HW_MODE_STATUS_EHARDWARE: HW mode change prevented by hardware
- * @SET_HW_MODE_STATUS_EPENDING: HW mode change is pending
- * @SET_HW_MODE_STATUS_ECOEX: HW mode change conflict with Coex
- */
-enum set_hw_mode_status {
-	SET_HW_MODE_STATUS_OK,
-	SET_HW_MODE_STATUS_EINVAL,
-	SET_HW_MODE_STATUS_ECANCELED,
-	SET_HW_MODE_STATUS_ENOTSUP,
-	SET_HW_MODE_STATUS_EHARDWARE,
-	SET_HW_MODE_STATUS_EPENDING,
-	SET_HW_MODE_STATUS_ECOEX,
-};
 
 typedef struct sSirRemainOnChnReq {
 	uint16_t messageType;
@@ -530,8 +440,6 @@ typedef struct sSirSmeReadyReq {
 	void *csr_roam_synch_cb;
 	void *pe_roam_synch_cb;
 	void *sme_msg_cb;
-	void *stop_roaming_cb;
-	void *csr_roam_pmkid_req_cb;
 } tSirSmeReadyReq, *tpSirSmeReadyReq;
 
 /**
@@ -560,9 +468,6 @@ struct s_sir_set_hw_mode {
 	struct sir_hw_mode set_hw;
 };
 
-typedef void (*dual_mac_cb)(enum set_hw_mode_status status,
-		uint32_t scan_config,
-		uint32_t fw_mode_config);
 /**
  * struct sir_dual_mac_config - Dual MAC configuration
  * @scan_config: Scan configuration
@@ -572,7 +477,7 @@ typedef void (*dual_mac_cb)(enum set_hw_mode_status status,
 struct sir_dual_mac_config {
 	uint32_t scan_config;
 	uint32_t fw_mode_config;
-	dual_mac_cb set_dual_mac_cb;
+	void *set_dual_mac_cb;
 };
 
 /**
@@ -588,35 +493,16 @@ struct sir_set_dual_mac_cfg {
 };
 
 /**
- * enum set_antenna_mode_status - Status of set antenna mode
- * command
- * @SET_ANTENNA_MODE_STATUS_OK: command successful
- * @SET_ANTENNA_MODE_STATUS_EINVAL: invalid antenna mode
- * @SET_ANTENNA_MODE_STATUS_ECANCELED: mode change cancelled
- * @SET_ANTENNA_MODE_STATUS_ENOTSUP: mode not supported
- */
-enum set_antenna_mode_status {
-	SET_ANTENNA_MODE_STATUS_OK,
-	SET_ANTENNA_MODE_STATUS_EINVAL,
-	SET_ANTENNA_MODE_STATUS_ECANCELED,
-	SET_ANTENNA_MODE_STATUS_ENOTSUP,
-};
-
-typedef void (*antenna_mode_cb)(enum set_antenna_mode_status status,
-				void *context);
-
-/**
  * struct sir_antenna_mode_param - antenna mode param
  * @num_tx_chains: Number of TX chains
  * @num_rx_chains: Number of RX chains
+ * @reason: Reason for setting antenna mode
  * @set_antenna_mode_resp: callback to set antenna mode command
- * @set_antenna_mode_ctx: callback context to set antenna mode command
  */
 struct sir_antenna_mode_param {
 	uint32_t num_tx_chains;
 	uint32_t num_rx_chains;
-	antenna_mode_cb set_antenna_mode_resp;
-	void *set_antenna_mode_ctx;
+	void *set_antenna_mode_resp;
 };
 
 /**
@@ -818,8 +704,9 @@ typedef struct sSirSmeStartBssReq {
 
 	bool obssEnabled;
 	uint8_t sap_dot11mc;
-	uint16_t beacon_tx_rate;
+	uint8_t beacon_tx_rate;
 	bool vendor_vht_sap;
+
 } tSirSmeStartBssReq, *tpSirSmeStartBssReq;
 
 #define GET_IE_LEN_IN_BSS(lenInBss) (lenInBss + sizeof(lenInBss) - \
@@ -828,24 +715,6 @@ typedef struct sSirSmeStartBssReq {
 
 #define WSCIE_PROBE_RSP_LEN (317 + 2)
 
-#ifdef WLAN_FEATURE_FILS_SK
-/* struct fils_ind_elements: elements parsed from fils indication present
- * in beacon/probe resp
- * @realm_cnt: number of realm present
- * @realm: realms
- * @is_fils_sk_supported: if FILS SK supported
- * @is_cache_id_present: if cache id present
- * @cache_id: cache id
- */
-struct fils_ind_elements {
-	uint16_t realm_cnt;
-	uint8_t realm[SIR_MAX_REALM_COUNT][SIR_REALM_LEN];
-	bool is_fils_sk_supported;
-	bool is_cache_id_present;
-	uint8_t cache_id[CACHE_ID_LEN];
-};
-
-#endif
 typedef struct sSirBssDescription {
 	/* offset of the ieFields from bssId. */
 	uint16_t length;
@@ -876,6 +745,8 @@ typedef struct sSirBssDescription {
 	uint16_t QBSSLoad_avail;
 	/* To achieve 8-byte alignment with ESE enabled */
 	uint32_t reservedPadding5;
+	/* Please keep the structure 4 bytes aligned above the ieFields */
+
 	/* whether it is from a probe rsp */
 	uint8_t fProbeRsp;
 	/* Actual channel the beacon/probe response was received on */
@@ -885,19 +756,11 @@ typedef struct sSirBssDescription {
 	uint8_t WscIeProbeRsp[WSCIE_PROBE_RSP_LEN];
 	uint8_t reservedPadding4;
 	uint32_t tsf_delta;
+
 	uint8_t  ht_caps_present;
 	uint8_t  vht_caps_present;
 	uint8_t  beacomforming_capable;
 	uint8_t  chan_width;
-#ifdef WLAN_FEATURE_FILS_SK
-	struct fils_ind_elements fils_info_element;
-#endif
-	uint8_t air_time_fraction;
-	uint8_t nss;
-	uint8_t oce_wan_present;
-	uint8_t oce_wan_down_cap;
-	uint32_t rssi_per_chain[ATH_MAX_ANTENNA];
-	/* Please keep the structure 4 bytes aligned above the ieFields */
 	uint32_t ieFields[1];
 
 } tSirBssDescription, *tpSirBssDescription;
@@ -937,11 +800,6 @@ typedef struct sSirChannelList {
 	uint8_t channelNumber[SIR_ESE_MAX_MEAS_IE_REQS];
 } tSirChannelList, *tpSirChannelList;
 
-struct sir_channel_list {
-	uint8_t numChannels;
-	uint8_t channelNumber[];
-};
-
 typedef struct sSirDFSChannelList {
 	uint32_t timeStamp[SIR_MAX_24G_5G_CHANNEL_RANGE];
 
@@ -979,7 +837,6 @@ typedef struct sSirSmeScanReq {
 	uint8_t dot11mode;
 	tSirScanType scanType;
 	uint32_t scan_id;
-	uint32_t scan_requestor_id;
 	/**
 	 * minChannelTime. Not used if scanType is passive.
 	 * 0x0 - Dont Use min channel timer. Only max channel timeout will used.
@@ -1050,9 +907,6 @@ typedef struct sSirSmeScanReq {
 	/* Number of SSIDs to scan */
 	uint8_t numSsid;
 
-	/* scan control flag extended */
-	uint32_t scan_ctrl_flags_ext;
-
 	/* channelList has to be the last member of this structure. Check
 	 * tSirChannelList for the reason. This MUST be the last field of the
 	 * structure
@@ -1067,16 +921,8 @@ typedef struct sSirSmeScanReq {
 	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
 	uint8_t mac_addr_mask[QDF_MAC_ADDR_SIZE];
 
-	/* probe req ie whitelisting attrs */
-	bool ie_whitelist;
-	uint32_t probe_req_ie_bitmap[PROBE_REQ_BITMAP_LEN];
-	uint32_t num_vendor_oui;
-	uint32_t oui_field_len;
-	uint32_t oui_field_offset;
-
 	/* channelList MUST be the last field of this structure */
-	struct sir_channel_list channelList;
-
+	tSirChannelList channelList;
 	/*-----------------------------
 	   tSirSmeScanReq....
 	   -----------------------------
@@ -1093,10 +939,7 @@ typedef struct sSirSmeScanReq {
 	   ----------------------------- <--+
 	   ... variable size uIEFiled
 	   up to uIEFieldLen (can be 0)
-	   -----------------------------
-	   ... variable size upto num_vendor_oui
-	   of type uint32_t
-	   -----------------------------------*/
+	   -----------------------------*/
 } tSirSmeScanReq, *tpSirSmeScanReq;
 
 typedef struct sSirSmeScanAbortReq {
@@ -1213,7 +1056,6 @@ typedef struct sAniGetTsmStatsRsp {
 				 * Per STA stats request must
 				 * contain valid
 				 */
-	struct qdf_mac_addr bssid; /* bssid to get the tsm stats for */
 	tAniTrafStrmMetrics tsmMetrics;
 	void *tsmStatsReq;      /* tsm stats request backup */
 } tAniGetTsmStatsRsp, *tpAniGetTsmStatsRsp;
@@ -1342,15 +1184,15 @@ typedef struct sSirSmeJoinReq {
 	tAniEdType MgmtEncryptionType;
 #endif
 
-	bool is11Rconnection;
+	tAniBool is11Rconnection;
 #ifdef FEATURE_WLAN_ESE
-	bool isESEFeatureIniEnabled;
-	bool isESEconnection;
+	tAniBool isESEFeatureIniEnabled;
+	tAniBool isESEconnection;
 	tESETspecInfo eseTspecInfo;
 #endif
 
-	bool isFastTransitionEnabled;
-	bool isFastRoamIniFeatureEnabled;
+	tAniBool isFastTransitionEnabled;
+	tAniBool isFastRoamIniFeatureEnabled;
 
 	uint8_t txLdpcIniFeatureEnabled;
 	tSirHTConfig htConfig;
@@ -1363,25 +1205,15 @@ typedef struct sSirSmeJoinReq {
 	bool send_smps_action;
 
 	uint8_t max_amsdu_num;
-	bool isWMEenabled;
-	bool isQosEnabled;
-	bool isOSENConnection;
+	tAniBool isWMEenabled;
+	tAniBool isQosEnabled;
+	tAniBool isOSENConnection;
 	struct rrm_config_param rrm_config;
-	bool spectrumMgtIndicator;
+	tAniBool spectrumMgtIndicator;
 	tSirMacPowerCapInfo powerCap;
 	tSirSupChnl supportedChannels;
-#ifdef WLAN_FEATURE_FILS_SK
-	struct cds_fils_connection_info fils_con_info;
-#endif
-	bool sae_pmk_cached;
-	bool ignore_assoc_disallowed;
 	bool enable_bcast_probe_rsp;
-	bool force_24ghz_in_ht20;
-	bool force_rsne_override;
-	bool supported_nss_1x1;
-	uint8_t vdev_nss;
-	uint8_t nss;
-	bool nss_forced_1x1;
+	bool ignore_assoc_disallowed;
 	tSirBssDescription bssDescription;
 	/*
 	 * WARNING: Pls make bssDescription as last variable in struct
@@ -1445,11 +1277,6 @@ typedef struct sSirSmeJoinRsp {
 	tDot11fIEHTInfo ht_operation;
 	tDot11fIEVHTOperation vht_operation;
 	tDot11fIEhs20vendor_ie hs20vendor_ie;
-	bool is_fils_connection;
-	uint16_t fils_seq_num;
-#ifdef WLAN_FEATURE_FILS_SK
-	struct fils_join_rsp_params *fils_join_rsp;
-#endif
 	uint8_t frames[1];
 } tSirSmeJoinRsp, *tpSirSmeJoinRsp;
 
@@ -1505,11 +1332,11 @@ typedef struct sSirSmeAssocInd {
 
 	/* powerCap & supportedChannels are present only when */
 	/* spectrumMgtIndicator flag is set */
-	bool spectrumMgtIndicator;
+	tAniBool spectrumMgtIndicator;
 	tSirMacPowerCapInfo powerCap;
 	tSirSupChnl supportedChannels;
-	bool wmmEnabledSta; /* if present - STA is WMM enabled */
-	bool reassocReq;
+	tAniBool wmmEnabledSta; /* if present - STA is WMM enabled */
+	tAniBool reassocReq;
 	/* Required for indicating the frames to upper layer */
 	uint32_t beaconLength;
 	uint8_t *beaconPtr;
@@ -1518,25 +1345,12 @@ typedef struct sSirSmeAssocInd {
 
 	/* Timing measurement capability */
 	uint8_t timingMeasCap;
-	tSirSmeChanInfo chan_info;
-	/* Extended CSA capability of station */
-	uint8_t ecsa_capable;
-	bool ampdu;
-	bool sgi_enable;
-	bool tx_stbc;
-	bool rx_stbc;
 	tSirMacHTChannelWidth ch_width;
 	enum sir_sme_phy_mode mode;
-	uint8_t max_supp_idx;
-	uint8_t max_ext_idx;
-	uint8_t max_mcs_idx;
-	uint8_t rx_mcs_map;
-	uint8_t tx_mcs_map;
-
+	tSirSmeChanInfo chan_info;
 	tDot11fIEHTCaps HTCaps;
 	tDot11fIEVHTCaps VHTCaps;
-	tSirMacCapabilityInfo capability_info;
-	bool is_sae_authenticated;
+
 } tSirSmeAssocInd, *tpSirSmeAssocInd;
 
 /* / Definition for Association confirm */
@@ -1550,7 +1364,6 @@ typedef struct sSirSmeAssocCnf {
 	uint16_t aid;
 	struct qdf_mac_addr alternate_bssid;
 	uint8_t alternateChannelId;
-	tSirMacStatusCodes mac_status_code;
 } tSirSmeAssocCnf, *tpSirSmeAssocCnf;
 
 /* / Enum definition for  Wireless medium status change codes */
@@ -1777,7 +1590,7 @@ typedef struct sSirSmeDisassocRsp {
 	struct qdf_mac_addr peer_macaddr;
 	tAniStaStatStruct perStaStats;  /* STA stats */
 	uint16_t staId;
-} tSirSmeDisassocRsp, *tpSirSmeDisassocRsp;
+} qdf_packed tSirSmeDisassocRsp, *tpSirSmeDisassocRsp;
 
 /* / Definition for Disassociation indication from peer */
 typedef struct sSirSmeDisassocInd {
@@ -1798,7 +1611,6 @@ typedef struct sSirSmeDisassocInd {
 typedef struct sSirSmeDisassocCnf {
 	uint16_t messageType;   /* eWNI_SME_DISASSOC_CNF */
 	uint16_t length;
-	uint8_t sme_session_id;
 	tSirResultCodes statusCode;
 	struct qdf_mac_addr bssid;
 	struct qdf_mac_addr peer_macaddr;
@@ -1887,6 +1699,16 @@ typedef struct sSirSmeSwitchChannelInd {
 	struct ch_params_s chan_params;
 	struct qdf_mac_addr bssid;      /* BSSID */
 } tSirSmeSwitchChannelInd, *tpSirSmeSwitchChannelInd;
+
+/* / Definition for Neighbor BSS indication */
+/* / MAC ---> */
+/* / MAC reports this each time a new I/BSS is detected */
+typedef struct sSirSmeNeighborBssInd {
+	uint16_t messageType;   /* eWNI_SME_NEIGHBOR_BSS_IND */
+	uint16_t length;
+	uint8_t sessionId;
+	tSirBssDescription bssDescription[1];
+} tSirSmeNeighborBssInd, *tpSirSmeNeighborBssInd;
 
 /* / Definition for MIC failure indication */
 /* / MAC ---> */
@@ -2102,8 +1924,8 @@ typedef struct sAniChangeCountryCodeReq {
 	uint16_t msgType;       /* message type is same as the request type */
 	uint16_t msgLen;        /* length of the entire request */
 	uint8_t countryCode[WNI_CFG_COUNTRY_CODE_LEN]; /* 3 char country code */
-	bool countryFromUserSpace;
-	bool sendRegHint;   /* true if we want to send hint to NL80211 */
+	tAniBool countryFromUserSpace;
+	tAniBool sendRegHint;   /* true if we want to send hint to NL80211 */
 	void *changeCCCallback;
 	void *pDevContext;      /* device context */
 	void *p_cds_context;    /* cds context */
@@ -2421,49 +2243,6 @@ typedef struct sLimScanChn {
 	uint16_t numTimeScan;   /* how many time this channel is scan */
 	uint8_t channelId;
 } tLimScanChn;
-
-/**
- * struct lim_channel_status
- * @channelfreq: Channel freq
- * @noise_floor: Noise Floor value
- * @rx_clear_count: rx clear count
- * @cycle_count: cycle count
- * @chan_tx_pwr_range: channel tx power per range in 0.5dBm steps
- * @chan_tx_pwr_throughput: channel tx power per throughput
- * @rx_frame_count: rx frame count (cumulative)
- * @bss_rx_cycle_count: BSS rx cycle count
- * @rx_11b_mode_data_duration: b-mode data rx time (units are microseconds)
- * @tx_frame_count: BSS tx cycle count	3045
- * @mac_clk_mhz: sample frequency
- * @channel_id: channel index
- * @cmd_flags: indicate which stat event is this status coming from
- */
-struct lim_channel_status {
-	uint32_t    channelfreq;
-	uint32_t    noise_floor;
-	uint32_t    rx_clear_count;
-	uint32_t    cycle_count;
-	uint32_t    chan_tx_pwr_range;
-	uint32_t    chan_tx_pwr_throughput;
-	uint32_t    rx_frame_count;
-	uint32_t    bss_rx_cycle_count;
-	uint32_t    rx_11b_mode_data_duration;
-	uint32_t    tx_frame_count;
-	uint32_t    mac_clk_mhz;
-	uint32_t    channel_id;
-	uint32_t    cmd_flags;
-};
-
-/**
- * struct lim_scan_channel_status
- * @total_channel: total number of be scanned channel
- * @channel_status_list: channel status info store in this array
- */
-struct lim_scan_channel_status {
-	uint8_t total_channel;
-	struct lim_channel_status
-	 channel_status_list[SIR_MAX_SUPPORTED_ACS_CHANNEL_LIST];
-};
 
 typedef struct sSmeGetScanChnRsp {
 	/* Message Type */
@@ -2922,8 +2701,12 @@ typedef struct sSirUpdateAPWPARSNIEsReq {
 #define SIR_ROAM_SCAN_MAX_PB_REQ_SIZE    450
 /* Occupied channel list remains static */
 #define CHANNEL_LIST_STATIC                   1
-/* Occupied channel list can be dynamic */
-#define CHANNEL_LIST_DYNAMIC                  2
+/* Occupied channel list can be learnt after init */
+#define CHANNEL_LIST_DYNAMIC_INIT             2
+/* Occupied channel list can be learnt after flush */
+#define CHANNEL_LIST_DYNAMIC_FLUSH            3
+/* Occupied channel list can be learnt after update */
+#define CHANNEL_LIST_DYNAMIC_UPDATE           4
 #define SIR_ROAM_SCAN_24G_DEFAULT_CH     1
 #define SIR_ROAM_SCAN_5G_DEFAULT_CH      36
 #define SIR_ROAM_SCAN_RESERVED_BYTES     61
@@ -2940,24 +2723,6 @@ typedef struct sSirUpdateAPWPARSNIEsReq {
 #define SIR_OFFLOAD_ENABLE                          1
 
 #ifdef WLAN_NS_OFFLOAD
-/**
- * enum sir_ipv6_addr_scope - Internal identification of IPv6 addr scope
- * @SIR_IPV6_ADDR_SCOPE_INVALID: invalid scope
- * @SIR_IPV6_ADDR_SCOPE_NODELOCAL: node local scope
- * @SIR_IPV6_ADDR_SCOPE_LINKLOCAL: link local scope
- * @SIR_IPV6_ADDR_SCOPE_SITELOCAL: site local scope
- * @SIR_IPV6_ADDR_SCOPE_ORGLOCAL: org local scope
- * @SIR_IPV6_ADDR_SCOPE_GLOBAL: global scope
- */
-enum sir_ipv6_addr_scope {
-	SIR_IPV6_ADDR_SCOPE_INVALID = 0,
-	SIR_IPV6_ADDR_SCOPE_NODELOCAL = 1,
-	SIR_IPV6_ADDR_SCOPE_LINKLOCAL = 2,
-	SIR_IPV6_ADDR_SCOPE_SITELOCAL = 3,
-	SIR_IPV6_ADDR_SCOPE_ORGLOCAL = 4,
-	SIR_IPV6_ADDR_SCOPE_GLOBAL = 5
-};
-
 typedef struct sSirNsOffloadReq {
 	uint8_t srcIPv6Addr[SIR_MAC_IPV6_ADDR_LEN];
 	uint8_t selfIPv6Addr[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA][SIR_MAC_IPV6_ADDR_LEN];
@@ -2967,36 +2732,18 @@ typedef struct sSirNsOffloadReq {
 	uint8_t targetIPv6AddrValid[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA];
 	uint8_t target_ipv6_addr_ac_type[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA];
 	uint8_t slotIdx;
-	enum sir_ipv6_addr_scope scope[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA];
 } tSirNsOffloadReq, *tpSirNsOffloadReq;
+#endif /* WLAN_NS_OFFLOAD */
 
 /**
- * sir_get_ipv6_addr_scope() - Convert linux specific IPv6 addr scope to
- *                             WLAN driver specific value
- * @scope: linux specific IPv6 addr scope
- *
- * Return: WLAN driver sepcific IPv6 addr scope
+ * struct hw_filter_request - For enable/disable HW Filter
+ * @mode_bitmap: the hardware filter mode to configure
+ * @bssid: bss_id for get session.
  */
-static inline
-enum sir_ipv6_addr_scope
-sir_get_ipv6_addr_scope(uint32_t ipv6_scope)
-{
-	switch (ipv6_scope) {
-	case IPV6_ADDR_SCOPE_NODELOCAL:
-		return SIR_IPV6_ADDR_SCOPE_NODELOCAL;
-	case IPV6_ADDR_SCOPE_LINKLOCAL:
-		return SIR_IPV6_ADDR_SCOPE_LINKLOCAL;
-	case IPV6_ADDR_SCOPE_SITELOCAL:
-		return SIR_IPV6_ADDR_SCOPE_SITELOCAL;
-	case IPV6_ADDR_SCOPE_ORGLOCAL:
-		return SIR_IPV6_ADDR_SCOPE_ORGLOCAL;
-	case IPV6_ADDR_SCOPE_GLOBAL:
-		return SIR_IPV6_ADDR_SCOPE_GLOBAL;
-	default:
-		return SIR_IPV6_ADDR_SCOPE_INVALID;
-	}
-}
-#endif /* WLAN_NS_OFFLOAD */
+struct hw_filter_request {
+	uint8_t mode_bitmap;
+	struct qdf_mac_addr bssid;
+};
 
 typedef struct sSirHostOffloadReq {
 	uint8_t offloadType;
@@ -3027,24 +2774,12 @@ typedef struct sSirKeepAliveReq {
 	uint8_t sessionId;
 } tSirKeepAliveReq, *tpSirKeepAliveReq;
 
-/**
- * enum rxmgmt_flags - flags for received management frame.
- * @RXMGMT_FLAG_NONE: Default value to indicate no flags are set.
- * @RXMGMT_FLAG_EXTERNAL_AUTH: frame can be used for external authentication
- *                             by upper layers.
- */
-enum rxmgmt_flags {
-	RXMGMT_FLAG_NONE,
-	RXMGMT_FLAG_EXTERNAL_AUTH = 1 << 1,
-};
-
 typedef struct sSirSmeMgmtFrameInd {
 	uint16_t frame_len;
 	uint32_t rxChan;
 	uint8_t sessionId;
 	uint8_t frameType;
 	int8_t rxRssi;
-	enum rxmgmt_flags rx_flags;
 	uint8_t frameBuf[1];    /* variable */
 } tSirSmeMgmtFrameInd, *tpSirSmeMgmtFrameInd;
 
@@ -3212,30 +2947,6 @@ typedef struct {
 } tSirNetworkType;
 
 /**
- * struct connected_pno_band_rssi_pref - BSS preference based on band
- * and RSSI
- * @band: band preference
- * @rssi_pref: RSSI preference
- */
-struct connected_pno_band_rssi_pref {
-	tSirRFBand band;
-	int8_t rssi;
-};
-
-/**
- * struct sir_nlo_mawc_params - MAWC based NLO configuration
- * @mawc_nlo_enabled: enable/disable MAWC based NLO
- * @exp_backoff_ratio: MAWC based NLO exponential backoff ratio
- * @init_scan_interval: MAWC based NLO initial scan interval
- * @max_scan_interval: MAWC based NLO maximum scan interval
- */
-struct sir_nlo_mawc_params {
-	bool mawc_nlo_enabled;
-	uint32_t exp_backoff_ratio;
-	uint32_t init_scan_interval;
-	uint32_t max_scan_interval;
-};
-/**
  * struct sSirPNOScanReq - PNO Scan request structure
  * @enable: flag to enable or disable
  * @modePNO: PNO Mode
@@ -3247,15 +2958,10 @@ struct sir_nlo_mawc_params {
  * @slow_scan_period: Slow scan period
  * @delay_start_time: delay in seconds to use before starting the first scan
  * @fast_scan_max_cycles: Fast scan max cycles
- * @scan_backoff_multiplier: multiply fast scan period by this after max cycles
  * @us24GProbeTemplateLen: 2.4G probe template length
  * @p24GProbeTemplate: 2.4G probe template
  * @us5GProbeTemplateLen: 5G probe template length
  * @p5GProbeTemplate: 5G probe template
- * @relative_rssi_set: Flag to check whether realtive_rssi is set or not
- * @relative_rssi: Relative rssi threshold, used for connected pno
- * @band_rssi_pref: Band and RSSI preference that can be given to one BSS
- * over the other BSS
  */
 typedef struct sSirPNOScanReq {
 	uint8_t enable;
@@ -3268,8 +2974,7 @@ typedef struct sSirPNOScanReq {
 	uint32_t slow_scan_period;
 	uint32_t delay_start_time;
 	uint8_t fast_scan_max_cycles;
-	uint32_t scan_backoff_multiplier;
-	struct sir_nlo_mawc_params mawc_params;
+
 	uint32_t        active_min_time;
 	uint32_t        active_max_time;
 	uint32_t        passive_min_time;
@@ -3287,15 +2992,6 @@ typedef struct sSirPNOScanReq {
 	bool enable_pno_scan_randomization;
 	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
 	uint8_t mac_addr_mask[QDF_MAC_ADDR_SIZE];
-	bool relative_rssi_set;
-	int8_t relative_rssi;
-	struct connected_pno_band_rssi_pref band_rssi_pref;
-
-	/* probe req ie whitelisting attrs */
-	bool ie_whitelist;
-	uint32_t probe_req_ie_bitmap[PROBE_REQ_BITMAP_LEN];
-	uint32_t num_vendor_oui;
-	/* followed by one or more vendor ouis of type uint32_t */
 } tSirPNOScanReq, *tpSirPNOScanReq;
 
 /* Preferred Network Found Indication */
@@ -3317,6 +3013,18 @@ typedef struct {
 #endif /* FEATURE_WLAN_SCAN_PNO */
 
 
+/**
+ * struct candidate_chan_info - channel information for candidate
+ * @channel_num: channel number.
+ * @other_ap_count: other ap count on candidate channel.
+ * @max_rssi_on_channel: Max best  rssi on candiate channel
+ */
+struct candidate_chan_info {
+	uint8_t    channel_num;
+	uint8_t    other_ap_count;
+	int8_t     max_rssi_on_channel;
+};
+
 /*
  * ALLOWED_ACTION_FRAMES_BITMAP
  *
@@ -3331,7 +3039,7 @@ typedef struct {
  * SIR_MAC_ACTION_DLP              2      0
  * SIR_MAC_ACTION_BLKACK           3      0
  * SIR_MAC_ACTION_PUBLIC_USAGE     4      1
- * SIR_MAC_ACTION_RRM              5      0
+ * SIR_MAC_ACTION_RRM              5      1
  * SIR_MAC_ACTION_FAST_BSS_TRNST   6      0
  * SIR_MAC_ACTION_HT               7      0
  * SIR_MAC_ACTION_SA_QUERY         8      1
@@ -3351,6 +3059,7 @@ typedef struct {
 		((1 << SIR_MAC_ACTION_SPECTRUM_MGMT) | \
 		 (1 << SIR_MAC_ACTION_QOS_MGMT) | \
 		 (1 << SIR_MAC_ACTION_PUBLIC_USAGE) | \
+		 (1 << SIR_MAC_ACTION_RRM) | \
 		 (1 << SIR_MAC_ACTION_SA_QUERY) | \
 		 (1 << SIR_MAC_ACTION_PROT_DUAL_PUB) | \
 		 (1 << SIR_MAC_ACTION_WNM) | \
@@ -3368,45 +3077,6 @@ typedef struct {
 
 #define ALLOWED_ACTION_FRAME_MAP_WORDS (SIR_MAC_ACTION_MAX / 32)
 
-/*
- * DROP_PUBLIC_ACTION_FRAME_BITMAP
- *
- * Bitmask is based on the below. The frames with 1's
- * set to their corresponding bit can be dropped in FW.
- *
- * ----------------------------------+-----+------+
- *         Type                      | Bit | Drop |
- * ----------------------------------+-----+------+
- * SIR_MAC_ACTION_MEASUREMENT_PILOT  |  7  |   1  |
- * ----------------------------------+-----+------+
- */
-#define DROP_PUBLIC_ACTION_FRAME_BITMAP \
-		(1 << SIR_MAC_ACTION_MEASUREMENT_PILOT)
-
-#ifndef ANI_SUPPORT_11H
-/*
- * DROP_SPEC_MGMT_ACTION_FRAME_BITMAP
- *
- * Bitmask is based on the below. The frames with 1's
- * set to their corresponding bit can be dropped in FW.
- *
- * ----------------------------------+-----+------+
- *         Type                      | Bit | Drop |
- * ----------------------------------+-----+------+
- * SIR_MAC_ACTION_MEASURE_REQUEST_ID    0     1
- * SIR_MAC_ACTION_TPC_REQUEST_ID        2     1
- * ----------------------------------+-----+------+
- */
-#define DROP_SPEC_MGMT_ACTION_FRAME_BITMAP \
-		((1 << SIR_MAC_ACTION_MEASURE_REQUEST_ID) |\
-		 (1 << SIR_MAC_ACTION_TPC_REQUEST_ID))
-#else
-/*
- * If 11H support is defined, dont drop the above action category of
- * spectrum mgmt action frames as host driver is processing them.
- */
-#define DROP_SPEC_MGMT_ACTION_FRAME_BITMAP 0
-#endif /* ANI_SUPPORT_11H */
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 typedef struct {
@@ -3478,9 +3148,6 @@ typedef enum {
  *                              current AP to avoid ping pong effects
  * @good_rssi_roam:             Lazy Roam
  * @is_5g_pref_enabled:         5GHz BSSID preference feature enable/disable.
- * @bg_scan_bad_rssi_thresh:    Bad RSSI threshold to perform bg scan.
- * @bg_scan_client_bitmap:      Bitmap to identify the client scans to snoop.
- * @bad_rssi_thresh_offset_2g:  Offset from Bad RSSI threshold for 2G to 5G Roam
  *
  * This structure holds all the key parameters related to
  * initial connection and also roaming connections.
@@ -3509,131 +3176,7 @@ struct roam_ext_params {
 	int dense_min_aps_cnt;
 	int initial_dense_status;
 	int traffic_threshold;
-	uint8_t num_rssi_rejection_ap;
-	struct rssi_disallow_bssid rssi_rejection_ap[MAX_RSSI_AVOID_BSSID_LIST];
-	int8_t bg_scan_bad_rssi_thresh;
-	uint8_t roam_bad_rssi_thresh_offset_2g;
-	uint32_t bg_scan_client_bitmap;
 };
-
-#define RSSI_WEIGHTAGE 20
-#define HT_CAPABILITY_WEIGHTAGE 2
-#define VHT_CAP_WEIGHTAGE 1
-#define CHAN_WIDTH_WEIGHTAGE 17
-#define CHAN_BAND_WEIGHTAGE 2
-#define NSS_WEIGHTAGE 16
-#define BEAMFORMING_CAP_WEIGHTAGE 2
-#define PCL_WEIGHT 10
-#define CHANNEL_CONGESTION_WEIGHTAGE 5
-#define OCE_WAN_WEIGHTAGE 0
-
-#define BEST_CANDIDATE_MAX_WEIGHT 100
-#define MAX_INDEX_SCORE 100
-#define MAX_INDEX_PER_INI 4
-
-
-#define WLAN_GET_BITS(_val, _index, _num_bits)                         \
-	    (((_val) >> (_index)) & ((1 << (_num_bits)) - 1))
-
-#define WLAN_SET_BITS(_var, _index, _num_bits, _val) do {               \
-	    (_var) &= ~(((1 << (_num_bits)) - 1) << (_index));              \
-	    (_var) |= (((_val) & ((1 << (_num_bits)) - 1)) << (_index));    \
-	    } while (0)
-
-#define WLAN_GET_SCORE_PERCENTAGE(value32, bw_index) \
-	WLAN_GET_BITS(value32, (8 * (bw_index)), 8)
-#define WLAN_SET_SCORE_PERCENTAGE(value32, score_pcnt, bw_index) \
-	WLAN_SET_BITS(value32, (8 * (bw_index)), 8, score_pcnt)
-
-
-
-/**
- * struct sir_weight_config - weight params to
- * calculate best candidate
- * @rssi_weightage: RSSI weightage
- * @ht_caps_weightage: HT caps weightage
- * @vht_caps_weightage: VHT caps weightage
- * @he_caps_weightage: HE caps weightage
- * @chan_width_weightage: Channel width weightage
- * @chan_band_weightage: Channel band weightage
- * @nss_weightage: NSS weightage
- * @beamforming_cap_weightage: Beamforming caps weightage
- * @pcl_weightage: PCL weightage
- * @channel_congestion_weightage: channel congestion weightage
- * @oce_wan_weightage: OCE WAN metrics weightage
- */
-struct  sir_weight_config {
-	uint8_t rssi_weightage;
-	uint8_t ht_caps_weightage;
-	uint8_t vht_caps_weightage;
-	uint8_t he_caps_weightage;
-	uint8_t chan_width_weightage;
-	uint8_t chan_band_weightage;
-	uint8_t nss_weightage;
-	uint8_t beamforming_cap_weightage;
-	uint8_t pcl_weightage;
-	uint8_t channel_congestion_weightage;
-	uint8_t oce_wan_weightage;
-};
-
-struct sir_rssi_cfg_score  {
-	uint32_t best_rssi_threshold;
-	uint32_t good_rssi_threshold;
-	uint32_t bad_rssi_threshold;
-	uint32_t good_rssi_pcnt;
-	uint32_t bad_rssi_pcnt;
-	uint32_t good_rssi_bucket_size;
-	uint32_t bad_rssi_bucket_size;
-	uint32_t rssi_pref_5g_rssi_thresh;
-};
-
-/**
- * struct sir_per_slot_scoring - define % score for differents slots for a
- *                             scoring param.
- * num_slot: number of slots in which the param will be divided.
- *           Max 15. index 0 is used for 'not_present. Num_slot will
- *           equally divide 100. e.g, if num_slot = 4 slot 0 = 0-25%, slot
- *           1 = 26-50% slot 2 = 51-75%, slot 3 = 76-100%
- * score_pcnt3_to_0: Conatins score percentage for slot 0-3
- *             BITS 0-7   :- the scoring pcnt when not present
- *             BITS 8-15  :- SLOT_1
- *             BITS 16-23 :- SLOT_2
- *             BITS 24-31 :- SLOT_3
- * score_pcnt7_to_4: Conatins score percentage for slot 4-7
- *             BITS 0-7   :- SLOT_4
- *             BITS 8-15  :- SLOT_5
- *             BITS 16-23 :- SLOT_6
- *             BITS 24-31 :- SLOT_7
- * score_pcnt11_to_8: Conatins score percentage for slot 8-11
- *             BITS 0-7   :- SLOT_8
- *             BITS 8-15  :- SLOT_9
- *             BITS 16-23 :- SLOT_10
- *             BITS 24-31 :- SLOT_11
- * score_pcnt15_to_12: Conatins score percentage for slot 12-15
- *             BITS 0-7   :- SLOT_12
- *             BITS 8-15  :- SLOT_13
- *             BITS 16-23 :- SLOT_14
- *             BITS 24-31 :- SLOT_15
- */
-struct sir_per_slot_scoring {
-	uint32_t num_slot;
-	uint32_t score_pcnt3_to_0;
-	uint32_t score_pcnt7_to_4;
-	uint32_t score_pcnt11_to_8;
-	uint32_t score_pcnt15_to_12;
-};
-
-struct sir_score_config {
-	bool enable_scoring_for_roam;
-	struct sir_weight_config weight_cfg;
-	struct sir_rssi_cfg_score rssi_score;
-	struct sir_per_slot_scoring esp_qbss_scoring;
-	struct sir_per_slot_scoring oce_wan_scoring;
-	uint32_t bandwidth_weight_per_index;
-	uint32_t nss_weight_per_index;
-	uint32_t band_weight_per_index;
-};
-
 
 /**
  * struct pmkid_mode_bits - Bit flags for PMKID usage in RSN IE
@@ -3647,63 +3190,20 @@ struct pmkid_mode_bits {
 	uint32_t unused:30;
 };
 
-/**
- * struct lca_disallow_config_params - LCA[Last Connected AP]
- *                                     disallow config params
- * @disallow_duration: LCA AP disallowed duration
- * @rssi_channel_penalization: RSSI channel Penalization
- * @num_disallowed_aps: Maximum number of AP's in LCA list
- *
- */
-struct lca_disallow_config_params {
-    uint32_t disallow_duration;
-    uint32_t rssi_channel_penalization;
-    uint32_t num_disallowed_aps;
-};
-
-/**
- * struct mawc_params - Motion Aided Wireless Connectivity configuration
- * @MAWCEnabled: Global configuration for MAWC (Roaming/PNO/ExtScan)
- * @mawc_roam_enabled: MAWC roaming enable/disable
- * @mawc_roam_traffic_threshold: Traffic threshold in kBps for MAWC roaming
- * @mawc_roam_ap_rssi_threshold: AP RSSI threshold for MAWC roaming
- * @mawc_roam_rssi_high_adjust: High Adjustment value for suppressing scan
- * @mawc_roam_rssi_low_adjust: Low Adjustment value for suppressing scan
- */
-struct mawc_params {
-	bool mawc_enabled;
-	bool mawc_roam_enabled;
-	uint32_t mawc_roam_traffic_threshold;
-	int8_t mawc_roam_ap_rssi_threshold;
-	uint8_t mawc_roam_rssi_high_adjust;
-	uint8_t mawc_roam_rssi_low_adjust;
-};
-
-/**
- * struct roam_sync_timeout_timer_info - Info related to roam sync timer
- * @vdev_id: Vdev id for which host waiting roam sync ind from fw
- */
-struct roam_sync_timeout_timer_info {
-	uint8_t vdev_id;
-};
-
 typedef struct sSirRoamOffloadScanReq {
 	uint16_t message_type;
 	uint16_t length;
 	bool RoamScanOffloadEnabled;
-	struct mawc_params mawc_roam_params;
+	bool MAWCEnabled;
 	int8_t LookupThreshold;
-	int8_t rssi_thresh_offset_5g;
 	uint8_t delay_before_vdev_stop;
 	uint8_t OpportunisticScanThresholdDiff;
 	uint8_t RoamRescanRssiDiff;
 	uint8_t RoamRssiDiff;
-	int32_t rssi_abs_thresh;
 	uint8_t ChannelCacheType;
 	uint8_t Command;
 	uint8_t reason;
 	uint16_t NeighborScanTimerPeriod;
-	uint16_t neighbor_scan_min_timer_period;
 	uint16_t NeighborRoamScanRefreshPeriod;
 	uint16_t NeighborScanChannelMinTime;
 	uint16_t NeighborScanChannelMaxTime;
@@ -3711,7 +3211,6 @@ typedef struct sSirRoamOffloadScanReq {
 	uint8_t ValidChannelCount;
 	uint8_t ValidChannelList[SIR_ROAM_MAX_CHANNELS];
 	bool IsESEAssoc;
-	bool is_11r_assoc;
 	uint8_t nProbes;
 	uint16_t HomeAwayTime;
 	tSirRoamNetworkType ConnectedNetwork;
@@ -3748,26 +3247,6 @@ typedef struct sSirRoamOffloadScanReq {
 	int8_t early_stop_scan_max_threshold;
 	enum wmi_dwelltime_adaptive_mode roamscan_adaptive_dwell_mode;
 	tSirAddie assoc_ie;
-	struct lca_disallow_config_params lca_config_params;
-#ifdef WLAN_FEATURE_FILS_SK
-	bool is_fils_connection;
-	struct roam_fils_params roam_fils_params;
-#endif
-	struct scoring_param score_params;
-	struct rsn_caps rsn_caps;
-	struct wmi_11k_offload_params offload_11k_params;
-	uint32_t ho_delay_for_rx;
-	uint32_t roam_preauth_retry_count;
-	uint32_t roam_preauth_no_ack_timeout;
-	uint32_t min_delay_btw_roam_scans;
-	uint32_t roam_trigger_reason_bitmask;
-	bool roam_force_rssi_trigger;
-	bool roaming_scan_policy;
-	uint32_t btm_offload_config;
-	uint32_t btm_solicited_timeout;
-	uint32_t btm_max_attempt_cnt;
-	uint32_t btm_sticky_time;
-	uint32_t btm_query_bitmask;
 } tSirRoamOffloadScanReq, *tpSirRoamOffloadScanReq;
 
 typedef struct sSirRoamOffloadScanRsp {
@@ -3895,13 +3374,11 @@ typedef struct {
 * WMA_GTK_OFFLOAD_REQ
 *--------------------------------------------------------------------------*/
 typedef struct {
-	uint32_t ulFlags;                    /* optional flags */
-	uint8_t aKCK[SIR_KCK_KEY_LEN];       /* Key confirmation key */
-	uint8_t aKEK[SIR_KEK_KEY_LEN_FILS];       /* key encryption key */
-	uint32_t kek_len;
+	uint32_t ulFlags;       /* optional flags */
+	uint8_t aKCK[16];       /* Key confirmation key */
+	uint8_t aKEK[16];       /* key encryption key */
 	uint64_t ullKeyReplayCounter;   /* replay counter */
 	struct qdf_mac_addr bssid;
-	bool is_fils_connection;
 } tSirGtkOffloadParams, *tpSirGtkOffloadParams;
 
 /*---------------------------------------------------------------------------
@@ -3968,6 +3445,26 @@ enum hw_mode_bandwidth {
 	HW_MODE_80_PLUS_80_MHZ,
 	HW_MODE_160_MHZ,
 	HW_MODE_MAX_BANDWIDTH
+};
+
+/**
+ * enum set_hw_mode_status - Status of set HW mode command
+ * @SET_HW_MODE_STATUS_OK: command successful
+ * @SET_HW_MODE_STATUS_EINVAL: Requested invalid hw_mode
+ * @SET_HW_MODE_STATUS_ECANCELED: HW mode change cancelled
+ * @SET_HW_MODE_STATUS_ENOTSUP: HW mode not supported
+ * @SET_HW_MODE_STATUS_EHARDWARE: HW mode change prevented by hardware
+ * @SET_HW_MODE_STATUS_EPENDING: HW mode change is pending
+ * @SET_HW_MODE_STATUS_ECOEX: HW mode change conflict with Coex
+ */
+enum set_hw_mode_status {
+	SET_HW_MODE_STATUS_OK,
+	SET_HW_MODE_STATUS_EINVAL,
+	SET_HW_MODE_STATUS_ECANCELED,
+	SET_HW_MODE_STATUS_ENOTSUP,
+	SET_HW_MODE_STATUS_EHARDWARE,
+	SET_HW_MODE_STATUS_EPENDING,
+	SET_HW_MODE_STATUS_ECOEX,
 };
 
 /**
@@ -4070,6 +3567,21 @@ struct sir_hw_mode_trans_ind {
  */
 struct sir_dual_mac_config_resp {
 	uint32_t status;
+};
+
+/**
+ * enum set_antenna_mode_status - Status of set antenna mode
+ * command
+ * @SET_ANTENNA_MODE_STATUS_OK: command successful
+ * @SET_ANTENNA_MODE_STATUS_EINVAL: invalid antenna mode
+ * @SET_ANTENNA_MODE_STATUS_ECANCELED: mode change cancelled
+ * @SET_ANTENNA_MODE_STATUS_ENOTSUP: mode not supported
+ */
+enum set_antenna_mode_status {
+	SET_ANTENNA_MODE_STATUS_OK,
+	SET_ANTENNA_MODE_STATUS_EINVAL,
+	SET_ANTENNA_MODE_STATUS_ECANCELED,
+	SET_ANTENNA_MODE_STATUS_ENOTSUP,
 };
 
 /**
@@ -4258,15 +3770,6 @@ typedef struct sSirTdlsEventnotify {
 	uint16_t messageType;
 	uint32_t peer_reason;
 } tSirTdlsEventnotify;
-
-/**
- * struct sir_sme_tdls_notify_set_state_disable - notify set state disable
- * @session_id: session id
- */
-struct sir_tdls_notify_set_state_disable {
-	uint32_t session_id;
-};
-
 #endif /* FEATURE_WLAN_TDLS */
 
 typedef struct sSirActiveModeSetBcnFilterReq {
@@ -4328,7 +3831,6 @@ typedef struct sAniHandoffReq {
 #define USER_SCAN_REQUESTOR_ID  0xA000
 #define ROC_SCAN_REQUESTOR_ID   0xB000
 #define PREAUTH_REQUESTOR_ID    0xC000
-#define ACS_SCAN_REQUESTOR_ID   0xD000
 
 typedef struct sSirScanOffloadReq {
 	uint8_t sessionId;
@@ -4356,7 +3858,6 @@ typedef struct sSirScanOffloadReq {
 	enum wmi_dwelltime_adaptive_mode scan_adaptive_dwell_mode;
 	uint16_t uIEFieldLen;
 	uint16_t uIEFieldOffset;
-	uint32_t scan_ctrl_flags_ext;
 
 	uint32_t burst_scan_duration;
 	/* mac address randomization attributes */
@@ -4364,14 +3865,7 @@ typedef struct sSirScanOffloadReq {
 	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
 	uint8_t mac_addr_mask[QDF_MAC_ADDR_SIZE];
 
-	/* probe req ie whitelisting attrs */
-	bool ie_whitelist;
-	uint32_t probe_req_ie_bitmap[PROBE_REQ_BITMAP_LEN];
-	uint32_t num_vendor_oui;
-	uint32_t oui_field_len;
-	uint32_t oui_field_offset;
-
-	struct sir_channel_list channelList;
+	tSirChannelList channelList;
 	/*-----------------------------
 	  sSirScanOffloadReq....
 	  -----------------------------
@@ -4388,10 +3882,7 @@ typedef struct sSirScanOffloadReq {
 	  ----------------------------- <--+
 	  ... variable size uIEField
 	  up to uIEFieldLen (can be 0)
-	  -----------------------------
-	  ... variable size upto num_vendor_oui
-	  of type uint32_t
-	  ------------------------*/
+	  -----------------------------*/
 } tSirScanOffloadReq, *tpSirScanOffloadReq;
 
 /**
@@ -4562,11 +4053,6 @@ struct sir_peer_info_req {
  * @rssi: rssi
  * @tx_rate: last tx rate
  * @rx_rate: last rx rate
- * @rx_mc_bc_cnt: Multicast broadcast packet count received from
- *              current station
- * MSB of rx_mc_bc_cnt indicates whether FW supports rx_mc_bc_cnt
- * feature or not, if first bit is 1 it indictes that FW supports this
- * feature, if it is 0 it indicates FW doesn't support this feature
  *
  * a station's information
  */
@@ -4575,7 +4061,6 @@ struct sir_peer_info {
 	int8_t rssi;
 	uint32_t tx_rate;
 	uint32_t rx_rate;
-	uint32_t rx_mc_bc_cnt;
 };
 
 /**
@@ -4591,65 +4076,6 @@ struct sir_peer_info_resp {
 };
 
 /**
- * struct sir_peer_info_ext_req - peer info request struct
- * @peer_macaddr: MAC address
- * @sessionid: vdev id
- * @reset_after_request: fw reset statistics after query
- *
- * peer info request message's struct
- */
-struct sir_peer_info_ext_req {
-	struct qdf_mac_addr peer_macaddr;
-	uint8_t sessionid;
-	uint8_t reset_after_request;
-};
-
-/**
- * struct sir_peer_info_ext - peer info information struct
- *                            (refer to station_info struct in Kernel)
- * @peer_macaddr: MAC address
- * @tx_packets: packets transmitted to this station
- * @tx_bytes: bytes transmitted to this station
- * @rx_packets: packets received from this station
- * @rx_bytes: bytes received from this station
- * @rx_retries: cumulative retry counts
- * @tx_failed: number of failed transmissions
- * @rssi: The signal strength
- * @tx_rate: last used tx bitrate (kbps)
- * @tx_rate_code: last tx rate code (last_tx_rate_code of wmi_peer_stats_info)
- * @rx_rate: last used rx bitrate (kbps)
- * @rx_rate_code: last rx rate code (last_rx_rate_code of wmi_peer_stats_info)
- *
- * a station's information
- */
-struct sir_peer_info_ext {
-	struct qdf_mac_addr peer_macaddr;
-	uint32_t tx_packets;
-	uint64_t tx_bytes;
-	uint32_t rx_packets;
-	uint64_t rx_bytes;
-	uint32_t tx_retries;
-	uint32_t tx_failed;
-	int32_t rssi;
-	uint32_t tx_rate;
-	uint32_t tx_rate_code;
-	uint32_t rx_rate;
-	uint32_t rx_rate_code;
-};
-
-/**
- * struct sir_peer_info_ext_resp - all peers' information struct
- * @count: peer's number
- * @info: peer information
- *
- * all station's information
- */
-struct sir_peer_info_ext_resp {
-	uint8_t count;
-	struct sir_peer_info_ext info[0];
-};
-
-/**
  * @sta_num: number of peer station which has valid info
  * @info: peer information
  *
@@ -4658,17 +4084,6 @@ struct sir_peer_info_ext_resp {
 struct sir_peer_sta_info {
 	uint8_t sta_num;
 	struct sir_peer_info info[MAX_PEER_STA];
-};
-
-/**
- * @sta_num: number of peer station which has valid info
- * @info: peer extended information
- *
- * all SAP peer station's extended information retrieved
- */
-struct sir_peer_sta_ext_info {
-	uint8_t sta_num;
-	struct sir_peer_info_ext info[MAX_PEER_STA];
 };
 
 typedef struct sSirAddPeriodicTxPtrn {
@@ -4823,7 +4238,6 @@ typedef struct sSirChanChangeRequest {
 	uint8_t center_freq_seg_1;
 	uint8_t bssid[QDF_MAC_ADDR_SIZE];
 	uint32_t dot11mode;
-	tSirNwType nw_type;
 	tSirMacRateSet operational_rateset;
 	tSirMacRateSet extended_rateset;
 } tSirChanChangeRequest, *tpSirChanChangeRequest;
@@ -4832,6 +4246,7 @@ typedef struct sSirChanChangeResponse {
 	uint8_t sessionId;
 	uint8_t newChannelNumber;
 	uint8_t channelChangeStatus;
+	ePhyChanBondState secondaryChannelOffset;
 } tSirChanChangeResponse, *tpSirChanChangeResponse;
 
 typedef struct sSirStartBeaconIndication {
@@ -4901,9 +4316,6 @@ typedef struct sSirDfsCsaIeRequest {
 	uint8_t csaIeRequired;
 	uint8_t bssid[QDF_MAC_ADDR_SIZE];
 	struct ch_params_s ch_params;
-	uint8_t  ch_switch_beacon_cnt;
-	uint8_t  ch_switch_mode;
-	uint8_t  dfs_ch_switch_disable;
 } tSirDfsCsaIeRequest, *tpSirDfsCsaIeRequest;
 
 /* Indication from lower layer indicating the completion of first beacon send
@@ -5017,23 +4429,13 @@ typedef struct sSirSmeRoamOffloadSynchInd {
 	uint8_t roamReason;
 	uint32_t chan_freq;
 	uint8_t kck[SIR_KCK_KEY_LEN];
-	uint32_t kek_len;
-	uint8_t kek[SIR_KEK_KEY_LEN_FILS];
-	uint32_t   pmk_len;
-	uint8_t    pmk[SIR_PMK_LEN];
-	uint8_t    pmkid[SIR_PMKID_LEN];
-	bool update_erp_next_seq_num;
-	uint16_t next_erp_seq_num;
+	uint8_t kek[SIR_KEK_KEY_LEN];
 	uint8_t replay_ctr[SIR_REPLAY_CTR_LEN];
 	void *add_bss_params;
 	tpSirSmeJoinRsp join_rsp;
 	uint16_t aid;
 	struct sir_hw_mode_trans_ind hw_mode_trans_ind;
 	uint8_t nss;
-	struct qdf_mac_addr dst_mac;
-	struct qdf_mac_addr src_mac;
-	uint16_t hlp_data_len;
-	uint8_t hlp_data[FILS_MAX_HLP_DATA_LEN];
 } roam_offload_synch_ind;
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
@@ -5695,11 +5097,6 @@ typedef struct {
 	uint8_t oui[WIFI_SCANNING_MAC_OUI_LENGTH];
 	uint32_t vdev_id;
 	bool enb_probe_req_sno_randomization;
-	/* probe req ie whitelisting attrs */
-	bool ie_whitelist;
-	uint32_t probe_req_ie_bitmap[PROBE_REQ_BITMAP_LEN];
-	uint32_t num_vendor_oui;
-	/* Followed by 0 or more vendor_ouis of type uint32_t */
 } tSirScanMacOui, *tpSirScanMacOui;
 
 enum {
@@ -5718,7 +5115,6 @@ struct sir_ipa_offload_enable_disable {
  * @msg_type: message type
  * @len: message length
  * @vdev_id: vdev id
- * @rx_ldpc_ini: Rx LDPC ini setting
  *
  * Message wrapper structure for eWNI_SME_SET_VDEV_IES_PER_BAND.
  */
@@ -5726,7 +5122,6 @@ struct sir_set_vdev_ies_per_band {
 	uint16_t msg_type;
 	uint16_t len;
 	uint32_t vdev_id;
-	uint8_t is_hw_mode_dbs;
 };
 
 /**
@@ -5828,7 +5223,6 @@ typedef struct {
 	uint8_t apCountryStr[WNI_CFG_COUNTRY_CODE_LEN];
 	/* country string for this association */
 	uint8_t countryStr[WNI_CFG_COUNTRY_CODE_LEN];
-	uint8_t time_slice_duty_cycle;
 } tSirWifiInterfaceInfo, *tpSirWifiInterfaceInfo;
 
 /* channel information */
@@ -5920,9 +5314,6 @@ typedef struct {
 	/* tx time (in milliseconds) per TPC level (0.5 dBm) */
 	uint32_t tx_time_per_tpc[MAX_TPC_LEVELS];
 
-	uint32_t on_time_host_scan;
-	uint32_t on_time_lpi_scan;
-
 	/* channel statistics tSirWifiChannelStats */
 	tSirWifiChannelStats *channels;
 } tSirWifiRadioStat, *tpSirWifiRadioStat;
@@ -5964,15 +5355,48 @@ typedef struct {
 	struct qdf_mac_addr peerMacAddress;
 	/* peer WIFI_CAPABILITY_XXX */
 	uint32_t capabilities;
-	union {
-		/* peer power saving mode */
-		uint32_t power_saving;
-		/* number of rates */
-		uint32_t numRate;
-	};
+	/* number of rates */
+	uint32_t numRate;
 	/* per rate statistics, number of entries  = num_rate */
 	tSirWifiRateStat rateStats[0];
 } tSirWifiPeerInfo, *tpSirWifiPeerInfo;
+
+/* per access category statistics */
+typedef struct {
+	/* tSirWifiTrafficAc */
+	/* access category (VI, VO, BE, BK) */
+	uint32_t ac;
+	/* number of successfully transmitted unicast data pkts (ACK rcvd) */
+	uint32_t txMpdu;
+	/* number of received unicast mpdus */
+	uint32_t rxMpdu;
+	/* number of succesfully transmitted multicast data packets */
+	/* STA case: implies ACK received from AP for the unicast */
+	/* packet in which mcast pkt was sent */
+	uint32_t txMcast;
+	/* number of received multicast data packets */
+	uint32_t rxMcast;
+	/* number of received unicast a-mpdus */
+	uint32_t rxAmpdu;
+	/* number of transmitted unicast a-mpdus */
+	uint32_t txAmpdu;
+	/* number of data pkt losses (no ACK) */
+	uint32_t mpduLost;
+	/* total number of data pkt retries */
+	uint32_t retries;
+	/* number of short data pkt retries */
+	uint32_t retriesShort;
+	/* number of long data pkt retries */
+	uint32_t retriesLong;
+	/* data pkt min contention time (usecs) */
+	uint32_t contentionTimeMin;
+	/* data pkt max contention time (usecs) */
+	uint32_t contentionTimeMax;
+	/* data pkt avg contention time (usecs) */
+	uint32_t contentionTimeAvg;
+	/* num of data pkts used for contention statistics */
+	uint32_t contentionNumSamples;
+} tSirWifiWmmAcStat, *tpSirWifiWmmAcStat;
 
 /* Interface statistics - corresponding to 2nd most
  * LSB in wifi statistics bitmap  for getting statistics
@@ -5980,20 +5404,63 @@ typedef struct {
 typedef struct {
 	/* current state of the interface */
 	tSirWifiInterfaceInfo info;
-
+	/* access point beacon received count from connected AP */
+	uint32_t beaconRx;
+	/* access point mgmt frames received count from */
+	/* connected AP (including Beacon) */
+	uint32_t mgmtRx;
+	/* action frames received count */
+	uint32_t mgmtActionRx;
+	/* action frames transmit count */
+	uint32_t mgmtActionTx;
+	/* access Point Beacon and Management frames RSSI (averaged) */
+	uint32_t rssiMgmt;
+	/* access Point Data Frames RSSI (averaged) from connected AP */
+	uint32_t rssiData;
+	/* access Point ACK RSSI (averaged) from connected AP */
+	uint32_t rssiAck;
+	/* number of peers */
+	uint32_t num_peers;
+	/*
+	 * Indicates how many peer_stats events will be sent depending on the
+	 * num_peers.
+	 */
+	uint32_t num_peer_events;
+	/* number of ac */
+	uint32_t num_ac;
+	/* Roaming Stat */
+	uint32_t roam_state;
+	/*
+	 * Average Beacon spread offset is the averaged time delay between TBTT
+	 * and beacon TSF. Upper 32 bits of averaged 64 bit beacon spread offset
+	 */
+	uint32_t avg_bcn_spread_offset_high;
+	/* Lower 32 bits of averaged 64 bit beacon spread offset */
+	uint32_t avg_bcn_spread_offset_low;
+	/*
+	 * Takes value of 1 if AP leaks packets after sending an ACK for PM=1
+	 * otherwise 0
+	 */
+	uint32_t is_leaky_ap;
+	/*
+	 * Average number of frames received from AP after receiving the ACK
+	 * for a frame with PM = 1
+	 */
+	uint32_t avg_rx_frms_leaked;
+	/*
+	 *  Rx leak watch window currently in force to minimize data loss
+	 *  because of leaky AP. Rx leak window is the
+	 *  time driver waits before shutting down the radio or switching
+	 *  the channel and after receiving an ACK for
+	 *  a data frame with PM bit set.
+	 */
+	uint32_t rx_leak_window;
 	uint32_t rts_succ_cnt;
 	uint32_t rts_fail_cnt;
 	uint32_t ppdu_succ_cnt;
 	uint32_t ppdu_fail_cnt;
-
-	/* link statistics */
-	wmi_iface_link_stats link_stats;
-
 	/* per ac data packet statistics */
-	wmi_wmm_ac_stats ac_stats[WIFI_AC_MAX];
-
-	uint32_t num_offload_stats;
-	wmi_iface_offload_stats offload_stats[WMI_OFFLOAD_STATS_TYPE_MAX];
+	tSirWifiWmmAcStat AccessclassStats[WIFI_AC_MAX];
 } tSirWifiIfaceStat, *tpSirWifiIfaceStat;
 
 /* Peer statistics - corresponding to 3rd most LSB in
@@ -6034,470 +5501,6 @@ typedef struct {
 /* Clear particular peer stats depending on the peer_mac */
 #define WIFI_STATS_IFACE_PER_PEER      0x00000200
 
-/**
- * struct sir_wifi_iface_tx_fail - TX failure event
- * @tid: TX TID
- * @msdu_num: TX MSDU failed counter
- * @status: TX status from HTT message.
- *          Only failure status will be involved.
- */
-struct sir_wifi_iface_tx_fail {
-	uint8_t  tid;
-	uint16_t msdu_num;
-	enum htt_tx_status status;
-};
-
-/**
- * struct sir_wifi_chan_cca_stats - channal CCA stats
- * @vdev_id: vdev ID
- * @idle_time: percentage of idle time, no TX, no RX, no interference
- * @tx_time: percentage of time transmitting packets
- * @rx_in_bss_time: percentage of time receiving packets in current BSS
- * @rx_out_bss_time: percentage of time receiving packets not in current BSS
- * @rx_busy_time: percentage of time interference detected
- * @rx_in_bad_cond_time: percentage of time receiving packets with errors
- *	or packets flagged as retransmission or seqnum discontinued.
- * @tx_in_bad_cond_time: percentage of time the device transmitted packets
- *	that haven't been ACKed.
- * @wlan_not_avail_time: percentage of time the chip is unable to
- *	work in normal conditions.
- */
-struct sir_wifi_chan_cca_stats {
-	uint32_t vdev_id;
-	uint32_t idle_time;
-	uint32_t tx_time;
-	uint32_t rx_in_bss_time;
-	uint32_t rx_out_bss_time;
-	uint32_t rx_busy_time;
-	uint32_t rx_in_bad_cond_time;
-	uint32_t tx_in_bad_cond_time;
-	uint32_t wlan_not_avail_time;
-};
-
-#define WIFI_MAX_CHAINS                 8
-
-/**
- * struct sir_wifi_peer_signal_stats - peer signal stats
- * @vdev_id: vdev ID
- * @peer_id: peer ID
- * @per_ant_snr: per antenna SNR
- * @nf: peer background noise
- * @per_ant_rx_mpdus: MPDUs received per antenna
- * @per_ant_tx_mpdus: MPDUs transferred per antenna
- * @num_chain: valid chain count
- */
-struct sir_wifi_peer_signal_stats {
-	uint32_t vdev_id;
-	uint32_t peer_id;
-
-	/* per antenna SNR in current bss */
-	int32_t per_ant_snr[WIFI_MAX_CHAINS];
-
-	/* Background noise */
-	int32_t nf[WIFI_MAX_CHAINS];
-
-	uint32_t per_ant_rx_mpdus[WIFI_MAX_CHAINS];
-	uint32_t per_ant_tx_mpdus[WIFI_MAX_CHAINS];
-	uint32_t num_chain;
-};
-
-#define WIFI_VDEV_NUM     4
-#define WFIF_MCS_NUM      10
-#define WIFI_AGGR_NUM     8
-#define WIFI_DELAY_SIZE   11
-
-/**
- * struct sir_wifi_tx - per AC tx stats
- * @msdus: number of totoal MSDUs on MAC layer in the period
- * @mpdus: number of totoal MPDUs on MAC layer in the period
- * @ppdus: number of totoal PPDUs on PHY layer in the period
- * @bytes: bytes of tx data on MAC layer in the period
- * @drops: number of TX packets cancelled due to any reason in the period,
- *	such as WMM limitation/bandwidth limitation/radio congestion
- * @drop_bytes: bytes of dropped TX packets in the period
- * @retries: number of unacked transmissions of MPDUs
- * @failed: number of packets have not been ACKed despite retried
- * @aggr_len: length of the MPDU aggregation size buffer
- * @mpdu_aggr_size: histogram of MPDU aggregation size
- * @success_mcs_len: length of success mcs buffer
- * @success_mcs: histogram of successed received MPDUs encoding rate
- * @fail_mcs_len: length of failed mcs buffer
- * @fail_mcs: histogram of failed received MPDUs encoding rate
- * @delay_len: length of the delay histofram buffer
- * @delay: histogram of delays on MAC layer
- */
-struct sir_wifi_tx {
-	uint32_t msdus;
-	uint32_t mpdus;
-	uint32_t ppdus;
-	uint32_t bytes;
-	uint32_t drops;
-	uint32_t drop_bytes;
-	uint32_t retries;
-	uint32_t failed;
-	uint32_t aggr_len;
-	uint32_t *mpdu_aggr_size;
-	uint32_t success_mcs_len;
-	uint32_t *success_mcs;
-	uint32_t fail_mcs_len;
-	uint32_t *fail_mcs;
-	uint32_t delay_len;
-	uint32_t *delay;
-};
-
-/**
- * struct sir_wifi_rx - per AC rx stats
- * @mpdus: number of RX packets on MAC layer
- * @bytes: bytes of RX packets on MAC layer
- * @ppdus: number of RX packets on PHY layer
- * @ppdu_bytes: bytes of RX packets on PHY layer
- * @mpdu_lost: number of discontinuity in seqnum
- * @mpdu_retry: number of RX packets flagged as retransmissions
- * @mpdu_dup: number of RX packets identified as duplicates
- * @mpdu_discard: number of RX packets discarded
- * @aggr_len: length of MPDU aggregation histogram buffer
- * @mpdu_aggr: histogram of MPDU aggregation size
- * @mcs_len: length of mcs histogram buffer
- * @mcs: histogram of encoding rate.
- */
-struct sir_wifi_rx {
-	uint32_t mpdus;
-	uint32_t bytes;
-	uint32_t ppdus;
-	uint32_t ppdu_bytes;
-	uint32_t mpdu_lost;
-	uint32_t mpdu_retry;
-	uint32_t mpdu_dup;
-	uint32_t mpdu_discard;
-	uint32_t aggr_len;
-	uint32_t *mpdu_aggr;
-	uint32_t mcs_len;
-	uint32_t *mcs;
-};
-
-/**
- * struct sir_wifi_ll_ext_wmm_ac_stats - stats for WMM AC
- * @type: WMM AC type
- * @tx_stats: pointer to TX stats
- * @rx_stats: pointer to RX stats
- */
-struct sir_wifi_ll_ext_wmm_ac_stats {
-	uint32_t type;
-	struct sir_wifi_tx *tx_stats;
-	struct sir_wifi_rx *rx_stats;
-};
-
-#define WIFI_INVALID_PEER_ID		(-1)
-#define WIFI_INVALID_VDEV_ID		(-1)
-#define WIFI_MAX_AC                     (4)
-
-/**
- * struct sir_wifi_ll_ext_peer_stats - per peer stats
- * @peer_id: peer ID
- * @vdev_id: VDEV ID
- * mac_address: MAC address
- * @sta_ps_inds: how many times STAs go to sleep
- * @sta_ps_durs: total sleep time of STAs (units in ms)
- * @rx_probe_reqs: number of probe requests received
- * @rx_oth_mgmts: number of other management frames received,
- *		  not including probe requests
- * @peer_signal_stat: signal stats
- * @ac_stats: WMM BE/BK/VI/VO stats
- */
-struct sir_wifi_ll_ext_peer_stats {
-	uint32_t peer_id;
-	uint32_t vdev_id;
-	tSirMacAddr mac_address;
-	uint32_t sta_ps_inds;
-	uint32_t sta_ps_durs;
-	uint32_t rx_probe_reqs;
-	uint32_t rx_oth_mgmts;
-	struct sir_wifi_peer_signal_stats peer_signal_stats;
-	struct sir_wifi_ll_ext_wmm_ac_stats ac_stats[WIFI_MAX_AC];
-};
-
-/**
- * struct sir_wifi_ll_ext_stats - link layer stats report
- * @trigger_cond_id:  Indicate what triggered this event.
- *	1: timeout. 2: threshold
- * @cca_chgd_bitmap: Bitmap to indicate changed channel CCA stats
- *	which exceeded the thresholds
- * @sig_chgd_bitmap: Bitmap to indicate changed peer signal stats
- *	which exceeded the thresholds
- * @tx_chgd_bitmap: Bitmap to indicate changed TX counters
- *	which exceeded the thresholds
- * @rx_chgd_bitmap: Bitmap to indicate changed RX counters
- *	which exceeded the thresholds
- * @chan_cca_stats: channel CCA stats
- * @peer_signal_stats: peer signal stats
- * @tx_mpdu_aggr_array_len: length of TX MPDU aggregation buffer
- * @tx_succ_mcs_array_len: length of mcs buffer for ACKed MPDUs
- * @tx_fail_mcs_array_len: length of mcs buffer for no-ACKed MPDUs
- * @tx_delay_array_len: length of delay stats buffer
- * @rx_mpdu_aggr_array_len: length of RX MPDU aggregation buffer
- * @rx_mcs_array_len: length of RX mcs stats buffer
- * @peer_stats: peer stats
- * @cca: physical channel CCA stats
- * @stats: pointer to stats data buffer.
- *
- * Structure of the whole statictics is like this:
- *     ---------------------------------
- *     |      trigger_cond_i           |
- *     +-------------------------------+
- *     |      cca_chgd_bitmap          |
- *     +-------------------------------+
- *     |      sig_chgd_bitmap          |
- *     +-------------------------------+
- *     |      tx_chgd_bitmap           |
- *     +-------------------------------+
- *     |      rx_chgd_bitmap           |
- *     +-------------------------------+
- *     |      peer_num                 |
- *     +-------------------------------+
- *     |      channel_num              |
- *     +-------------------------------+
- *     |      tx_mpdu_aggr_array_len   |
- *     +-------------------------------+
- *     |      tx_succ_mcs_array_len    |
- *     +-------------------------------+
- *     |      tx_fail_mcs_array_len    |
- *     +-------------------------------+
- *     |      tx_delay_array_len       |
- *     +-------------------------------+
- *     |      rx_mpdu_aggr_array_len   |
- *     +-------------------------------+
- *     |      rx_mcs_array_len         |
- *     +-------------------------------+
- *     |      pointer to CCA stats     |
- *     +-------------------------------+
- *     |      pointer to peer stats    |
- *     +-------------------------------+
- *     |      CCA stats                |
- *     +-------------------------------+
- *     |      peer_stats               |----+
- *     +-------------------------------+    |
- *     |      per peer signals stats   |<---+
- *     |        peer0 ~ peern          |    |
- *     +-------------------------------+    |
- *     | TX aggr/mcs parameters array  |    |
- *     | Length of this buffer is      |    |
- *     | configurable for user layer.  |<-+ |
- *     +-------------------------------+  | |
- *     |      per peer tx stats        |--+ |
- *     |         BE                    | <--+
- *     |         BK                    |    |
- *     |         VI                    |    |
- *     |         VO                    |    |
- *     +-------------------------------+    |
- *     | TX aggr/mcs parameters array  |    |
- *     | Length of this buffer is      |    |
- *     | configurable for user layer.  |<-+ |
- *     +-------------------------------+  | |
- *     |      peer peer rx stats       |--+ |
- *     |         BE                    | <--+
- *     |         BE                    |
- *     |         BK                    |
- *     |         VI                    |
- *     |         VO                    |
- *     ---------------------------------
- */
-struct sir_wifi_ll_ext_stats {
-	uint32_t trigger_cond_id;
-	uint32_t cca_chgd_bitmap;
-	uint32_t sig_chgd_bitmap;
-	uint32_t tx_chgd_bitmap;
-	uint32_t rx_chgd_bitmap;
-	uint8_t peer_num;
-	uint8_t channel_num;
-	uint32_t tx_mpdu_aggr_array_len;
-	uint32_t tx_succ_mcs_array_len;
-	uint32_t tx_fail_mcs_array_len;
-	uint32_t tx_delay_array_len;
-	uint32_t rx_mpdu_aggr_array_len;
-	uint32_t rx_mcs_array_len;
-	struct sir_wifi_ll_ext_peer_stats *peer_stats;
-	struct sir_wifi_chan_cca_stats *cca;
-	uint8_t stats[];
-};
-
-/**
- * struct sir_channel_cca_threshold - threshold for channel CCA
- * @idle_time: idle time, no TX, no RX, no interference
- * @tx_time: time transmitting packets
- * @rx_in_bss_time: time receiving packets in current BSSs
- * @rx_out_bss_time: time receiving packets not in current BSSs
- * @rx_busy_time: time interference detected
- * @rx_in_bad_cond_time: receiving packets with errors
- * @tx_in_bad_cond_time: time transmitted packets not been ACKed
- * @wlan_not_avail_time: wlan card cannot work
- */
-struct sir_channel_cca_threshold {
-	uint32_t idle_time;
-	uint32_t tx_time;
-	uint32_t rx_in_bss_time;
-	uint32_t rx_out_bss_time;
-	uint32_t rx_busy_time;
-	uint32_t rx_in_bad_cond_time;
-	uint32_t tx_in_bad_cond_time;
-	uint32_t wlan_not_avail_time;
-};
-
-/**
- * struct sir_signal_threshold - threshold for per peer sigbal
- * @snr: signal to noise rate
- * @nf: noise floor
- */
-struct sir_signal_threshold {
-	uint32_t snr;
-	uint32_t nf;
-};
-
-/**
- * struct sir_tx_threshold - threshold for TX
- * @msdu: TX MSDUs on MAC layer
- * @mpdu: TX MPDUs on MAC layer
- * @ppdu: TX PPDUs on MAC layer
- * @bytes: TX bytes on MAC layer
- * @msdu_drop: drooped MSDUs
- * @byte_drop: dropped Bytes
- * @mpdu_retry: MPDU not acked
- * @ppdu_fail: PPDUs which received no block ack
- * @aggregation: aggregation size
- * @succ_mcs: histogram of encoding rate for acked PPDUs
- * @fail_mcs: histogram of encoding rate for no-acked PPDUs
- */
-struct sir_tx_threshold {
-	uint32_t msdu;
-	uint32_t mpdu;
-	uint32_t ppdu;
-	uint32_t bytes;
-	uint32_t msdu_drop;
-	uint32_t byte_drop;
-	uint32_t mpdu_retry;
-	uint32_t mpdu_fail;
-	uint32_t ppdu_fail;
-	uint32_t aggregation;
-	uint32_t succ_mcs;
-	uint32_t fail_mcs;
-	uint32_t delay;
-};
-
-/**
- * struct sir_rx_threshold - threshold for RX
- * @mpdu: RX MPDUs on MAC layer
- * @bytes: RX bytes on MAC layer
- * @ppdu: RX PPDU on PHY layer
- * @ppdu_bytes: RX bytes on PHY layer
- * @disorder: discontinuity in seqnum
- * @mpdu_retry: MPDUs flagged as retry
- * @mpdu_dup: MPDUs identified as duplicated
- * @aggregation: aggregation size
- * @mcs: histogram of encoding rate for PPDUs
- * @ps_inds: power save indication
- * @ps_durs: total time in power save
- * @probe_reqs: probe request received
- * @other_mgmt: other MGMT frames received
- */
-struct sir_rx_threshold {
-	uint32_t mpdu;
-	uint32_t bytes;
-	uint32_t ppdu;
-	uint32_t ppdu_bytes;
-	uint32_t disorder;
-	uint32_t mpdu_lost;
-	uint32_t mpdu_retry;
-	uint32_t mpdu_dup;
-	uint32_t mpdu_discard;
-	uint32_t aggregation;
-	uint32_t mcs;
-	uint32_t ps_inds;
-	uint32_t ps_durs;
-	uint32_t probe_reqs;
-	uint32_t other_mgmt;
-};
-
-/**
- * struct sir_wifi_ll_ext_stats_threshold - Threshold for stats update
- * @period: MAC counter indication period (unit in ms)
- * @enable: if threshold mechnism is enabled or disabled
- * @enable_bitmap: whether dedicated threshold is enabed.
- *     Every MAC counter has a dedicated threshold. If the dedicated
- *     threshold is not set in the bitmap, global threshold will take
- *     effect.
- * @global: whether clobal threshold is enabled.
- *     When both global and dedicated threshold are diabled, MAC counter
- *     will indicate stats periodically.
- * @global_threshold: global threshold value
- * @cca_bitmap: bitmap for CCA.
- *     Bit0: idle time
- *     Bit1: tx time
- *     Bit2: RX in BSS
- *     Bit3: RX out of BSS
- *     Bit4: medium busy
- *     Bit5: RX bad
- *     Bit6: TX bad
- *     Bit7: WLAN card not available
- * @signal_bitmap:
- *     Bit0: Per channel SNR counter
- *     Bit1: Per channel noise floor counter
- * @tx_bitmap:  bitmap for TX counters
- *     Bit0: TX counter unit in MSDU
- *     Bit1: TX counter unit in MPDU
- *     Bit2: TX counter unit in PPDU
- *     Bit3: TX counter unit in byte
- *     Bit4: Dropped MSDUs
- *     Bit5: Dropped Bytes
- *     Bit6: MPDU retry counter
- *     Bit7: MPDU failure counter
- *     Bit8: PPDU failure counter
- *     Bit9: MPDU aggregation counter
- *     Bit10: MCS counter for ACKed MPDUs
- *     Bit11: MCS counter for Failed MPDUs
- *     Bit12: TX Delay counter
- * @rx_bitmap:bitmap for RX counters
- *     Bit0: MAC RX counter unit in MPDU
- *     Bit1: MAC RX counter unit in byte
- *     Bit2: PHY RX counter unit in PPDU
- *     Bit3: PHY RX counter unit in byte
- *     Bit4: Disorder counter
- *     Bit5: Retry counter
- *     Bit6: Duplication counter
- *     Bit7: Discard counter
- *     Bit8: MPDU aggregation size counter
- *     Bit9: MCS counter
- *     Bit10: Peer STA power state change (wake to sleep) counter
- *     Bit11: Peer STA power save counter, total time in PS mode
- *     Bit12: Probe request counter
- *     Bit13: Other management frames counter
- * @cca_thresh: CCA threshold
- * @signal_thresh: signal threshold
- * @tx_thresh: TX threshold
- * @rx_thresh: RX threshold
- *
- * Generally, Link layer statistics is reported periodically. But if the
- * variation of one stats of compared to the pervious notification exceeds
- * a threshold, FW will report the new stats immediately.
- * This structure contains threshold for different counters.
- */
-struct sir_ll_ext_stats_threshold {
-	uint32_t period;
-	uint32_t enable;
-	uint32_t enable_bitmap;
-	uint32_t global;
-	uint32_t global_threshold;
-	uint32_t cca_bitmap;
-	uint32_t signal_bitmap;
-	uint32_t tx_bitmap;
-	uint32_t rx_bitmap;
-	struct sir_channel_cca_threshold cca;
-	struct sir_signal_threshold signal;
-	struct sir_tx_threshold tx;
-	struct sir_rx_threshold rx;
-};
-
-#define LL_STATS_MIN_PERIOD          10
-#define LL_STATS_INVALID_PERIOD      0xFFFFFFFF
-
 typedef struct {
 	uint32_t paramId;
 	uint8_t ifaceId;
@@ -6514,10 +5517,6 @@ typedef struct {
 	uint8_t results[0];
 } tSirLLStatsResults, *tpSirLLStatsResults;
 
-/* Result ID for LL stats extension */
-#define WMI_LL_STATS_EXT_PS_CHG             0x00000100
-#define WMI_LL_STATS_EXT_TX_FAIL            0x00000200
-#define WMI_LL_STATS_EXT_MAC_COUNTER        0x00000400
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
 typedef struct sAniGetLinkStatus {
@@ -6668,7 +5667,7 @@ struct chip_pwr_save_fail_detected_params {
 #define DEFAULT_SCAN_IE_ID 256
 
  /* MAX_DEFAULT_SCAN_IE_LEN - Maxmimum length of Default Scan IE's */
-#define MAX_DEFAULT_SCAN_IE_LEN 2048
+#define MAX_DEFAULT_SCAN_IE_LEN 1024
 
  /* Extended Capabilities IE header(IE Id + IE Length) length */
 #define EXT_CAP_IE_HDR_LEN 2
@@ -6728,6 +5727,9 @@ typedef void (*hw_mode_transition_cb)(uint32_t old_hw_mode_index,
 		uint32_t new_hw_mode_index,
 		uint32_t num_vdev_mac_entries,
 		struct sir_vdev_mac_map *vdev_mac_map);
+typedef void (*dual_mac_cb)(uint32_t status, uint32_t scan_config,
+		uint32_t fw_mode_config);
+typedef void (*antenna_mode_cb)(uint32_t status);
 
 /**
  * struct sir_nss_update_request
@@ -6744,34 +5746,14 @@ struct sir_nss_update_request {
 };
 
 /**
- * enum sir_bcn_update_reason: bcn update reason
- * @REASON_DEFAULT: reason default
- * @REASON_NSS_UPDATE: If NSS is updated
- * @REASON_CONFIG_UPDATE: Config update
- * @REASON_SET_HT2040: HT2040 update
- * @REASON_COLOR_CHANGE: Color change
- * @REASON_CHANNEL_SWITCH: channel switch
- */
-enum sir_bcn_update_reason {
-	REASON_DEFAULT = 0,
-	REASON_NSS_UPDATE = 1,
-	REASON_CONFIG_UPDATE = 2,
-	REASON_SET_HT2040 = 3,
-	REASON_COLOR_CHANGE = 4,
-	REASON_CHANNEL_SWITCH = 5,
-};
-
-/**
- * struct sir_bcn_update_rsp
+ * struct sir_beacon_tx_complete_rsp
  *
- * @vdev_id: session for which bcn was updated
- * @reason: bcn update reason
- * @status: status of the beacon sent to FW
+ * @session_id: session for which beacon update happened
+ * @tx_status: status of the beacon tx from FW
  */
-struct sir_bcn_update_rsp {
-	uint8_t vdev_id;
-	enum sir_bcn_update_reason reason;
-	QDF_STATUS status;
+struct sir_beacon_tx_complete_rsp {
+	uint8_t session_id;
+	uint8_t tx_status;
 };
 
 typedef void (*nss_update_cb)(void *context, uint8_t tx_status, uint8_t vdev_id,
@@ -7254,17 +6236,17 @@ struct obss_scanparam {
 };
 
 /**
- * struct sir_apf_set_offload - set apf filter instructions
+ * struct sir_bpf_set_offload - set bpf filter instructions
  * @session_id: session identifier
- * @version: host apf version
- * @filter_id: Filter ID for APF filter
+ * @version: host bpf version
+ * @filter_id: Filter ID for BPF filter
  * @total_length: The total length of the full instruction
  *                total_length equal to 0 means reset
  * @current_offset: current offset, 0 means start a new setting
  * @current_length: Length of current @program
- * @program: APF instructions
+ * @program: BPF instructions
  */
-struct sir_apf_set_offload {
+struct sir_bpf_set_offload {
 	uint8_t  session_id;
 	uint32_t version;
 	uint32_t filter_id;
@@ -7275,18 +6257,18 @@ struct sir_apf_set_offload {
 };
 
 /**
- * struct sir_apf_offload_capabilities - get apf Capabilities
- * @apf_version: fw's implement version
- * @max_apf_filters: max filters that fw supports
- * @max_bytes_for_apf_inst: the max bytes that can be used as apf instructions
- * @remaining_bytes_for_apf_inst: remaining bytes for apf instructions
+ * struct sir_bpf_offload_capabilities - get bpf Capabilities
+ * @bpf_version: fw's implement version
+ * @max_bpf_filters: max filters that fw supports
+ * @max_bytes_for_bpf_inst: the max bytes that can be used as bpf instructions
+ * @remaining_bytes_for_bpf_inst: remaining bytes for bpf instructions
  *
  */
-struct sir_apf_get_offload {
-	uint32_t apf_version;
-	uint32_t max_apf_filters;
-	uint32_t max_bytes_for_apf_inst;
-	uint32_t remaining_bytes_for_apf_inst;
+struct sir_bpf_get_offload {
+	uint32_t bpf_version;
+	uint32_t max_bpf_filters;
+	uint32_t max_bytes_for_bpf_inst;
+	uint32_t remaining_bytes_for_bpf_inst;
 };
 
 /**
@@ -7345,14 +6327,6 @@ struct sir_wake_lock_stats {
  * @pno_match: pno match wakeup count
  * @oem_response: oem response wakeup count
  * @pwr_save_fail_detected: pwr save fail detected wakeup count
- * @mgmt_assoc: association request management frame
- * @mgmt_disassoc: disassociation management frame
- * @mgmt_assoc_resp: association response management frame
- * @mgmt_reassoc: reassociate request management frame
- * @mgmt_reassoc_resp: reassociate response management frame
- * @mgmt_auth: authentication managament frame
- * @mgmt_deauth: deauthentication management frame
- * @mgmt_action: action managament frame
  */
 struct sir_vdev_wow_stats {
 	uint32_t ucast;
@@ -7371,14 +6345,6 @@ struct sir_vdev_wow_stats {
 	uint32_t pno_match;
 	uint32_t oem_response;
 	uint32_t pwr_save_fail_detected;
-	uint32_t mgmt_assoc;
-	uint32_t mgmt_disassoc;
-	uint32_t mgmt_assoc_resp;
-	uint32_t mgmt_reassoc;
-	uint32_t mgmt_reassoc_resp;
-	uint32_t mgmt_auth;
-	uint32_t mgmt_deauth;
-	uint32_t mgmt_action;
 };
 
 /**
@@ -7578,28 +6544,6 @@ struct ndp_pmk {
 };
 
 /**
- * struct ndp_passphrase - structure to hold passphrase
- * @passphrase_len: length of passphrase
- * @passphrase: buffer containing passphrase
- *
- */
-struct ndp_passphrase {
-	uint32_t passphrase_len;
-	uint8_t *passphrase;
-};
-
-/**
- * struct ndp_service_name - structure to hold service_name
- * @service_name_len: length of service_name
- * @service_name: buffer containing service_name
- *
- */
-struct ndp_service_name {
-	uint32_t service_name_len;
-	uint8_t *service_name;
-};
-
-/**
  * struct ndi_create_req - ndi create request params
  * @transaction_id: unique identifier
  * @iface_name: interface name
@@ -7660,8 +6604,6 @@ struct ndp_initiator_req {
 	struct ndp_app_info ndp_info;
 	uint32_t ncs_sk_type;
 	struct ndp_pmk pmk;
-	struct ndp_passphrase passphrase;
-	struct ndp_service_name service_name;
 };
 
 /**
@@ -7732,8 +6674,6 @@ struct ndp_responder_req {
 	struct ndp_app_info ndp_info;
 	struct ndp_pmk pmk;
 	uint32_t ncs_sk_type;
-	struct ndp_passphrase passphrase;
-	struct ndp_service_name service_name;
 };
 
 /**
@@ -7755,19 +6695,6 @@ struct ndp_responder_rsp_event {
 };
 
 /**
- * struct ndp_channel_info - ndp channel and channel bandwidth
- * @channel: channel freq in mhz of the ndp connection
- * @ch_width: channel width (wmi_channel_width) of the ndp connection
- * @nss: nss used for ndp connection
- *
- */
-struct ndp_channel_info {
-	uint32_t channel;
-	uint32_t ch_width;
-	uint32_t nss;
-};
-
-/**
  * struct ndp_confirm_event - ndp confirmation event from FW
  * @vdev_id: session id of the interface over which ndp is being created
  * @ndp_instance_id: ndp instance id for which confirm is being generated
@@ -7775,8 +6702,6 @@ struct ndp_channel_info {
  * @num_active_ndps_on_peer: number of ndp instances on peer
  * @peer_ndi_mac_addr: peer NDI mac address
  * @rsp_code: ndp response code
- * @num_channels: num channels
- * @ch: channel info struct array
  * @ndp_info: ndp application info
  *
  */
@@ -7787,8 +6712,6 @@ struct ndp_confirm_event {
 	uint32_t num_active_ndps_on_peer;
 	struct qdf_mac_addr peer_ndi_mac_addr;
 	enum ndp_response_code rsp_code;
-	uint32_t num_channels;
-	struct ndp_channel_info ch[SIR_NAN_CH_INFO_MAX_CHANNELS];
 	struct ndp_app_info ndp_info;
 };
 
@@ -7879,27 +6802,6 @@ struct ndp_schedule_update_rsp {
 };
 
 /**
- * struct ndp_sch_update_event - ndp schedule update indication
- * @vdev_id: vdev id on which ndp schedule update was received
- * @peer_addr: peer for which schedule update was received
- * @flags: reason for sch update
- * @num_channels: num of channels
- * @num_ndp_instances: num of ndp instances
- * @ch: channel info array
- * @ndp_instances: array of ndp instances
- *
- */
-struct ndp_sch_update_event {
-	uint32_t vdev_id;
-	struct qdf_mac_addr peer_addr;
-	uint32_t flags;
-	uint32_t num_channels;
-	uint32_t num_ndp_instances;
-	struct ndp_channel_info ch[SIR_NAN_CH_INFO_MAX_CHANNELS];
-	uint32_t *ndp_instances;
-};
-
-/**
  * struct sme_ndp_peer_ind - ndp peer indication
  * @msg_type: message id
  * @msg_len: message length
@@ -7922,36 +6824,12 @@ struct sme_ndp_peer_ind {
  * struct sir_set_tx_rx_aggregation_size - sets tx rx aggregation size
  * @vdev_id: vdev id of the session
  * @tx_aggregation_size: Tx aggregation size
- * @tx_aggregation_size_be: Tx aggregation size for be queue
- * @tx_aggregation_size_bk: Tx aggregation size for bk queue
- * @tx_aggregation_size_vi: Tx aggregation size for vi queue
- * @tx_aggregation_size_vo: Tx aggregation size for vo queue
  * @rx_aggregation_size: Rx aggregation size
  */
 struct sir_set_tx_rx_aggregation_size {
 	uint8_t vdev_id;
 	uint32_t tx_aggregation_size;
-	uint32_t tx_aggregation_size_be;
-	uint32_t tx_aggregation_size_bk;
-	uint32_t tx_aggregation_size_vi;
-	uint32_t tx_aggregation_size_vo;
 	uint32_t rx_aggregation_size;
-};
-
-/**
- * struct sir_set_tx_aggr_sw_retry_threshold - set sw retry threshold
- * @vdev_id: vdev id of the session
- * @tx_aggr_sw_retry_threshold_be: sw retry threshold for BE
- * @tx_aggr_sw_retry_threshold_bk: sw retry threshold for BK
- * @tx_aggr_sw_retry_threshold_vi: sw retry threshold for VI
- * @tx_aggr_sw_retry_threshold_vo: sw retry threshold for VO
- */
-struct sir_set_tx_aggr_sw_retry_threshold {
-	uint8_t vdev_id;
-	uint32_t tx_aggr_sw_retry_threshold_be;
-	uint32_t tx_aggr_sw_retry_threshold_bk;
-	uint32_t tx_aggr_sw_retry_threshold_vi;
-	uint32_t tx_aggr_sw_retry_threshold_vo;
 };
 
 /**
@@ -8161,9 +7039,6 @@ struct sme_rcpi_req {
  * @dad_detected: dad detected
  * @connect_status: connection status
  * @ba_session_establishment_status: BA session status
- * @connect_stats_present: connectivity stats present or not
- * @tcp_ack_recvd: tcp syn ack's count
- * @icmpv4_rsp_recvd: icmpv4 responses count
  */
 struct rsp_stats {
 	uint32_t vdev_id;
@@ -8175,9 +7050,6 @@ struct rsp_stats {
 	uint32_t dad_detected;
 	uint32_t connect_status;
 	uint32_t ba_session_establishment_status;
-	bool connect_stats_present;
-	uint32_t tcp_ack_recvd;
-	uint32_t icmpv4_rsp_recvd;
 };
 
 /**
@@ -8186,22 +7058,12 @@ struct rsp_stats {
  * @flag: enable/disable stats
  * @pkt_type: type of packet(1 - arp)
  * @ip_addr: subnet ipv4 address in case of encrypted packets
- * @pkt_type_bitmap: pkt bitmap
- * @tcp_src_port: tcp src port for pkt tracking
- * @tcp_dst_port: tcp dst port for pkt tracking
- * @icmp_ipv4: target ipv4 address to track ping packets
- * @reserved: reserved
  */
 struct set_arp_stats_params {
 	uint32_t vdev_id;
 	uint8_t flag;
 	uint8_t pkt_type;
 	uint32_t ip_addr;
-	uint32_t pkt_type_bitmap;
-	uint32_t tcp_src_port;
-	uint32_t tcp_dst_port;
-	uint32_t icmp_ipv4;
-	uint32_t reserved;
 };
 
 /**
@@ -8224,285 +7086,6 @@ struct sir_del_all_tdls_peers {
 	uint16_t msg_type;
 	uint16_t msg_len;
 	struct qdf_mac_addr bssid;
-	bool disable_tdls_state;
-};
-
-/**
- * enum action_filter_type - Type of action frame filter
- * @SME_ACTION_FRAME_RANDOM_MAC_SET: Set filter
- * @SME_ACTION_FRAME_RANDOM_MAC_CLEAR: Clear filter
- */
-enum action_filter_type {
-	SME_ACTION_FRAME_RANDOM_MAC_SET,
-	SME_ACTION_FRAME_RANDOM_MAC_CLEAR,
-};
-
-typedef void (*action_frame_random_filter_callback)(bool set_random_addr,
-						    void *context);
-/**
- * struct action_frame_random_filter - Random mac filter attrs for set/clear
- * @session_id: Session interface
- * @filter_type: Type of filter from action_filter_type
- * @callback: Invoked from wmi
- * @context: Parameter to be used with callback
- * @mac_addr: Random mac addr for which filter is to be set
- * @freq: Channel frequency
- */
-struct action_frame_random_filter {
-	uint32_t session_id;
-	enum action_filter_type filter_type;
-	action_frame_random_filter_callback callback;
-	void *context;
-	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
-	uint32_t freq;
-};
-
-/**
- * struct chain_rssi_result - chain rssi result
- * num_chains_valid: chains vaild number
- * @chain_rssi: chain rssi result
- * @ant_id: antenna id
- */
-struct chain_rssi_result {
-	#define CHAIN_MAX_NUM  8
-	uint32_t num_chains_valid;
-	uint32_t chain_rssi[CHAIN_MAX_NUM];
-	uint32_t ant_id[CHAIN_MAX_NUM];
-};
-
-/**
- * struct get_chain_rssi_req_params - get chain rssi req params
- * @peer_macaddr: specific peer mac address
- * @session_id: session id
- */
-struct get_chain_rssi_req_params {
-	struct qdf_mac_addr peer_macaddr;
-	uint8_t session_id;
-};
-
-struct INTERF_RSP {
-	uint8_t interf_type;
-	uint16_t interf_min_freq;
-	uint16_t interf_max_freq;
-};
-
-#define MAX_INTERF 10 /* 5 categories x (lower + upper) bands */
-#define MAX_NUM_BINS 520
-#define MAX_SPECTRAL_CHAINS  4
-struct INTERF_SRC_RSP {
-	uint16_t count;
-	struct INTERF_RSP interf[MAX_INTERF];
-};
-
-struct samp_msg_data {
-	int16_t     spectral_data_len;
-	int16_t     spectral_data_len_sec80;
-	int16_t     spectral_rssi;
-	int16_t     spectral_rssi_sec80;
-	int8_t      spectral_combined_rssi;
-	int8_t      spectral_upper_rssi;
-	int8_t      spectral_lower_rssi;
-	int8_t      spectral_chain_ctl_rssi[MAX_SPECTRAL_CHAINS];
-	int8_t      spectral_chain_ext_rssi[MAX_SPECTRAL_CHAINS];
-	uint8_t     spectral_max_scale;
-	int16_t     spectral_bwinfo;
-	int32_t     spectral_tstamp;
-	int16_t     spectral_max_index;
-	int16_t     spectral_max_index_sec80;
-	int16_t     spectral_max_mag;
-	int16_t     spectral_max_mag_sec80;
-	uint8_t     spectral_max_exp;
-	int32_t     spectral_last_tstamp;
-	int16_t     spectral_upper_max_index;
-	int16_t     spectral_lower_max_index;
-	uint8_t     spectral_nb_upper;
-	uint8_t     spectral_nb_lower;
-	uint16_t    bin_pwr_count;
-
-	uint8_t    lb_edge_extrabins;
-	uint8_t    rb_edge_extrabins;
-
-	uint16_t   bin_pwr_count_sec80;
-	uint8_t    bin_pwr[MAX_NUM_BINS];
-	uint8_t    bin_pwr_sec80[MAX_NUM_BINS];
-	struct INTERF_SRC_RSP interf_list;
-	int16_t    noise_floor;
-	int16_t    noise_floor_sec80;
-	uint32_t   ch_width;
-};
-
-enum dcs_int_type {
-	SPECTRAL_DCS_INT_NONE,
-	SPECTRAL_DCS_INT_CW,
-	SPECTRAL_DCS_INT_WIFI
-};
-
-/**
- * struct spectral_samp_msg - FFT sampling data
- * @signature: flag indicating it is a samp message
- * @freq: frequency of the samplings
- * @vhtop_ch_freq_seg1: VHT channel frequency segment 1
- * @vhtop_ch_freq_seg2: VHT channel frequency segment 2
- * @freq_loading: spectral scan frequency loading
- * @dcs_enabled: if DCS is enabled
- * @int_type: DCS interface type
- * @macaddr: interface mac address
- * @samp_data: sampling data
- */
-struct spectral_samp_msg {
-	uint32_t      signature;
-	uint16_t      freq;
-	uint16_t      vhtop_ch_freq_seg1;
-	uint16_t      vhtop_ch_freq_seg2;
-	uint16_t      freq_loading;
-	uint8_t       dcs_enabled;
-	enum dcs_int_type   int_type;
-	uint8_t       macaddr[6];
-	struct samp_msg_data samp_data;
-};
-
-/**
- * sir_sme_rx_aggr_hole_ind - sme rx aggr hole indication
- * @hole_cnt: num of holes detected
- * @hole_info_array: hole info
- */
-struct sir_sme_rx_aggr_hole_ind {
-	uint32_t hole_cnt;
-	uint32_t hole_info_array[];
-};
-
-/**
- * struct sir_set_rx_reorder_timeout_val - rx reorder timeout
- * @rx_timeout_pri: reorder timeout for AC
- *                  rx_timeout_pri[0] : AC_VO
- *                  rx_timeout_pri[1] : AC_VI
- *                  rx_timeout_pri[2] : AC_BE
- *                  rx_timeout_pri[3] : AC_BK
- */
-struct sir_set_rx_reorder_timeout_val {
-	uint32_t rx_timeout_pri[4];
-};
-
-/**
- * struct sir_peer_set_rx_blocksize - set rx blocksize
- * @vdev_id: vdev id
- * @peer_macaddr: peer mac address
- * @rx_block_ack_win_limit: windows size limitation
- */
-struct sir_peer_set_rx_blocksize {
-	uint32_t vdev_id;
-	struct qdf_mac_addr peer_macaddr;
-	uint32_t rx_block_ack_win_limit;
-};
-
-/**
- * struct sir_rssi_disallow_lst - Structure holding Rssi based avoid candidate
- * list
- * @node: Node pointer
- * @bssid: BSSID of the AP
- * @retry_delay: Retry delay received during last rejection in ms
- * @ expected_rssi: RSSI at which STA can initate
- * @time_during_rejection: Timestamp during last rejection in millisec
- */
-struct sir_rssi_disallow_lst {
-	qdf_list_node_t node;
-	struct qdf_mac_addr bssid;
-	uint32_t retry_delay;
-	int8_t expected_rssi;
-	qdf_time_t time_during_rejection;
-};
-
-/*
- * struct scan_chan_info - channel info
- * @freq: radio frequence
- * @cmd flag: cmd flag
- * @noise_floor: noise floor
- * @cycle_count: cycle count
- * @rx_clear_count: rx clear count
- * @tx_frame_count: TX frame count
- * @clock_freq: clock frequency MHZ
- */
-struct scan_chan_info {
-	uint32_t freq;
-	uint32_t cmd_flag;
-	uint32_t noise_floor;
-	uint32_t cycle_count;
-	uint32_t rx_clear_count;
-	uint32_t tx_frame_count;
-	uint32_t clock_freq;
-};
-
-/**
- * struct sir_limit_off_chan - limit off-channel command parameters
- * @vdev_id: vdev id
- * @is_tos_active: status of the traffic (active/inactive)
- * @max_off_chan_time: max allowed off channel time
- * @rest_time: home channel time
- * @skip_dfs_chans: skip dfs channels during scan
- */
-struct sir_limit_off_chan {
-	uint8_t vdev_id;
-	bool is_tos_active;
-	uint32_t max_off_chan_time;
-	uint32_t rest_time;
-	bool skip_dfs_chans;
-};
-
-typedef void (*roam_scan_stats_cb)(void *context,
-				   struct wmi_roam_scan_stats_res *res);
-
-/**
- * struct sir_roam_scan_stats - Stores roam scan context
- * @vdev_id: vdev id
- * @cb: callback to be invoked for roam scan stats response
- * @context: context of callback
- */
-struct sir_roam_scan_stats {
-	uint32_t vdev_id;
-	roam_scan_stats_cb cb;
-	void *context;
-};
-
-/**
- * struct sae_info - SAE info used for commit/confirm messages
- * @msg_type: Message type
- * @msg_len: length of message
- * @vdev_id: vdev id
- * @peer_mac_addr: peer MAC address
- * @ssid: SSID
- */
-struct sir_sae_info {
-	uint16_t msg_type;
-	uint16_t msg_len;
-	uint32_t vdev_id;
-	struct qdf_mac_addr peer_mac_addr;
-	tSirMacSSid ssid;
-};
-
-/**
- * struct sir_sae_msg - SAE msg used for message posting
- * @message_type: message type
- * @length: message length
- * @session_id: SME session id
- * @sae_status: SAE status, 0: Success, Non-zero: Failure.
- * @peer_mac_addr: peer MAC address
- */
-struct sir_sae_msg {
-	uint16_t message_type;
-	uint16_t length;
-	uint16_t session_id;
-	uint8_t sae_status;
-	tSirMacAddr peer_mac_addr;
-};
-
-/**
- * struct set_pcl_req - Request message to set the PCL
- * @chan_weights: PCL channel weights
- * @band: Supported band
- */
-struct set_pcl_req {
-	struct wmi_pcl_chan_weights chan_weights;
-	tSirRFBand band;
 };
 
 #endif /* __SIR_API_H */

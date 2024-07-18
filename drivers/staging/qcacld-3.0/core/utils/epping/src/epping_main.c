@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*========================================================================
@@ -41,7 +50,6 @@
 #include "bmi.h"
 #include "ol_fw.h"
 #include "ol_if_athvar.h"
-#include "wma_api.h"
 #include "hif.h"
 #include "epping_main.h"
 #include "epping_internal.h"
@@ -132,7 +140,6 @@ void epping_disable(void)
 			   "%s: error: htc_handle = NULL", __func__);
 		return;
 	}
-	wma_wmi_stop();
 	htc_stop(htc_handle);
 	epping_cookie_cleanup(pEpping_ctx);
 	htc_destroy(htc_handle);
@@ -163,7 +170,7 @@ void epping_close(void)
 
 /**
  * epping_target_suspend_acknowledge() - process wow ack/nack from fw
- * @context: htc_init_info->context
+ * @context: HTC_INIT_INFO->context
  * @wow_nack: true when wow is rejected
  */
 static void epping_target_suspend_acknowledge(void *context, bool wow_nack)
@@ -212,7 +219,7 @@ int epping_enable(struct device *parent_dev)
 	epping_context_t *pEpping_ctx = NULL;
 	cds_context_type *p_cds_context = NULL;
 	qdf_device_t qdf_ctx;
-	struct htc_init_info htcInfo;
+	HTC_INIT_INFO htcInfo;
 	struct hif_opaque_softc *scn;
 	tSirMacAddr adapter_macAddr;
 	struct hif_target_info *tgt_info;
@@ -303,7 +310,7 @@ int epping_enable(struct device *parent_dev)
 	}
 
 	/* start HIF */
-	if (htc_wait_target(pEpping_ctx->HTCHandle) != QDF_STATUS_SUCCESS) {
+	if (htc_wait_target(pEpping_ctx->HTCHandle) != A_OK) {
 		EPPING_LOG(QDF_TRACE_LEVEL_FATAL,
 			   "%s: htc_wait_target error", __func__);
 		goto error_end;
@@ -316,7 +323,7 @@ int epping_enable(struct device *parent_dev)
 			   "%s: htc_wait_targetdone", __func__);
 		goto error_end;
 	}
-	if (htc_start(pEpping_ctx->HTCHandle) != QDF_STATUS_SUCCESS) {
+	if (htc_start(pEpping_ctx->HTCHandle) != A_OK) {
 		goto error_end;
 	}
 	EPPING_LOG(QDF_TRACE_LEVEL_INFO_HIGH, "%s: HTC started", __func__);
@@ -331,7 +338,6 @@ int epping_enable(struct device *parent_dev)
 	if (ret < 0 || pEpping_ctx->epping_adapter == NULL) {
 		EPPING_LOG(QDF_TRACE_LEVEL_FATAL,
 			   "%s: epping_add_adaptererror error", __func__);
-		wma_wmi_stop();
 		htc_stop(pEpping_ctx->HTCHandle);
 		epping_cookie_cleanup(pEpping_ctx);
 		goto error_end;

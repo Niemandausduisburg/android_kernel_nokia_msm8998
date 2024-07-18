@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -175,9 +184,9 @@ static bool hdd_is_world_regdomain(uint32_t reg_domain)
  * hdd_update_regulatory_info() - update regulatory info
  * @hdd_ctx: hdd context
  *
- * Return: Error Code
+ * Return: void
  */
-static int hdd_update_regulatory_info(hdd_context_t *hdd_ctx)
+static void hdd_update_regulatory_info(hdd_context_t *hdd_ctx)
 {
 	uint32_t country_code;
 
@@ -186,7 +195,8 @@ static int hdd_update_regulatory_info(hdd_context_t *hdd_ctx)
 	hdd_ctx->reg.reg_domain = CTRY_FLAG;
 	hdd_ctx->reg.reg_domain |= country_code;
 
-	return cds_fill_some_regulatory_info(&hdd_ctx->reg);
+	cds_fill_some_regulatory_info(&hdd_ctx->reg);
+
 }
 
 /**
@@ -241,9 +251,9 @@ static void hdd_regulatory_wiphy_init(hdd_context_t *hdd_ctx,
 	 * disable 2.4 Ghz channels that dont have 20 mhz bw
 	 */
 	for (chan_num = 0;
-	     chan_num < wiphy->bands[HDD_NL80211_BAND_2GHZ]->n_channels;
+	     chan_num < wiphy->bands[NL80211_BAND_2GHZ]->n_channels;
 	     chan_num++) {
-		chan = &(wiphy->bands[HDD_NL80211_BAND_2GHZ]->channels[chan_num]);
+		chan = &(wiphy->bands[NL80211_BAND_2GHZ]->channels[chan_num]);
 		if (chan->flags & IEEE80211_CHAN_NO_20MHZ)
 			chan->flags |= IEEE80211_CHAN_DISABLED;
 	}
@@ -328,19 +338,19 @@ static void hdd_modify_wiphy(struct wiphy  *wiphy,
 			chan->flags &= ~IEEE80211_CHAN_DISABLED;
 
 			if (!(reg_rule->flags & NL80211_RRF_DFS)) {
-				hdd_debug("Remove dfs restriction for %u",
+				hdd_info("Remove dfs restriction for %u",
 					chan->center_freq);
 				chan->flags &= ~IEEE80211_CHAN_RADAR;
 			}
 
 			if (!(reg_rule->flags & NL80211_RRF_PASSIVE_SCAN)) {
-				hdd_debug("Remove passive restriction for %u",
+				hdd_info("Remove passive restriction for %u",
 					chan->center_freq);
 				chan->flags &= ~IEEE80211_CHAN_PASSIVE_SCAN;
 			}
 
 			if (!(reg_rule->flags & NL80211_RRF_NO_IBSS)) {
-				hdd_debug("Remove no ibss restriction for %u",
+				hdd_info("Remove no ibss restriction for %u",
 					chan->center_freq);
 				chan->flags &= ~IEEE80211_CHAN_NO_IBSS;
 			}
@@ -349,103 +359,6 @@ static void hdd_modify_wiphy(struct wiphy  *wiphy,
 				MBM_TO_DBM(reg_rule->power_rule.max_eirp);
 		}
 	}
-}
-
-/**
- * hdd_modify_indoor_channel_state_flags() - modify wiphy flags and cds state
- * @wiphy_chan: wiphy channel number
- * @cds_chan: cds channel structure
- * @disable: Disable/enable the flags
- *
- * Modify wiphy flags and cds state if channel is indoor.
- *
- * Return: void
- */
-void hdd_modify_indoor_channel_state_flags(
-	hdd_context_t *hdd_ctx,
-	struct ieee80211_channel *wiphy_chan,
-	struct regulatory_channel *cds_chan,
-	enum channel_enum chan_enum, int chan_num, bool disable)
-{
-	bool indoor_support = hdd_ctx->config->indoor_channel_support;
-
-	/* Mark indoor channel to disable in wiphy and cds */
-	if (disable) {
-		if (wiphy_chan->flags & IEEE80211_CHAN_INDOOR_ONLY) {
-			wiphy_chan->flags |=
-				IEEE80211_CHAN_DISABLED;
-			hdd_info("Mark indoor channel %d as disable",
-				chan_mapping[chan_enum-1].chan_num);
-			cds_chan->state =
-				CHANNEL_STATE_DISABLE;
-		}
-	} else {
-		if (wiphy_chan->flags & IEEE80211_CHAN_INDOOR_ONLY) {
-			wiphy_chan->flags &=
-					~IEEE80211_CHAN_DISABLED;
-			/*
-			  * Indoor channels may be marked as dfs / enable
-			  * during regulatory processing
-			  */
-			if ((wiphy_chan->flags &
-				(IEEE80211_CHAN_RADAR |
-				IEEE80211_CHAN_PASSIVE_SCAN)) ||
-			     ((indoor_support == false) &&
-				(wiphy_chan->flags &
-				IEEE80211_CHAN_INDOOR_ONLY)))
-				cds_chan->state =
-					CHANNEL_STATE_DFS;
-			else
-				cds_chan->state =
-					CHANNEL_STATE_ENABLE;
-			hdd_info("Mark indoor channel %d as cds_chan state %d",
-				chan_mapping[chan_enum-1].chan_num,
-				cds_chan->state);
-		}
-	}
-
-}
-
-void hdd_update_indoor_channel(hdd_context_t *hdd_ctx,
-					bool disable)
-{
-	int band_num;
-	int chan_num;
-	enum channel_enum chan_enum = CHAN_ENUM_1;
-	struct ieee80211_channel *wiphy_chan, *wiphy_chan_144 = NULL;
-	struct regulatory_channel *cds_chan;
-	uint8_t band_capability;
-	struct wiphy *wiphy = hdd_ctx->wiphy;
-
-	ENTER();
-	hdd_info("disable: %d", disable);
-
-	band_capability = hdd_ctx->curr_band;
-	for (band_num = 0; band_num < HDD_NUM_NL80211_BANDS; band_num++) {
-
-		if (wiphy->bands[band_num] == NULL)
-			continue;
-
-		for (chan_num = 0;
-		     chan_num < wiphy->bands[band_num]->n_channels &&
-		     chan_enum < NUM_CHANNELS;
-		     chan_num++) {
-
-			wiphy_chan =
-				&(wiphy->bands[band_num]->channels[chan_num]);
-			cds_chan = &(reg_channels[chan_enum]);
-			if (chan_enum == CHAN_ENUM_144)
-				wiphy_chan_144 = wiphy_chan;
-
-			chan_enum++;
-			hdd_modify_indoor_channel_state_flags(hdd_ctx,
-				wiphy_chan, cds_chan,
-				chan_enum, chan_num, disable);
-			cds_chan->flags = wiphy_chan->flags;
-		}
-	}
-	EXIT();
-
 }
 
 /**
@@ -481,17 +394,6 @@ static void hdd_process_regulatory_data(hdd_context_t *hdd_ctx,
 
 			wiphy_chan =
 				&(wiphy->bands[band_num]->channels[chan_num]);
-
-			while ((wiphy_chan->center_freq !=
-					chan_mapping[chan_enum].center_freq) &&
-					(chan_enum < NUM_CHANNELS))
-				chan_enum++;
-			if (NUM_CHANNELS == chan_enum) {
-				hdd_alert("wiphy channel freq %d not found",
-						wiphy_chan->center_freq);
-				break;
-			}
-
 			cds_chan = &(reg_channels[chan_enum]);
 			if (CHAN_ENUM_144 == chan_enum)
 				wiphy_chan_144 = wiphy_chan;
@@ -519,18 +421,6 @@ static void hdd_process_regulatory_data(hdd_context_t *hdd_ctx,
 				cds_chan->state = CHANNEL_STATE_DFS;
 			} else {
 				cds_chan->state = CHANNEL_STATE_ENABLE;
-			}
-
-			/* This check is to mark SRD as passive if ini is 0 */
-			if (!hdd_ctx->config->etsi_srd_chan_in_master_mode &&
-			    cds_is_etsi13_regdmn_srd_chan(
-						    wiphy_chan->center_freq)) {
-				hdd_debug("freq %d is SRD, marked as passive",
-					  wiphy_chan->center_freq);
-				wiphy_chan->flags |=
-						IEEE80211_CHAN_PASSIVE_SCAN;
-				cds_chan->flags = wiphy_chan->flags;
-				cds_chan->state = CHANNEL_STATE_DFS;
 			}
 			cds_chan->pwr_limit = wiphy_chan->max_power;
 			cds_chan->flags = wiphy_chan->flags;
@@ -612,12 +502,7 @@ int hdd_regulatory_init(hdd_context_t *hdd_ctx, struct wiphy *wiphy)
 
 	hdd_process_regulatory_data(hdd_ctx, wiphy, true);
 
-	if (hdd_is_world_regdomain(reg_info->reg_domain))
-		reg_info->cc_src = SOURCE_CORE;
-	else
-		reg_info->cc_src = SOURCE_DRIVER;
-
-	sme_set_cc_src(hdd_ctx->hHal, reg_info->cc_src);
+	reg_info->cc_src = SOURCE_DRIVER;
 
 	cds_put_default_country(reg_info->alpha2);
 
@@ -713,22 +598,6 @@ static void hdd_restore_reg_flags(struct wiphy *wiphy, uint32_t flags)
 }
 #endif
 
-int hdd_apply_cached_country_info(hdd_context_t *hdd_ctx)
-{
-	int ret_val = 0;
-
-	ret_val = hdd_update_regulatory_info(hdd_ctx);
-	if (ret_val)
-		return ret_val;
-
-	cds_fill_and_send_ctl_to_fw(&hdd_ctx->reg);
-
-	hdd_process_regulatory_data(hdd_ctx, hdd_ctx->wiphy,
-				    hdd_ctx->reg.reset);
-
-	sme_set_cc_src(hdd_ctx->hHal, hdd_ctx->reg.cc_src);
-	return ret_val;
-}
 
 /**
  * hdd_reg_notifier() - regulatory notifier
@@ -743,9 +612,8 @@ void hdd_reg_notifier(struct wiphy *wiphy,
 	hdd_context_t *hdd_ctx = wiphy_priv(wiphy);
 	bool reset = false;
 	enum dfs_region dfs_reg;
-	int32_t ret_val;
 
-	hdd_debug("country: %c%c, initiator %d, dfs_region: %d",
+	hdd_info("country: %c%c, initiator %d, dfs_region: %d",
 		  request->alpha2[0],
 		  request->alpha2[1],
 		  request->initiator,
@@ -756,10 +624,14 @@ void hdd_reg_notifier(struct wiphy *wiphy,
 		return;
 	}
 
-	if (cds_is_driver_unloading() || cds_is_driver_recovering() ||
-	    cds_is_driver_in_bad_state()) {
+	if (cds_is_driver_unloading() || cds_is_driver_recovering()) {
 		hdd_err("%s: unloading or ssr in progress, ignore",
 			__func__);
+		return;
+	}
+
+	if (hdd_ctx->driver_status == DRIVER_MODULES_CLOSED) {
+		hdd_err("Driver module is closed; dropping request");
 		return;
 	}
 
@@ -770,11 +642,11 @@ void hdd_reg_notifier(struct wiphy *wiphy,
 
 	if (('K' == request->alpha2[0]) &&
 	    ('R' == request->alpha2[1]))
-		request->dfs_region = (enum nl80211_dfs_regions) DFS_KR_REGION;
+		request->dfs_region = DFS_KR_REGION;
 
 	if (('C' == request->alpha2[0]) &&
 	    ('N' == request->alpha2[1]))
-		request->dfs_region = (enum nl80211_dfs_regions) DFS_CN_REGION;
+		request->dfs_region = DFS_CN_REGION;
 
 	/* first check if this callback is in response to the driver callback */
 
@@ -811,16 +683,17 @@ void hdd_reg_notifier(struct wiphy *wiphy,
 		}
 
 		if (NL80211_REGDOM_SET_BY_CORE == request->initiator) {
-			hdd_ctx->reg.cc_src = SOURCE_CORE;
 			pld_set_cc_source(hdd_ctx->parent_dev,
 						PLD_SOURCE_CORE);
+			hdd_ctx->reg.cc_src = SOURCE_CORE;
 			if (is_wiphy_custom_regulatory(wiphy))
 				reset = true;
 		} else if (NL80211_REGDOM_SET_BY_DRIVER == request->initiator) {
 			hdd_ctx->reg.cc_src = SOURCE_DRIVER;
+			sme_set_cc_src(hdd_ctx->hHal, SOURCE_DRIVER);
 		} else {
 			if (pld_get_cc_source(hdd_ctx->parent_dev)
-							== PLD_SOURCE_11D)
+						== PLD_SOURCE_11D)
 				hdd_ctx->reg.cc_src = SOURCE_11D;
 			else
 				hdd_ctx->reg.cc_src = SOURCE_USERSPACE;
@@ -831,25 +704,17 @@ void hdd_reg_notifier(struct wiphy *wiphy,
 
 		hdd_ctx->reg.alpha2[0] = request->alpha2[0];
 		hdd_ctx->reg.alpha2[1] = request->alpha2[1];
-		hdd_ctx->reg.reset = reset;
 
-		hdd_set_dfs_region(hdd_ctx,
-				   (enum dfs_region) request->dfs_region);
+		hdd_update_regulatory_info(hdd_ctx);
 
+		hdd_process_regulatory_data(hdd_ctx, wiphy, reset);
 
-		if (hdd_ctx->driver_status == DRIVER_MODULES_CLOSED) {
-			hdd_debug("Driver module is closed, apply it later");
-			return;
-		}
-
-		ret_val = hdd_apply_cached_country_info(hdd_ctx);
-
-		if (ret_val) {
-			hdd_err("invalid reg info, do not process");
-			return;
-		}
 		sme_generic_change_country_code(hdd_ctx->hHal,
 						hdd_ctx->reg.alpha2);
+
+		cds_fill_and_send_ctl_to_fw(&hdd_ctx->reg);
+
+		hdd_set_dfs_region(hdd_ctx, request->dfs_region);
 
 		cds_get_dfs_region(&dfs_reg);
 		cds_set_wma_dfs_region(dfs_reg);

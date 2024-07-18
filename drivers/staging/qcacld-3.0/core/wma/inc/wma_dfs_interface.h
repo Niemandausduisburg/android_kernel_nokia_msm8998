@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #include "ath_dfs_structs.h"
@@ -104,7 +113,6 @@
 
 #define WMA_DFS2_PHYERROR_CODE    0x5
 #define WMA_DFS2_FALSE_RADAR_EXT  0x24
-#define WMA_SPECTRAL_SCAN_ERROR   0x26
 
 /**
  * struct dfs_ieee80211_channel - channel info
@@ -180,11 +188,11 @@ struct ieee80211_dfs_state {
  * @DFS_HWBD_QCA6174: Rome(AR6320)
  * @DFS_HWBD_QCA2582: Killer 1525
  */
-enum DFS_HWBD_ID {
+typedef enum {
 	DFS_HWBD_NONE = 0,
 	DFS_HWBD_QCA6174 = 1,
 	DFS_HWBD_QCA2582 = 2,
-};
+} DFS_HWBD_ID;
 
 
 /**
@@ -199,7 +207,7 @@ enum DFS_HWBD_ID {
  * @last_radar_found_chan: last radar found channel
  * @dfs_pri_multiplier: dfs multiplier
  */
-struct ieee80211com {
+typedef struct ieee80211com {
 	void (*ic_start_csa)(struct ieee80211com *ic, uint8_t ieeeChan);
 	void (*ic_get_ext_chan_info)(struct ieee80211com *ic,
 				     struct ieee80211_channel_list *chan);
@@ -258,8 +266,8 @@ struct ieee80211com {
 	int32_t dfs_pri_multiplier;
 	qdf_spinlock_t chan_lock;
 	bool disable_phy_err_processing;
-	enum DFS_HWBD_ID dfs_hw_bd_id;
-};
+	DFS_HWBD_ID dfs_hw_bd_id;
+} IEEE80211COM, *PIEEE80211COM;
 
 /**
  * ieee80211_chan2freq() - Convert channel to frequency value.
@@ -272,8 +280,9 @@ static inline u_int
 ieee80211_chan2freq(struct ieee80211com *ic,
 			const struct dfs_ieee80211_channel *c)
 {
-	if (c == NULL)
+	if (c == NULL) {
 		return 0;
+	}
 	return (c == DFS_IEEE80211_CHAN_ANYC) ?
 			DFS_IEEE80211_CHAN_ANY : c->ic_freq;
 }

@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, 2014 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -22,21 +25,23 @@
  * to the Linux Foundation.
  */
 
-/**
- * @file htt_deps.h
+/*
  *
- * @details list other header files that contain the defs for data types,
- *      constants, and compiler pragmas used in the HTT header files
+ * This file sys_global.h contains the logDump utility for system module.
+ * Author:      V. K. Kandarpa
+ * Date:        01/24/2002
+ * History:-
+ * Date         Modified by    Modification Information
+ * --------------------------------------------------------------------
  */
+#ifndef __SYS_DEBUG_H__
+#define __SYS_DEBUG_H__
 
-#ifndef _HTT_DEPS_H_
-#define _HTT_DEPS_H_
+#include <stdarg.h>
+#include "utils_api.h"
+#include "sir_debug.h"
+#include "sir_params.h"
 
-#include <a_types.h>    /* A_UINT32 */
-#include <a_osapi.h>    /* PREPACK, POSTPACK */
-#ifdef ATHR_WIN_NWF
-#pragma warning(disable:4214) /* bit field types other than int */
-#endif
-#include "wlan_defs.h"
+void sys_log(tpAniSirGlobal pMac, uint32_t loglevel, const char *pString, ...);
 
-#endif /* _HTT_DEPS_H_ */
+#endif /* __SYS_DEBUG_H__ */

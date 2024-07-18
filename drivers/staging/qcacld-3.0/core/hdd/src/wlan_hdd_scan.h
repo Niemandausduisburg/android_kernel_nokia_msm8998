@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -27,26 +30,18 @@
 #define WLAN_HDD_SCAN_H
 
 #include "wlan_hdd_main.h"
-#include "csr_inside_api.h"
 
 #define MAX_PENDING_LOG 5
 
 /* (30 Mins) */
 #define MIN_TIME_REQUIRED_FOR_NEXT_BUG_REPORT (30 * 60 * 1000)
 
-/* Minimum number of channels for enabling DBS Scan */
-#define HDD_MIN_CHAN_DBS_SCAN_THRESHOLD         8
-
-/* HDD Scan inactivity timeout set to double
- * of the CSR CMD Timeout */
-#define HDD_SCAN_INACTIVITY_TIMEOUT \
-	(CSR_ACTIVE_SCAN_LIST_CMD_TIMEOUT * 2)
 /*
  * enum scan_source - scan request source
  *
  * @NL_SCAN: Scan initiated from NL
  * @VENDOR_SCAN: Scan intiated from vendor command
- */
+*/
 enum scan_source {
 	NL_SCAN,
 	VENDOR_SCAN,
@@ -83,7 +78,6 @@ int wlan_hdd_cfg80211_sched_scan_start(struct wiphy *wiphy,
 				       struct cfg80211_sched_scan_request
 				       *request);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
 /**
  * wlan_hdd_cfg80211_sched_scan_stop() - stop cfg80211 scheduled (PNO) scan
  * @wiphy: Pointer to wiphy
@@ -98,12 +92,6 @@ int wlan_hdd_cfg80211_sched_scan_start(struct wiphy *wiphy,
  */
 int wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
 				      struct net_device *dev);
-#else
-int wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
-				      struct net_device *dev,
-				      uint64_t reqid);
-
-#endif /* KERNEL_VERSION(4, 12, 0) */
 
 /**
  * wlan_hdd_sched_scan_stop() - stop scheduled (PNO) scans
@@ -134,61 +122,12 @@ int wlan_hdd_vendor_abort_scan(
 	struct wiphy *wiphy, struct wireless_dev *wdev,
 	const void *data, int data_len);
 
-void hdd_cleanup_scan_queue(hdd_context_t *hdd_ctx, hdd_adapter_t *p_adapter);
+void hdd_cleanup_scan_queue(hdd_context_t *hdd_ctx);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)) || \
-	defined(CFG80211_ABORT_SCAN)
+    defined(CFG80211_ABORT_SCAN)
 void wlan_hdd_cfg80211_abort_scan(struct wiphy *wiphy,
 				  struct wireless_dev *wdev);
 #endif
-
-/**
- * wlan_hdd_fill_whitelist_ie_attrs - fill the white list members
- * @ie_whitelist: enables whitelist
- * @probe_req_ie_bitmap: bitmap to be filled
- * @num_vendor_oui: pointer to no of ouis
- * @voui: pointer to ouis to be filled
- * @hdd_ctx: pointer to hdd ctx
- *
- * This function fills the ie bitmap and vendor oui fields with the
- * corresponding values present in config and hdd_ctx
- *
- * Return: None
- */
-void wlan_hdd_fill_whitelist_ie_attrs(bool *ie_whitelist,
-				      uint32_t *probe_req_ie_bitmap,
-				      uint32_t *num_vendor_oui,
-				      uint32_t *voui,
-				      hdd_context_t *hdd_ctx);
-
-/**
- * hdd_init_scan_reject_params() - init scan reject params
- * @hdd_ctx: hdd contxt
- *
- * Return: None
- */
-void hdd_init_scan_reject_params(hdd_context_t *hdd_ctx);
-
-/**
- * hdd_reset_scan_reject_params() - reset scan reject params per roam stats
- * @hdd_ctx: hdd contxt
- * @roam_status: roam status
- * @roam_result: roam result
- *
- * Return: None
- */
-void hdd_reset_scan_reject_params(hdd_context_t *hdd_ctx,
-				  eRoamCmdStatus roam_status,
-				  eCsrRoamResult roam_result);
-
-/**
- * wlan_hdd_cfg80211_scan_block_cb() - scan block work handler
- * @work: Pointer to work
- *
- * This function is used to do scan block work handler
- *
- * Return: none
- */
-void wlan_hdd_cfg80211_scan_block_cb(struct work_struct *work);
-
 #endif /* end #if !defined(WLAN_HDD_SCAN_H) */
+

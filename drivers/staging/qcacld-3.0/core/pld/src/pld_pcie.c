@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #include <linux/platform_device.h>
@@ -192,7 +201,7 @@ static void pld_pcie_uevent(struct pci_dev *pdev, uint32_t status)
 
 	data.uevent = status;
 
-	if (pld_context->ops->uevent)
+	if (!pld_context->ops->uevent)
 		pld_context->ops->uevent(&pdev->dev, &data);
 
 	return;
@@ -288,12 +297,6 @@ static struct pci_device_id pld_pcie_id_table[] = {
 	{ 0 }
 };
 
-#ifdef MULTI_IF_NAME
-#define PLD_PCIE_OPS_NAME "pld_pcie_" MULTI_IF_NAME
-#else
-#define PLD_PCIE_OPS_NAME "pld_pcie"
-#endif
-
 #ifdef CONFIG_PLD_PCIE_CNSS
 #ifdef FEATURE_RUNTIME_PM
 struct cnss_wlan_runtime_ops runtime_pm_ops = {
@@ -303,7 +306,7 @@ struct cnss_wlan_runtime_ops runtime_pm_ops = {
 #endif
 
 struct cnss_wlan_driver pld_pcie_ops = {
-	.name       = PLD_PCIE_OPS_NAME,
+	.name       = "pld_pcie",
 	.id_table   = pld_pcie_id_table,
 	.probe      = pld_pcie_probe,
 	.remove     = pld_pcie_remove,
@@ -342,7 +345,7 @@ void pld_pcie_unregister_driver(void)
 }
 #else
 struct pci_driver pld_pcie_ops = {
-	.name       = PLD_PCIE_OPS_NAME,
+	.name       = "pld_pcie",
 	.id_table   = pld_pcie_id_table,
 	.probe      = pld_pcie_probe,
 	.remove     = pld_pcie_remove,
@@ -372,7 +375,6 @@ void pld_pcie_unregister_driver(void)
 int pld_pcie_get_ce_id(int irq)
 {
 	int ce_id = irq - 100;
-
 	if (ce_id < CE_COUNT_MAX && ce_id >= 0)
 		return ce_id;
 

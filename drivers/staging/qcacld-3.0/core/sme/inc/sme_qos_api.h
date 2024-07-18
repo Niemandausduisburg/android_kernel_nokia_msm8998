@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #if !defined(__SME_QOSAPI_H)
@@ -42,8 +51,6 @@
 #define SME_QOS_UAPSD_VI      0x02
 #define SME_QOS_UAPSD_BE      0x08
 #define SME_QOS_UAPSD_BK      0x04
-#define WLAN_MAX_DSCP 0x3f
-
 
 /*---------------------------------------------------------------------------
   Enumeration of the various QoS status types that would be reported to HDD
@@ -159,6 +166,19 @@ typedef enum {
 } sme_QosWmmUpType;
 
 /*---------------------------------------------------------------------------
+  Enumeration of the various TSPEC directions
+
+  From 802.11e/WMM specifications
+  ---------------------------------------------------------------------------*/
+
+typedef enum {
+	SME_QOS_WMM_TS_DIR_UPLINK = 0,
+	SME_QOS_WMM_TS_DIR_DOWNLINK = 1,
+	SME_QOS_WMM_TS_DIR_RESV = 2,    /* Reserved */
+	SME_QOS_WMM_TS_DIR_BOTH = 3,
+} sme_QosWmmDirType;
+
+/*---------------------------------------------------------------------------
   Enumeration of the various TSPEC ack policies.
 
   From 802.11 WMM specification
@@ -182,7 +202,7 @@ typedef struct {
 	sme_QosWmmAckPolicyType ack_policy;
 	sme_QosWmmUpType up;    /* User priority */
 	uint8_t psb;            /* power-save bit */
-	sme_qos_wmm_dir_type direction;    /* Direction */
+	sme_QosWmmDirType direction;    /* Direction */
 	uint8_t tid;            /* TID : To be filled up by SME-QoS */
 } sme_QosWmmTsInfoType;
 

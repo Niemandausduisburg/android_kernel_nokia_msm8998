@@ -1,5 +1,8 @@
 * Copyright (c) 2014-2015 The Linux Foundation. All rights reserved.
 *
+* Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+*
+*
 * Permission to use, copy, modify, and/or distribute this software for
 * any purpose with or without fee is hereby granted, provided that the
 * above copyright notice and this permission notice appear in all
@@ -13,6 +16,11 @@
 * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 * PERFORMANCE OF THIS SOFTWARE.
+
+* This file was originally distributed by Qualcomm Atheros, Inc.
+* under proprietary terms before Copyright ownership was assigned
+* to the Linux Foundation.
+
 *
 * This is the data definition file for the CFG module.
 * Author:         Kevin Nguyen
@@ -1392,6 +1400,18 @@ HAL
 #ENUM ON       1
 
 *
+* Default LOG level
+*
+
+WNI_CFG_LOG_LEVEL    I    4    12
+V   RW    NP
+NONE
+0   7   4
+V   RW    NP
+NONE
+0   7   4
+
+*
 * OLBC detection timeout
 *
 
@@ -2754,10 +2774,10 @@ LIM
 WNI_CFG_VHT_RX_HIGHEST_SUPPORTED_DATA_RATE  I    4    19
 V    RW    NP
 LIM
-0    866   866
+0    780   780
 V    RW    NP
 LIM
-0    866   866
+0    780   780
 
 *
 * Tx Highest supported data rate.
@@ -2765,10 +2785,10 @@ LIM
 WNI_CFG_VHT_TX_HIGHEST_SUPPORTED_DATA_RATE  I    4    19
 V    RW    NP
 LIM
-0    866    866
+0    780    780
 V    RW    NP
 LIM
-0    866    866
+0    780    780
 
 *
 * Channel center freq Seg1
@@ -3913,6 +3933,19 @@ NONE
 V    RW    NP
 NONE
 0    1    1
+
+*
+*  MCAST BCAST filter Setting
+*  0: No filter, 1: Block Mcast, 2: Block Bcast, 3: Block Mcast and Bcast
+*
+
+WNI_CFG_MCAST_BCAST_FILTER_SETTING    I    4    7
+V    RW    NP
+HAL
+0    3    0
+V    RW    NP
+HAL
+0    3    0
 
 *
 *  BTC DHCP No of Bt slots to block

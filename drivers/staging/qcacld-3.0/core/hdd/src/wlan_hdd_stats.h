@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2018,2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -54,13 +57,13 @@ struct index_vht_data_rate_type {
 };
 
 /**
- * enum - data_rate_11ac_max_mcs
+ * enum - eDataRate11ACMaxMcs
  * @DATA_RATE_11AC_MAX_MCS_7: MCS7 rate
  * @DATA_RATE_11AC_MAX_MCS_8: MCS8 rate
  * @DATA_RATE_11AC_MAX_MCS_9: MCS9 rate
  * @DATA_RATE_11AC_MAX_MCS_NA:i Not applicable
  */
-enum data_rate_11ac_max_mcs {
+enum eDataRate11ACMaxMcs{
 	DATA_RATE_11AC_MAX_MCS_7,
 	DATA_RATE_11AC_MAX_MCS_8,
 	DATA_RATE_11AC_MAX_MCS_9,
@@ -78,22 +81,6 @@ struct index_data_rate_type {
 };
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
-
-/**
- * struct hdd_ll_stats_priv - hdd link layer stats private
- * @ll_stats: head to different link layer stats received in scheduler
- *            thread context
- * @request_id: userspace-assigned link layer stats request id
- * @request_bitmap: userspace-assigned link layer stats request bitmap
- * @ll_stats_lock: Lock to serially access request_bitmap
- */
-struct hdd_ll_stats_priv {
-	qdf_list_t ll_stats_q;
-	uint32_t request_id;
-	uint32_t request_bitmap;
-	qdf_spinlock_t ll_stats_lock;
-};
-
 /*
  * Used to allocate the size of 4096 for the link layer stats.
  * The size of 4096 is considered assuming that all data per
@@ -153,58 +140,16 @@ static inline bool hdd_link_layer_stats_supported(void)
 	return true;
 }
 
-/**
- * hdd_get_interface_info() - get interface info
- * @adapter: Pointer to device adapter
- * @info: Pointer to interface info
- *
- * Return: bool
- */
-bool hdd_get_interface_info(hdd_adapter_t *adapter,
-			    tpSirWifiInterfaceInfo info);
-
-/**
- * wlan_hdd_ll_stats_get() - Get Link Layer statistics from FW
- * @adapter: Pointer to device adapter
- * @req_id: request id
- * @req_mask: bitmask used by FW for the request
- *
- * Return: 0 on success and error code otherwise
- */
-int wlan_hdd_ll_stats_get(hdd_adapter_t *adapter, uint32_t req_id,
-			  uint32_t req_mask);
-
-/**
- * __wlan_hdd_cfg80211_ll_stats_ext_set_param - config monitor parameters
- * @wiphy: wiphy handle
- * @wdev: wdev handle
- * @data: user layer input
- * @data_len: length of user layer input
- *
- * return: 0 success, einval failure
- */
-int wlan_hdd_cfg80211_ll_stats_ext_set_param(struct wiphy *wiphy,
-					     struct wireless_dev *wdev,
-					     const void *data,
-					     int data_len);
 #else
 
 static inline void hdd_init_ll_stats_ctx(void)
 {
+	return;
 }
 
 static inline bool hdd_link_layer_stats_supported(void)
 {
 	return false;
-}
-
-static inline int
-wlan_hdd_cfg80211_ll_stats_ext_set_param(struct wiphy *wiphy,
-					 struct wireless_dev *wdev,
-					 const void *data,
-					 int data_len)
-{
-	return -EINVAL;
 }
 
 #endif /* End of WLAN_FEATURE_LINK_LAYER_STATS */
@@ -274,18 +219,8 @@ void hdd_clear_hif_stats(void);
 void wlan_hdd_cfg80211_stats_ext_callback(void *ctx,
 					  tStatsExtEvent *msg);
 
-/**
- * wlan_hdd_cfg80211_stats_ext2_callback - stats_ext2_callback
- * @ctx: hdd context
- * @pmsg: stats_ext2_event
- *
- * Return: void
- */
-void wlan_hdd_cfg80211_stats_ext2_callback(void *ctx,
-	struct stats_ext2_event *pmsg);
-
-void wlan_hdd_cfg80211_link_layer_stats_callback(void *ctx, int indType,
-						 void *pRsp, void *context);
+void wlan_hdd_cfg80211_link_layer_stats_callback(void *ctx,
+						 int indType, void *pRsp);
 
 /**
  * wlan_hdd_get_rcpi() - Wrapper to get current RCPI
@@ -303,19 +238,5 @@ int wlan_hdd_get_rcpi(hdd_adapter_t *adapter, uint8_t *mac,
 		      int32_t *rcpi_value,
 		      enum rcpi_measurement_type measurement_type);
 
-/**
- * wlan_hdd_cfg80211_link_layer_stats_ext_callback() - Callback for LL ext
- * @ctx: HDD context
- * @rsp: msg from FW
- *
- * This function is an extension of
- * wlan_hdd_cfg80211_link_layer_stats_callback. It converts
- * monitoring parameters offloaded to NL data and send the same to the
- * kernel/upper layers.
- *
- * Return: None.
- */
-void wlan_hdd_cfg80211_link_layer_stats_ext_callback(tHddHandle ctx,
-						     tSirLLStatsResults *rsp);
 #endif /* end #if !defined(WLAN_HDD_STATS_H) */
 

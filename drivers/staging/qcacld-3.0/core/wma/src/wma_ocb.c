@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -76,9 +85,9 @@ int wma_ocb_set_config_resp(tp_wma_handle wma_handle, uint8_t status)
 		/* Default TX parameter */
 		if (!ol_txrx_set_ocb_def_tx_param(vdev,
 				req->def_tx_param, req->def_tx_param_size)) {
-			/* Setting the default param failed */
-			WMA_LOGE(FL("Invalid default TX parameters"));
-			status = QDF_STATUS_E_INVAL;
+				/* Setting the default param failed */
+				WMA_LOGE(FL("Invalid default TX parameters"));
+				status = QDF_STATUS_E_INVAL;
 		}
 		ol_txrx_set_ocb_chan_info(vdev, ocb_set_chan);
 	}
@@ -247,8 +256,7 @@ int wma_ocb_set_config(tp_wma_handle wma_handle, struct sir_ocb_config *config)
 	tconfig.schedule = (struct ocb_config_sched *)config->schedule;
 	tconfig.dcc_ndl_chan_list_len = config->dcc_ndl_chan_list_len;
 	tconfig.dcc_ndl_chan_list = config->dcc_ndl_chan_list;
-	tconfig.dcc_ndl_active_state_list_len =
-				config->dcc_ndl_active_state_list_len;
+	tconfig.dcc_ndl_active_state_list_len = config->dcc_ndl_active_state_list_len;
 	tconfig.dcc_ndl_active_state_list = config->dcc_ndl_active_state_list;
 	ch_mhz = qdf_mem_malloc(sizeof(uint32_t)*config->channel_count);
 	if (ch_mhz == NULL) {
@@ -298,7 +306,6 @@ int wma_ocb_set_config_event_handler(void *handle, uint8_t *event_buf,
 {
 	WMI_OCB_SET_CONFIG_RESP_EVENTID_param_tlvs *param_tlvs;
 	wmi_ocb_set_config_resp_event_fixed_param *fix_param;
-
 	param_tlvs = (WMI_OCB_SET_CONFIG_RESP_EVENTID_param_tlvs *)event_buf;
 	fix_param = param_tlvs->fixed_param;
 	return wma_ocb_set_config_resp(handle, fix_param->status);
@@ -318,8 +325,7 @@ int wma_ocb_set_utc_time(tp_wma_handle wma_handle, struct sir_ocb_utc *utc)
 
 	cmd.vdev_id = utc->vdev_id;
 	qdf_mem_copy(&cmd.utc_time, &utc->utc_time, WMI_SIZE_UTC_TIME);
-	qdf_mem_copy(&cmd.time_error, &utc->time_error,
-				 WMI_SIZE_UTC_TIME_ERROR);
+	qdf_mem_copy(&cmd.time_error, &utc->time_error, WMI_SIZE_UTC_TIME_ERROR);
 	ret = wmi_unified_ocb_set_utc_time_cmd(wma_handle->wmi_handle, &cmd);
 	if (ret != EOK) {
 		WMA_LOGE(FL("Failed to set OCB UTC time"));
@@ -401,8 +407,7 @@ int wma_ocb_get_tsf_timer(tp_wma_handle wma_handle,
 	QDF_STATUS ret;
 
 	/* Send the WMI command */
-	ret = wmi_unified_ocb_get_tsf_timer(wma_handle->wmi_handle,
-					request->vdev_id);
+	ret = wmi_unified_ocb_get_tsf_timer(wma_handle->wmi_handle, request->vdev_id);
 	/* If there is an error, set the completion event */
 	if (ret != EOK) {
 		WMA_LOGE(FL("Failed to send WMI message: %d"), ret);
@@ -419,9 +424,8 @@ int wma_ocb_get_tsf_timer(tp_wma_handle wma_handle,
  *
  * Return: 0 on success
  */
-static int wma_ocb_get_tsf_timer_resp_event_handler(void *handle,
-						    uint8_t *event_buf,
-						    uint32_t len)
+int wma_ocb_get_tsf_timer_resp_event_handler(void *handle, uint8_t *event_buf,
+					     uint32_t len)
 {
 	QDF_STATUS qdf_status;
 	struct sir_ocb_get_tsf_timer_response *response;
@@ -490,9 +494,8 @@ int wma_dcc_get_stats(tp_wma_handle wma_handle,
  *
  * Return: 0 on success
  */
-static int wma_dcc_get_stats_resp_event_handler(void *handle,
-						uint8_t *event_buf,
-						uint32_t len)
+int wma_dcc_get_stats_resp_event_handler(void *handle, uint8_t *event_buf,
+				uint32_t len)
 {
 	QDF_STATUS qdf_status;
 	struct sir_dcc_get_stats_response *response;
@@ -598,9 +601,8 @@ int wma_dcc_update_ndl(tp_wma_handle wma_handle,
  *
  * Return: 0 on success
  */
-static int wma_dcc_update_ndl_resp_event_handler(void *handle,
-						 uint8_t *event_buf,
-						 uint32_t len)
+int wma_dcc_update_ndl_resp_event_handler(void *handle, uint8_t *event_buf,
+					  uint32_t len)
 {
 	QDF_STATUS qdf_status;
 	struct sir_dcc_update_ndl_response *resp;
@@ -640,7 +642,7 @@ static int wma_dcc_update_ndl_resp_event_handler(void *handle,
  *
  * Return: 0 on success
  */
-static int wma_dcc_stats_event_handler(void *handle, uint8_t *event_buf,
+int wma_dcc_stats_event_handler(void *handle, uint8_t *event_buf,
 				uint32_t len)
 {
 	QDF_STATUS qdf_status;

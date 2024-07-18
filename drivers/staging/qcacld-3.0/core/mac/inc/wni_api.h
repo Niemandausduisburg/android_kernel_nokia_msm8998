@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -72,6 +81,7 @@ enum eWniMsgTypes {
 	eWNI_SME_SWITCH_CHL_IND,
 	eWNI_SME_STOP_BSS_REQ,
 	eWNI_SME_STOP_BSS_RSP,
+	eWNI_SME_NEIGHBOR_BSS_IND,
 	eWNI_SME_DEAUTH_CNF,
 	eWNI_SME_MIC_FAILURE_IND,
 	eWNI_SME_ADDTS_REQ,
@@ -184,7 +194,6 @@ enum eWniMsgTypes {
 	/* update in beacons/probe rsp */
 	eWNI_SME_STATS_EXT_EVENT,
 	eWNI_SME_GET_PEER_INFO_IND,
-	eWNI_SME_GET_PEER_INFO_EXT_IND,
 	eWNI_SME_CSA_OFFLOAD_EVENT,
 	eWNI_SME_UPDATE_ADDITIONAL_IES, /* indicates Additional IE from hdd to PE */
 	eWNI_SME_MODIFY_ADDITIONAL_IES, /* To indicate IE modify from hdd to PE */
@@ -196,7 +205,6 @@ enum eWniMsgTypes {
 #endif
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 	eWNI_SME_HO_FAIL_IND,   /* Hand Off Failure Ind from WMA to SME */
-	eWNI_SME_SAME_AP_REASSOC_IND, /* Self reassociation using LFR3 */
 #endif
 #ifdef WLAN_FEATURE_NAN
 	eWNI_SME_NAN_EVENT,
@@ -237,12 +245,10 @@ enum eWniMsgTypes {
 	eWNI_SME_MON_INIT_SESSION,
 	eWNI_SME_PDEV_SET_HT_VHT_IE,
 	eWNI_SME_SET_VDEV_IES_PER_BAND,
-	eWNI_SME_ROAM_INVOKE,
 	eWNI_SME_NDP_INITIATOR_REQ,
 	eWNI_SME_NDP_INITIATOR_RSP,
 	eWNI_SME_NDP_NEW_PEER_IND,
 	eWNI_SME_NDP_CONFIRM_IND,
-	eWNI_SME_NDP_SCH_UPDATE_IND,
 	eWNI_SME_NDP_INDICATION,
 	eWNI_SME_NDP_RESPONDER_REQ,
 	eWNI_SME_NDP_RESPONDER_RSP,
@@ -256,17 +262,9 @@ enum eWniMsgTypes {
 	eWNI_SME_DEFAULT_SCAN_IE,
 	eWNI_SME_ROAM_SCAN_OFFLOAD_REQ,
 	eWNI_SME_LOST_LINK_INFO_IND,
-	eWNI_SME_FORCE_DISCONNECT,
 	eWNI_SME_RSO_CMD_STATUS_IND,
-	eWMI_SME_LL_STATS_IND,
 	eWNI_SME_DEL_ALL_TDLS_PEERS,
-	eWNI_SME_BT_ACTIVITY_INFO_IND,
-	eWNI_SME_RX_AGGR_HOLE_IND,
-	eWNI_SME_TDLS_NOTIFY_SET_STATE_DISABLE,
 	eWNI_SME_UPDATE_CONFIG,
-	eWNI_SME_TRIGGER_SAE,
-	eWNI_SME_SEND_MGMT_FRAME_TX,
-	eWNI_SME_SEND_SAE_MSG,
 	eWNI_SME_MSG_TYPES_END
 };
 

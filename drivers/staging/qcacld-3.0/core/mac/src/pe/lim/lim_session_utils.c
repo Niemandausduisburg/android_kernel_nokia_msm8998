@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /**=========================================================================
 
    \file  lim_session_utils.c
@@ -27,6 +36,7 @@
    Include Files
    ------------------------------------------------------------------------*/
 #include "ani_global.h"
+#include "lim_debug.h"
 #include "lim_ft_defs.h"
 #include "lim_session.h"
 #include "lim_session_utils.h"
@@ -45,7 +55,7 @@ uint8_t is_lim_session_off_channel(tpAniSirGlobal mac_ctx, uint8_t session_id)
 	uint8_t i;
 
 	if (session_id >= mac_ctx->lim.maxBssId) {
-		pe_warn("Invalid session_id: %d", session_id);
+		lim_log(mac_ctx, LOGE, FL("Invalid session_id:%d"), session_id);
 		return false;
 	}
 
@@ -106,8 +116,6 @@ uint8_t lim_is_in_mcc(tpAniSirGlobal mac_ctx)
 		if ((mac_ctx->lim.gpSession[i].valid)) {
 			curr_oper_channel =
 				mac_ctx->lim.gpSession[i].currentOperChannel;
-			if (curr_oper_channel == 0)
-				continue;
 			if (chan == 0)
 				chan = curr_oper_channel;
 			else if (chan != curr_oper_channel)
@@ -127,7 +135,6 @@ uint8_t pe_get_current_stas_count(tpAniSirGlobal mac_ctx)
 {
 	uint8_t i;
 	uint8_t stacount = 0;
-
 	for (i = 0; i < mac_ctx->lim.maxBssId; i++)
 		if (mac_ctx->lim.gpSession[i].valid == true)
 			stacount +=

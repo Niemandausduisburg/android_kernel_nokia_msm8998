@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -16,6 +19,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
 #ifndef __COPY_ENGINE_INTERNAL_H__
 #define __COPY_ENGINE_INTERNAL_H__
 
@@ -88,7 +96,7 @@ struct CE_ring_state {
 	unsigned int low_water_mark_nentries;
 	unsigned int high_water_mark_nentries;
 	void **per_transfer_context;
-	OS_DMA_MEM_CONTEXT(ce_dmacontext); /* OS Specific DMA context */
+	OS_DMA_MEM_CONTEXT(ce_dmacontext) /* OS Specific DMA context */
 };
 
 /* Copy Engine internal state */
@@ -126,15 +134,14 @@ struct CE_state {
 	atomic_t rx_pending;
 
 	qdf_spinlock_t ce_index_lock;
-	/* Flag to indicate whether to break out the DPC context */
-	bool force_break;
+	bool force_break;	/* Flag to indicate whether to
+				 * break out the DPC context */
 
 	/* time in nanoseconds to yield control of napi poll */
 	unsigned long long ce_service_yield_time;
-	/* CE service start time in nanoseconds */
-	unsigned long long ce_service_start_time;
-	/* Num Of Receive Buffers handled for one interrupt DPC routine */
-	unsigned int receive_count;
+	unsigned int receive_count;	/* count Num Of Receive Buffers
+					 * handled for one interrupt
+					 * DPC routine */
 	/* epping */
 	bool timer_inited;
 	qdf_timer_t poll_timer;
@@ -388,8 +395,7 @@ struct ce_sendlist_s {
 			unsigned int ndesc;     /* Rx descriptor list */
 		} u;
 		/* flags: externally-specified flags;
-		 * OR-ed with internal flags
-		 */
+		 * OR-ed with internal flags */
 		uint32_t flags;
 		uint32_t user_flags;
 	} item[CE_SENDLIST_ITEMS_MAX];

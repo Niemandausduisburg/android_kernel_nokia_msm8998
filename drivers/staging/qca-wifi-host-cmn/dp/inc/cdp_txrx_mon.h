@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,7 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+ /**
  * @file cdp_txrx_mon.h
  * @brief Define the monitor mode API functions
  * called by the host control SW and the OS interface module
@@ -24,12 +32,9 @@
 
 #ifndef _CDP_TXRX_MON_H_
 #define _CDP_TXRX_MON_H_
-void ol_txrx_monitor_set_filter_ucast_data(ol_txrx_pdev_handle pdev,
-					   u_int8_t val);
-void ol_txrx_monitor_set_filter_mcast_data(ol_txrx_pdev_handle pdev,
-					   u_int8_t val);
-void ol_txrx_monitor_set_filter_non_data(ol_txrx_pdev_handle pdev,
-					 u_int8_t val);
+void ol_txrx_monitor_set_filter_ucast_data(ol_txrx_pdev_handle, u_int8_t val);
+void ol_txrx_monitor_set_filter_mcast_data(ol_txrx_pdev_handle, u_int8_t val);
+void ol_txrx_monitor_set_filter_non_data(ol_txrx_pdev_handle, u_int8_t val);
 
 u_int8_t ol_txrx_monitor_get_filter_ucast_data(
 				ol_txrx_vdev_handle vdev_txrx_handle);

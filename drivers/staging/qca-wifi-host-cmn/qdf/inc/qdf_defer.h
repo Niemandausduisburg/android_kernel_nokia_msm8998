@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -52,45 +61,38 @@ typedef __qdf_bh_t       qdf_bh_t;
 
 /**
  * qdf_create_bh - creates the bottom half deferred handler
+ * @hdl: os handle
  * @bh: pointer to bottom
  * @func: deferred function to run at bottom half interrupt context.
  * @arg: argument for the deferred function
  * Return: none
  */
-static inline void
-qdf_create_bh(qdf_bh_t  *bh, qdf_defer_fn_t  func, void  *arg)
+static inline void qdf_create_bh(qdf_handle_t  hdl, qdf_bh_t  *bh,
+				 qdf_defer_fn_t  func, void  *arg)
 {
-	__qdf_init_bh(bh, func, arg);
+	__qdf_init_bh(hdl, bh, func, arg);
 }
 
 /**
  * qdf_sched - schedule a bottom half (DPC)
+ * @hdl: OS handle
  * @bh: pointer to bottom
  * Return: none
  */
-static inline void qdf_sched_bh(qdf_bh_t *bh)
+static inline void qdf_sched_bh(qdf_handle_t hdl, qdf_bh_t *bh)
 {
-	__qdf_sched_bh(bh);
+	__qdf_sched_bh(hdl, bh);
 }
 
 /**
  * qdf_destroy_bh - destroy the bh (synchronous)
+ * @hdl: OS handle
  * @bh: pointer to bottom
  * Return: none
  */
-static inline void qdf_destroy_bh(qdf_bh_t *bh)
+static inline void qdf_destroy_bh(qdf_handle_t hdl, qdf_bh_t *bh)
 {
-	__qdf_disable_bh(bh);
-}
-
-/**
- * qdf_tasklet_is_scheduled - check bh status
- * @bh: pointer to bottom
- * Return: tasklet schedule state
- */
-static inline bool qdf_tasklet_is_scheduled(struct tasklet_struct *bh)
-{
-	return __qdf_tasklet_is_scheduled(bh);
+	__qdf_disable_bh(hdl, bh);
 }
 
 /*********************Non-Interrupt Context deferred Execution***************/
@@ -102,28 +104,28 @@ static inline bool qdf_tasklet_is_scheduled(struct tasklet_struct *bh)
  * @work: pointer to work
  * @func: deferred function to run at bottom half non-interrupt context.
  * @arg: argument for the deferred function
- *
- * Return: QDF_STATUS
+ * Return: none
  */
-static inline QDF_STATUS qdf_create_work(qdf_handle_t hdl, qdf_work_t  *work,
+static inline void qdf_create_work(qdf_handle_t hdl, qdf_work_t  *work,
 				   qdf_defer_fn_t  func, void  *arg)
 {
-	return __qdf_init_work(work, func, arg);
+	__qdf_init_work(hdl, work, func, arg);
 }
 
 /**
  * qdf_create_delayed_work - create a delayed work/task, This runs in
  * non-interrupt context, so can be preempted by H/W & S/W intr
+ * @hdl: OS handle
  * @work: pointer to work
  * @func: deferred function to run at bottom half non-interrupt context.
  * @arg: argument for the deferred function
  * Return: none
  */
-static inline void qdf_create_delayed_work(qdf_delayed_work_t *work,
-					   qdf_defer_fn_t func,
-					   void *arg)
+static inline void qdf_create_delayed_work(qdf_handle_t hdl,
+					   qdf_delayed_work_t  *work,
+					   qdf_defer_fn_t  func, void  *arg)
 {
-	__qdf_init_delayed_work(work, func, arg);
+	__qdf_init_delayed_work(hdl, work, func, arg);
 }
 
 /**
@@ -138,17 +140,6 @@ static inline qdf_workqueue_t *qdf_create_workqueue(char *name)
 }
 
 /**
- * qdf_create_singlethread_workqueue() - create a single threaded workqueue
- * @name: string
- *
- * Return: pointer of type qdf_workqueue_t
- */
-static inline qdf_workqueue_t *qdf_create_singlethread_workqueue(char *name)
-{
-	return  __qdf_create_singlethread_workqueue(name);
-}
-
-/**
  * qdf_queue_work - Queue the work/task
  * @hdl: OS handle
  * @wqueue: pointer to workqueue
@@ -158,21 +149,23 @@ static inline qdf_workqueue_t *qdf_create_singlethread_workqueue(char *name)
 static inline void
 qdf_queue_work(qdf_handle_t hdl, qdf_workqueue_t *wqueue, qdf_work_t *work)
 {
-	return  __qdf_queue_work(wqueue, work);
+	return  __qdf_queue_work(hdl, wqueue, work);
 }
 
 /**
  * qdf_queue_delayed_work - Queue the delayed work/task
+ * @hdl: OS handle
  * @wqueue: pointer to workqueue
  * @work: pointer to work
- * @delay: delay interval in milliseconds
+ * @delay: delay interval
  * Return: none
  */
-static inline void qdf_queue_delayed_work(qdf_workqueue_t *wqueue,
+static inline void qdf_queue_delayed_work(qdf_handle_t hdl,
+					  qdf_workqueue_t *wqueue,
 					  qdf_delayed_work_t *work,
 					  uint32_t delay)
 {
-	return  __qdf_queue_delayed_work(wqueue, work, delay);
+	return  __qdf_queue_delayed_work(hdl, wqueue, work, delay);
 }
 
 /**
@@ -184,7 +177,7 @@ static inline void qdf_queue_delayed_work(qdf_workqueue_t *wqueue,
 static inline void qdf_flush_workqueue(qdf_handle_t hdl,
 				       qdf_workqueue_t *wqueue)
 {
-	return  __qdf_flush_workqueue(wqueue);
+	return  __qdf_flush_workqueue(hdl, wqueue);
 }
 
 /**
@@ -196,7 +189,7 @@ static inline void qdf_flush_workqueue(qdf_handle_t hdl,
 static inline void qdf_destroy_workqueue(qdf_handle_t hdl,
 					 qdf_workqueue_t *wqueue)
 {
-	return  __qdf_destroy_workqueue(wqueue);
+	return  __qdf_destroy_workqueue(hdl, wqueue);
 }
 
 /**
@@ -207,23 +200,26 @@ static inline void qdf_destroy_workqueue(qdf_handle_t hdl,
  */
 static inline void qdf_sched_work(qdf_handle_t hdl, qdf_work_t *work)
 {
-	__qdf_sched_work(work);
+	__qdf_sched_work(hdl, work);
 }
 
 /**
  * qdf_sched_delayed_work() - Schedule a delayed task
+ * @hdl: OS handle
  * @work: pointer to delayed work
- * @delay: delay interval in milliseconds
+ * @delay: delay interval
  * Return: none
  */
-static inline void
-qdf_sched_delayed_work(qdf_delayed_work_t *work, uint32_t delay)
+static inline void qdf_sched_delayed_work(qdf_handle_t hdl,
+					  qdf_delayed_work_t *work,
+					  uint32_t delay)
 {
-	__qdf_sched_delayed_work(work, delay);
+	__qdf_sched_delayed_work(hdl, work, delay);
 }
 
 /**
  * qdf_cancel_work() - Cancel a work
+ * @hdl: OS handle
  * @work: pointer to work
  *
  * Cancel work and wait for its execution to finish.
@@ -236,26 +232,30 @@ qdf_sched_delayed_work(qdf_delayed_work_t *work, uint32_t delay)
  *
  * Return: true if work was pending, false otherwise
  */
-static inline bool qdf_cancel_work(qdf_work_t *work)
+static inline bool qdf_cancel_work(qdf_handle_t hdl,
+				   qdf_work_t *work)
 {
-	return __qdf_cancel_work(work);
+	return __qdf_cancel_work(hdl, work);
 }
 
 /**
  * qdf_cancel_delayed_work() - Cancel a delayed work
+ * @hdl: OS handle
  * @work: pointer to delayed work
  *
  * This is qdf_cancel_work for delayed works.
  *
  * Return: true if work was pending, false otherwise
  */
-static inline bool qdf_cancel_delayed_work(qdf_delayed_work_t *work)
+static inline bool qdf_cancel_delayed_work(qdf_handle_t hdl,
+					   qdf_delayed_work_t *work)
 {
-	return __qdf_cancel_delayed_work(work);
+	return __qdf_cancel_delayed_work(hdl, work);
 }
 
 /**
  * qdf_flush_work - Flush a deferred task on non-interrupt context
+ * @hdl: OS handle
  * @work: pointer to work
  *
  * Wait until work has finished execution. work is guaranteed to be
@@ -263,32 +263,35 @@ static inline bool qdf_cancel_delayed_work(qdf_delayed_work_t *work)
  *
  * Return: none
  */
-static inline void qdf_flush_work(qdf_work_t *work)
+static inline void qdf_flush_work(qdf_handle_t hdl, qdf_work_t *work)
 {
-	__qdf_flush_work(work);
+	__qdf_flush_work(hdl, work);
 }
 
 /**
  * qdf_flush_delayed_work() - Flush a delayed work
+ * @hdl: OS handle
  * @work: pointer to delayed work
  *
  * This is qdf_flush_work for delayed works.
  *
  * Return: none
  */
-static inline void qdf_flush_delayed_work(qdf_delayed_work_t *work)
+static inline void qdf_flush_delayed_work(qdf_handle_t hdl,
+					  qdf_delayed_work_t *work)
 {
-	__qdf_flush_delayed_work(work);
+	__qdf_flush_delayed_work(hdl, work);
 }
 
 /**
  * qdf_disable_work - disable the deferred task (synchronous)
+ * @hdl: OS handle
  * @work: pointer to work
  * Return: unsigned int
  */
-static inline uint32_t qdf_disable_work(qdf_work_t *work)
+static inline uint32_t qdf_disable_work(qdf_handle_t hdl, qdf_work_t *work)
 {
-	return __qdf_disable_work(work);
+	return __qdf_disable_work(hdl, work);
 }
 
 /**
@@ -299,7 +302,7 @@ static inline uint32_t qdf_disable_work(qdf_work_t *work)
  */
 static inline void qdf_destroy_work(qdf_handle_t hdl, qdf_work_t *work)
 {
-	__qdf_disable_work(work);
+	__qdf_disable_work(hdl, work);
 }
 
 #endif /*_QDF_DEFER_H*/

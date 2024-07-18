@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2013-2014, 2016-2017, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,12 +19,18 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #if defined(CONFIG_ATH_PROCFS_DIAG_SUPPORT)
 #include <linux/module.h>       /* Specifically, a module */
 #include <linux/kernel.h>       /* We're doing kernel work */
 #include <linux/version.h>      /* We're doing kernel work */
 #include <linux/proc_fs.h>      /* Necessary because we use the proc fs */
-#include <linux/uaccess.h>        /* for copy_from_user */
+#include <asm/uaccess.h>        /* for copy_from_user */
 #include "hif.h"
 #include "hif_main.h"
 #if defined(HIF_USB)
@@ -99,18 +108,17 @@ static ssize_t ath_procfs_diag_read(struct file *file, char __user *buf,
 	}
 
 out:
-	if (rv) {
-		qdf_mem_free(read_buffer);
+	if (rv)
 		return -EIO;
-	}
 
 	if (copy_to_user(buf, read_buffer, count)) {
 		qdf_mem_free(read_buffer);
 		HIF_ERROR("%s: copy_to_user error in /proc/%s",
 			__func__, PROCFS_NAME);
 		return -EFAULT;
-	}
-	qdf_mem_free(read_buffer);
+	} else
+		qdf_mem_free(read_buffer);
+
 	return count;
 }
 
@@ -160,7 +168,6 @@ static ssize_t ath_procfs_diag_write(struct file *file,
 	if ((count == 4) && ((((uint32_t) (*pos)) & 3) == 0)) {
 		/* reading a word? */
 		uint32_t value = *((uint32_t *)write_buffer);
-
 		rv = hif_diag_write_access(hif_hdl, (uint32_t)(*pos), value);
 	} else {
 		rv = hif_diag_write_mem(hif_hdl, (uint32_t)(*pos),
@@ -170,10 +177,11 @@ static ssize_t ath_procfs_diag_write(struct file *file,
 out:
 
 	qdf_mem_free(write_buffer);
-	if (rv == 0)
+	if (rv == 0) {
 		return count;
-	else
+	} else {
 		return -EIO;
+	}
 }
 
 static const struct file_operations athdiag_fops = {
@@ -181,8 +189,8 @@ static const struct file_operations athdiag_fops = {
 	.write = ath_procfs_diag_write,
 };
 
-/*
- * This function is called when the module is loaded
+/**
+   *This function is called when the module is loaded
  *
  */
 int athdiag_procfs_init(void *scn)
@@ -195,7 +203,8 @@ int athdiag_procfs_init(void *scn)
 		return -ENOMEM;
 	}
 
-	proc_file = proc_create_data(PROCFS_NAME, 0600, proc_dir,
+	proc_file = proc_create_data(PROCFS_NAME,
+				     S_IRUSR | S_IWUSR, proc_dir,
 				     &athdiag_fops, (void *)scn);
 	if (proc_file == NULL) {
 		remove_proc_entry(PROCFS_NAME, proc_dir);
@@ -208,8 +217,8 @@ int athdiag_procfs_init(void *scn)
 	return 0;               /* everything is ok */
 }
 
-/*
- * This function is called when the module is unloaded
+/**
+   *This function is called when the module is unloaded
  *
  */
 void athdiag_procfs_remove(void)

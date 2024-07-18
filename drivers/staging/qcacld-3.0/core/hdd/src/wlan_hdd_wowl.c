@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -41,7 +50,6 @@ static uint8_t g_hdd_wowl_ptrns_count;
 static inline int find_ptrn_len(const char *ptrn)
 {
 	int len = 0;
-
 	while (*ptrn != '\0' && *ptrn != WOWL_INTER_PTRN_TOKENIZER) {
 		len++;
 		ptrn++;
@@ -328,9 +336,8 @@ bool hdd_add_wowl_ptrn_debugfs(hdd_adapter_t *pAdapter, uint8_t pattern_idx,
 		hdd_err("Malformed WoW pattern!");
 
 		return false;
-	}
-
-	pattern_len >>= 1;
+	} else
+		pattern_len >>= 1;
 
 	if (!pattern_len || pattern_len > WOWL_PTRN_MAX_SIZE) {
 		hdd_err("WoW pattern length %d is out of range (1 ~ %d).",
@@ -532,7 +539,7 @@ bool hdd_exit_wowl(hdd_adapter_t *pAdapter)
 	return true;
 }
 
-void hdd_free_user_wowl_ptrns(void)
+void hdd_deinit_wowl(void)
 {
 	int i;
 

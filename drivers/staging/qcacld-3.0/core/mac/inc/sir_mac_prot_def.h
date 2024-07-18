@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -17,6 +20,13 @@
  */
 
 /*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+
+/*
  * This file sir_mac_prot_def.h contains the MAC/PHY protocol
  * definitions used across various projects.
  */
@@ -29,7 +39,6 @@
 #include "cds_api.h"
 #include "sir_types.h"
 #include "wni_cfg.h"
-#include <lim_fils_defs.h>
 
 /* /Capability information related */
 #define CAPABILITY_INFO_DELAYED_BA_BIT 14
@@ -151,10 +160,12 @@
 #define SIR_MAC_QOS_DEF_BA_REQ      4
 #define SIR_MAC_QOS_DEF_BA_RSP      5
 
+#ifdef ANI_SUPPORT_11H
 #define SIR_MAC_ACTION_MEASURE_REQUEST_ID      0
 #define SIR_MAC_ACTION_MEASURE_REPORT_ID       1
 #define SIR_MAC_ACTION_TPC_REQUEST_ID          2
 #define SIR_MAC_ACTION_TPC_REPORT_ID           3
+#endif /* ANI_SUPPORT_11H */
 #define SIR_MAC_ACTION_CHANNEL_SWITCH_ID       4
 
 #ifdef ANI_SUPPORT_11H
@@ -188,8 +199,6 @@
 #define SIR_MAC_VHT_GID_NOTIFICATION           1
 #define SIR_MAC_VHT_OPMODE_NOTIFICATION        2
 
-#define SIR_MAC_VHT_OPMODE_SIZE                3
-
 #define NUM_OF_SOUNDING_DIMENSIONS	1 /*Nss - 1, (Nss = 2 for 2x2)*/
 /* HT Action Field Codes */
 #define SIR_MAC_SM_POWER_SAVE       1
@@ -207,13 +216,7 @@
 /* Public Action for 20/40 BSS Coexistence */
 #define SIR_MAC_ACTION_2040_BSS_COEXISTENCE     0
 #define SIR_MAC_ACTION_EXT_CHANNEL_SWITCH_ID    4
-#define SIR_MAC_ACTION_MEASUREMENT_PILOT        7
 
-/* Public Action frames for GAS */
-#define SIR_MAC_ACTION_GAS_INITIAL_REQUEST      0x0A
-#define SIR_MAC_ACTION_GAS_INITIAL_RESPONSE     0x0B
-#define SIR_MAC_ACTION_GAS_COMEBACK_REQUEST     0x0C
-#define SIR_MAC_ACTION_GAS_COMEBACK_RESPONSE    0x0D
 
 #ifdef WLAN_FEATURE_11W
 /* 11w SA query request/response action frame category code */
@@ -399,20 +402,12 @@
 #define VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_2_2       780
 #define VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_2_2       780
 
-#define VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_1_1_SGI80 433
-#define VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_1_1_SGI80 433
-#define VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_2_2_SGI80 866
-#define VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_2_2_SGI80 866
-
 #define VHT_CAP_80_SUPP 0
 #define VHT_CAP_160_SUPP 1
 #define VHT_CAP_160_AND_80P80_SUPP 2
 
 #define VHT_MCS_1x1 0xFFFC
 #define VHT_MCS_2x2 0xFFF3
-
-/* Mask to check if BTM offload is enabled/disabled*/
-#define BTM_OFFLOAD_ENABLED_MASK     0x01
 
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 #define SIR_MAC_QCOM_VENDOR_EID      200
@@ -425,7 +420,7 @@
 #define SIR_MAC_ANI_WORKAROUND_EID_MIN     0
 #define SIR_MAC_ANI_WORKAROUND_EID_MAX     255
 
-#define SIR_MAC_MAX_ADD_IE_LENGTH       2048
+#define SIR_MAC_MAX_ADD_IE_LENGTH       500
 
 /* / Maximum length of each IE */
 #define SIR_MAC_MAX_IE_LENGTH       255
@@ -448,9 +443,6 @@
 
 #define SIR_MAC_OUI_VERSION_1         1
 
-/* OWE DH Parameter element https://tools.ietf.org/html/rfc8110 */
-#define SIR_DH_PARAMETER_ELEMENT_EXT_EID 32
-
 /* OUI and type definition for WPA IE in network byte order */
 #define SIR_MAC_WPA_OUI             0x01F25000
 #define SIR_MAC_WME_OUI             0x02F25000
@@ -463,23 +455,9 @@
 #define SIR_MAX_NOA_ATTR_LEN        31
 #define SIR_MAX_NOA_DESCR           2
 #define SIR_P2P_IE_HEADER_LEN       6
-#define HEADER_LEN_P2P_IE  6
-#define OUI_SIZE_P2P       4
-
-#define P2P_1X1_WAR_OUI   "\x00\x50\xf2\x04"
-#define P2P_1X1_OUI_LEN    4
-#define MAX_CONFIG_METHODS_LEN   2
-#define DEVICE_CATEGORY_MAX_LEN  1
 
 #define SIR_MAC_CISCO_OUI "\x00\x40\x96"
 #define SIR_MAC_CISCO_OUI_SIZE 3
-
-#define SIR_MAC_QCN_OUI_TYPE   "\x8c\xfd\xf0\x01"
-#define SIR_MAC_QCN_OUI_TYPE_SIZE  4
-
-/* MBO OUI definitions */
-#define SIR_MAC_MBO_OUI "\x50\x6f\x9a\x16"
-#define SIR_MAC_MBO_OUI_SIZE 4
 
 /* min size of wme oui header: oui(3) + type + subtype + version */
 #define SIR_MAC_OUI_WME_HDR_MIN       6
@@ -563,6 +541,7 @@
 #define SIR_MAC_AUTH_ALGO_OFFSET             0
 #define SIR_MAC_AUTH_XACT_SEQNUM_OFFSET      2
 #define SIR_MAC_AUTH_STATUS_CODE_OFFSET      4
+#define SIR_MAC_AUTH_CHALLENGE_OFFSET        6
 
 /* / Transaction sequence number definitions (used in Authentication frames) */
 #define    SIR_MAC_AUTH_FRAME_1        1
@@ -583,9 +562,6 @@
 
 /* 2 bytes each for auth algo number, transaction number and status code */
 #define SIR_MAC_AUTH_FRAME_INFO_LEN          6
-/* 2 bytes for ID and length + SIR_MAC_AUTH_CHALLENGE_LENGTH */
-#define SIR_MAC_AUTH_CHALLENGE_BODY_LEN    (SIR_MAC_CHALLENGE_ID_LEN + \
-					    SIR_MAC_AUTH_CHALLENGE_LENGTH)
 
 /* / MAX key length when ULA is used */
 #define SIR_MAC_MAX_KEY_LENGTH               32
@@ -649,12 +625,7 @@
 #define SIR_MAC_VENDOR_AP_4_OUI             "\x8C\xFD\xF0"
 #define SIR_MAC_VENDOR_AP_4_OUI_LEN         3
 
-/* Maximum allowable size of a beacon and probe rsp frame */
-#define SIR_MAX_BEACON_SIZE    512
-#define SIR_MAX_PROBE_RESP_SIZE 512
-
-/* Status Code (present in Management response frames) enum */
-/* (IEEE Std 802.11-2016, 9.4.1.9, Table 9-46) */
+/* / Status Code (present in Management response frames) enum */
 
 typedef enum eSirMacStatusCodes {
 	eSIR_MAC_SUCCESS_STATUS = 0,    /* Reserved */
@@ -699,17 +670,11 @@ typedef enum eSirMacStatusCodes {
 	eSIR_MAC_DSSS_OFDM_NOT_SUPPORTED_STATUS = 26,   /* Association denied due to requesting station not supporting the DSSS-OFDM option */
 	/* reserved                                     27-29 */
 	eSIR_MAC_TRY_AGAIN_LATER = 30,  /* Association request rejected temporarily, try again later */
-#ifdef WLAN_FEATURE_11W
-	eSIR_MAC_ROBUST_MGMT_FRAMES_POLICY_VIOLATION_STATUS = 31,    /* Robust management frames policy violation */
-#endif
+	/* reserved                                     31 */
 	eSIR_MAC_QOS_UNSPECIFIED_FAILURE_STATUS = 32,   /* Unspecified, QoS-related failure */
 	eSIR_MAC_QAP_NO_BANDWIDTH_STATUS = 33,  /* Association denied because QoS AP has insufficient bandwidth to handle another */
 	/* QoS STA */
-	/*
-	 * Association denied due to excessive frame loss rates
-	 * and/or poor conditions/RSSI on cur channel
-	 */
-	eSIR_MAC_XS_FRAME_LOSS_POOR_CHANNEL_RSSI_STATUS = 34,
+	eSIR_MAC_XS_FRAME_LOSS_STATUS = 34,     /* Association denied due to excessive frame loss rates and/or poor conditions on cur- */
 	/* rent operating channel */
 	eSIR_MAC_STA_QOS_NOT_SUPPORTED_STATUS = 35,     /* Association (with QoS BSS) denied because the requesting STA does not support the */
 	/* QoS facility */
@@ -734,9 +699,9 @@ typedef enum eSirMacStatusCodes {
 	eSIR_MAC_DEST_STA_NOT_QSTA_STATUS = 50, /* The Destination STA is not a QoS STA */
 	eSIR_MAC_INVALID_LISTEN_INTERVAL_STATUS = 51,   /* Association denied because the ListenInterval is too large */
 
-	eSIR_MAC_INVALID_FT_ACTION_FRAME_COUNT = 52,
-	eSIR_MAC_INVALID_PMKID = 53,
-
+	eSIR_MAC_DSSS_CCK_RATE_MUST_SUPPORT_STATUS = 52,        /* FIXME: */
+	eSIR_MAC_DSSS_CCK_RATE_NOT_SUPPORT_STATUS = 53,
+	eSIR_MAC_PSMP_CONTROLLED_ACCESS_ONLY_STATUS = 54,
 #ifdef FEATURE_WLAN_ESE
 	eSIR_MAC_ESE_UNSPECIFIED_QOS_FAILURE_STATUS = 200,      /* ESE-Unspecified, QoS related failure in (Re)Assoc response frames */
 	eSIR_MAC_ESE_TSPEC_REQ_REFUSED_STATUS = 201,    /* ESE-TSPEC request refused due to AP's policy configuration in AddTs Rsp, (Re)Assoc Rsp. */
@@ -1018,15 +983,6 @@ typedef struct sSirMacRateSet {
 	uint8_t rate[SIR_MAC_RATESET_EID_MAX];
 } qdf_packed tSirMacRateSet;
 
-/** struct merged_mac_rate_set - merged mac rate set
- * @num_rates: num of rates
- * @rate: rate list
- */
-struct merged_mac_rate_set {
-	uint8_t num_rates;
-	uint8_t rate[2 * SIR_MAC_RATESET_EID_MAX];
-};
-/* Reserve 1 byte for NULL character in the SSID name field to print in %s */
 typedef struct sSirMacSSid {
 	uint8_t length;
 	uint8_t ssId[SIR_MAC_MAX_SSID_LENGTH + 1];
@@ -1037,11 +993,11 @@ typedef struct sSirMacWpaInfo {
 	uint8_t info[SIR_MAC_MAX_IE_LENGTH];
 } qdf_packed tSirMacWpaInfo, *tpSirMacWpaInfo,
 tSirMacRsnInfo, *tpSirMacRsnInfo;
-
 typedef struct sSirMacWapiInfo {
 	uint8_t length;
 	uint8_t info[SIR_MAC_MAX_IE_LENGTH];
-} qdf_packed tSirMacWapiInfo, *tpSirMacWapiInfo;
+} qdf_packed tSirMacWapiInfo, *tpSirMacWapiInfo,
+tSirMacWapiInfo, *tpSirMacWapiInfo;
 
 typedef struct sSirMacFHParamSet {
 	uint16_t dwellTime;
@@ -1986,14 +1942,6 @@ typedef struct sSirMacAuthFrameBody {
 	uint8_t type;           /* = SIR_MAC_CHALLENGE_TEXT_EID */
 	uint8_t length;         /* = SIR_MAC_AUTH_CHALLENGE_LENGTH */
 	uint8_t challengeText[SIR_MAC_AUTH_CHALLENGE_LENGTH];
-#ifdef WLAN_FEATURE_FILS_SK
-	tSirMacRsnInfo rsn_ie;
-	uint8_t assoc_delay_info;
-	uint8_t session[SIR_FILS_SESSION_LENGTH];
-	uint8_t wrapped_data_len;
-	uint8_t wrapped_data[SIR_FILS_WRAPPED_DATA_MAX_SIZE];
-	uint8_t nonce[SIR_FILS_NONCE_LENGTH];
-#endif
 } qdf_packed tSirMacAuthFrameBody, *tpSirMacAuthFrameBody;
 
 typedef struct sSirMacAuthenticationFrame {
@@ -2086,43 +2034,6 @@ typedef struct sSirMacLinkReport {
 } tSirMacLinkReport, *tpSirMacLinkReport;
 
 #define BEACON_REPORT_MAX_IES 224       /* Refer IEEE 802.11k-2008, Table 7-31d */
-/* Max number of beacon reports per channel supported in the driver */
-#define MAX_BEACON_REPORTS 8
-/* Offset of IEs after Fixed Fields in Beacon Frame */
-#define BEACON_FRAME_IES_OFFSET 12
-
-/**
- * struct bcn_report_frame_body_frag_id - beacon report reported frame body
- *					  fragment ID sub element params
- * @id: report ID
- * @frag_id: fragment ID
- * @more_frags: more frags present or not present
- */
-struct bcn_report_frame_body_frag_id {
-	uint8_t id;
-	uint8_t frag_id;
-	bool more_frags;
-};
-
-/**
- * struct sSirMacBeaconReport - Beacon Report Structure
- * @regClass: Regulatory Class
- * @channel: Channel for which the current report is being sent
- * @measStartTime: RRM scan start time for this report
- * @measDuration: Scan duration for the current channel
- * @phyType: Condensed Phy Type
- * @bcnProbeRsp: Beacon or probe response being reported
- * @rsni: Received signal-to-noise indication
- * @rcpi: Received Channel Power indication
- * @bssid: BSSID of the AP requesting the beacon report
- * @antennaId: Number of Antennas used for measurement
- * @parentTSF: measuring STA's TSF timer value
- * @numIes: Number of IEs included in the beacon frames
- * @last_bcn_report_ind_support: Support for Last beacon report indication
- * @is_last_bcn_report: Is the current report last or more reports present
- * @frame_body_frag_id: Reported Frame Body Frag Id sub-element params
- * @Ies: IEs included in the beacon report
- */
 typedef struct sSirMacBeaconReport {
 	uint8_t regClass;
 	uint8_t channel;
@@ -2136,9 +2047,6 @@ typedef struct sSirMacBeaconReport {
 	uint8_t antennaId;
 	uint32_t parentTSF;
 	uint8_t numIes;
-	uint8_t last_bcn_report_ind_support;
-	uint8_t is_last_bcn_report;
-	struct bcn_report_frame_body_frag_id frame_body_frag_id;
 	uint8_t Ies[BEACON_REPORT_MAX_IES];
 
 } tSirMacBeaconReport, *tpSirMacBeaconReport;
@@ -2279,67 +2187,4 @@ typedef struct sSirMacRadioMeasureReport {
 #define SIR_MAC_TXSTBC                             1
 #define SIR_MAC_RXSTBC                             1
 
-/**
- * enum p2p_attr_id - enum for P2P attributes ID in P2P IE
- * @P2P_ATTR_STATUS - Attribute Status none
- * @P2P_ATTR_MINOR_REASON_CODE: Minor reason code attribute
- * @P2P_ATTR_CAPABILITY: Capability attribute
- * @P2P_ATTR_DEVICE_ID: device ID attribute
- * @P2P_ATTR_GROUP_OWNER_INTENT: Group owner intent attribute
- * @P2P_ATTR_CONFIGURATION_TIMEOUT: Config timeout attribute
- * @P2P_ATTR_LISTEN_CHANNEL: listen channel attribute
- * @P2P_ATTR_GROUP_BSSID: Group BSSID attribute
- * @P2P_ATTR_EXT_LISTEN_TIMING: Listen timing attribute
- * @P2P_ATTR_INTENDED_INTERFACE_ADDR: Intended interface address attribute
- * @P2P_ATTR_MANAGEABILITY:  Manageability attribute
- * @P2P_ATTR_CHANNEL_LIST: Channel list attribute
- * @P2P_ATTR_NOTICE_OF_ABSENCE: Notice of Absence attribute
- * @P2P_ATTR_DEVICE_INFO: Device Info attribute
- * @P2P_ATTR_GROUP_INFO: Group Info attribute
- * @P2P_ATTR_GROUP_ID: Group ID attribute
- * @P2P_ATTR_INTERFACE: Interface attribute
- * @P2P_ATTR_OPERATING_CHANNEL: Operating channel attribute
- * @P2P_ATTR_INVITATION_FLAGS: Invitation flags attribute
- * @P2P_ATTR_OOB_GO_NEG_CHANNEL: GO neg channel attribute
- * @P2P_ATTR_SERVICE_HASH: Service HASH attribute
- * @P2P_ATTR_SESSION_INFORMATION_DATA: Session Info data attribute
- * @P2P_ATTR_CONNECTION_CAPABILITY = Connection capability attribute
- * @P2P_ATTR_ADVERTISEMENT_ID = Advertisement ID attribute
- * @P2P_ATTR_ADVERTISED_SERVICE = Advertised Service attribute
- * @P2P_ATTR_SESSION_ID = Session ID attribute
- * @P2P_ATTR_FEATURE_CAPABILITY = Feature capability attribute
- * @P2P_ATTR_PERSISTENT_GROUP -Persistent group attribute
- * @P2P_ATTR_VENDOR_SPECIFIC - Vendor specific attribute
- */
-enum p2p_attr_id {
-	P2P_ATTR_STATUS = 0,
-	P2P_ATTR_MINOR_REASON_CODE = 1,
-	P2P_ATTR_CAPABILITY = 2,
-	P2P_ATTR_DEVICE_ID = 3,
-	P2P_ATTR_GROUP_OWNER_INTENT = 4,
-	P2P_ATTR_CONFIGURATION_TIMEOUT = 5,
-	P2P_ATTR_LISTEN_CHANNEL = 6,
-	P2P_ATTR_GROUP_BSSID = 7,
-	P2P_ATTR_EXT_LISTEN_TIMING = 8,
-	P2P_ATTR_INTENDED_INTERFACE_ADDR = 9,
-	P2P_ATTR_MANAGEABILITY = 10,
-	P2P_ATTR_CHANNEL_LIST = 11,
-	P2P_ATTR_NOTICE_OF_ABSENCE = 12,
-	P2P_ATTR_DEVICE_INFO = 13,
-	P2P_ATTR_GROUP_INFO = 14,
-	P2P_ATTR_GROUP_ID = 15,
-	P2P_ATTR_INTERFACE = 16,
-	P2P_ATTR_OPERATING_CHANNEL = 17,
-	P2P_ATTR_INVITATION_FLAGS = 18,
-	P2P_ATTR_OOB_GO_NEG_CHANNEL = 19,
-	P2P_ATTR_SERVICE_HASH = 21,
-	P2P_ATTR_SESSION_INFORMATION_DATA = 22,
-	P2P_ATTR_CONNECTION_CAPABILITY = 23,
-	P2P_ATTR_ADVERTISEMENT_ID = 24,
-	P2P_ATTR_ADVERTISED_SERVICE = 25,
-	P2P_ATTR_SESSION_ID = 26,
-	P2P_ATTR_FEATURE_CAPABILITY = 27,
-	P2P_ATTR_PERSISTENT_GROUP = 28,
-	P2P_ATTR_VENDOR_SPECIFIC = 221
-};
 #endif /* __MAC_PROT_DEFS_H */

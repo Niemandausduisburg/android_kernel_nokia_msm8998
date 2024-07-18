@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -45,10 +54,8 @@ typedef enum {
 typedef struct sCsrNeighborRoamCfgParams {
 	uint8_t maxNeighborRetries;
 	uint32_t neighborScanPeriod;
-	uint32_t neighbor_scan_min_period;
 	tCsrChannelInfo channelInfo;
 	uint8_t neighborLookupThreshold;
-	int8_t rssi_thresh_offset_5g;
 	uint8_t neighborReassocThreshold;
 	uint32_t minChannelScanTime;
 	uint32_t maxChannelScanTime;
@@ -322,9 +329,6 @@ void csr_roam_reset_roam_params(tpAniSirGlobal mac_ptr);
 #define REASON_ROAM_STOP_ALL                        38
 #define REASON_SUPPLICANT_DISABLED_ROAMING          39
 #define REASON_CTX_INIT                             40
-#define REASON_FILS_PARAMS_CHANGED                  41
-#define REASON_SME_ISSUED                           42
-#define REASON_DRIVER_ENABLED                       43
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
 QDF_STATUS csr_roam_offload_scan(tpAniSirGlobal pMac, uint8_t sessionId,
@@ -336,36 +340,6 @@ static inline QDF_STATUS csr_roam_offload_scan(tpAniSirGlobal pMac,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
-
-/**
- * csr_get_roam_enabled_sta_sessionid() - get the session id of the sta on which
- * roaming is enabled.
- * @mac_ctx:  pointer to global mac structure
- *
- * The function check if any sta is present and has roaming enabled and return
- * the session id of the sta with roaming enabled else if roaming is not enabled
- * on any STA return CSR_SESSION_ID_INVALID
- *
- * Return: session id of STA on which roaming is enabled
- */
-uint8_t csr_get_roam_enabled_sta_sessionid(
-	tpAniSirGlobal mac_ctx);
-
-#if defined(WLAN_FEATURE_FILS_SK)
-/**
- * csr_update_fils_config - Update FILS config to CSR roam session
- * @mac: MAC context
- * @session_id: session id
- * @src_profile: Source profile having latest FILS config
- *
- * API to update FILS config to roam csr session
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS csr_update_fils_config(tpAniSirGlobal mac, uint8_t session_id,
-				  tCsrRoamProfile *src_profile);
-#endif
-
 QDF_STATUS csr_neighbor_roam_handoff_req_hdlr(tpAniSirGlobal pMac, void *pMsg);
 QDF_STATUS csr_neighbor_roam_proceed_with_handoff_req(tpAniSirGlobal pMac,
 		uint8_t sessionId);
@@ -384,75 +358,10 @@ QDF_STATUS csr_roam_read_tsf(tpAniSirGlobal pMac, uint8_t *pTimestamp,
 QDF_STATUS csr_roam_synch_callback(tpAniSirGlobal mac,
 	roam_offload_synch_ind *roam_synch_data,
 	tpSirBssDescription  bss_desc_ptr, enum sir_roam_op_code reason);
-
-/**
- * csr_fast_reassoc() - invokes FAST REASSOC command
- * @hal: handle returned by mac_open
- * @profile: current connected profile
- * @bssid: bssid to look for in scan cache
- * @ch_freq: channel on which reassoc should be send
- * @vdev_id: vdev id
- * @connected_bssid: bssid of currently connected profile
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS csr_fast_reassoc(tHalHandle hal, tCsrRoamProfile *profile,
-			    const tSirMacAddr bssid, int channel,
-			    uint8_t vdev_id, const tSirMacAddr connected_bssid);
-
-#ifdef WLAN_FEATURE_FIPS
-/**
- * csr_roam_pmkid_req_callback() - Registered CSR Callback function to handle
- * roam event from firmware for pmkid generation fallback.
- * @vdev_id: Vdev id
- * @bss_list: candidate AP bssid list
- */
-QDF_STATUS
-csr_roam_pmkid_req_callback(uint8_t vdev_id,
-			    struct roam_pmkid_req_event *bss_list);
-
-/**
- * csr_process_roam_pmkid_req_callback() - API to trigger the pmkid
- * generation fallback event for candidate AP received from firmware.
- * @mac_ctx: Global mac context pointer
- * @vdev_id: Vdev id
- * @roam_bsslist: roam candidate AP bssid list
- *
- * This function calls the hdd_sme_roam_callback with reason
- * eCSR_ROAM_FIPS_PMK_REQUEST to trigger pmkid generation in supplicant.
- */
-QDF_STATUS
-csr_process_roam_pmkid_req_callback(tpAniSirGlobal mac_ctx,
-				    uint8_t vdev_id,
-				    struct roam_pmkid_req_event *roam_bsslist);
-#else
-static inline QDF_STATUS
-csr_roam_pmkid_req_callback(uint8_t vdev_id,
-			    struct roam_pmkid_req_event *bss_list)
-{
-	return QDF_STATUS_SUCCESS;
-}
-#endif /* WLAN_FEATURE_FIPS */
-
 #else
 static inline QDF_STATUS csr_roam_synch_callback(tpAniSirGlobal mac,
 	roam_offload_synch_ind *roam_synch_data,
 	tpSirBssDescription  bss_desc_ptr, enum sir_roam_op_code reason)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
-
-static inline
-QDF_STATUS csr_fast_reassoc(tHalHandle hal, tCsrRoamProfile *profile,
-			    const tSirMacAddr bssid, int channel,
-			    uint8_t vdev_id, const tSirMacAddr connected_bssid)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline QDF_STATUS
-csr_roam_pmkid_req_callback(tpAniSirGlobal mac_ctx, uint8_t vdev_id,
-			    struct roam_pmkid_req_event *bss_list)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
@@ -483,19 +392,5 @@ static inline void csr_neighbor_roam_send_lfr_metric_event(
 QDF_STATUS csr_roam_stop_wait_for_key_timer(tpAniSirGlobal pMac);
 QDF_STATUS csr_roam_copy_connected_profile(tpAniSirGlobal pMac,
 		uint32_t sessionId, tCsrRoamProfile *pDstProfile);
-
-/**
- * csr_invoke_neighbor_report_request - Send neighbor report invoke command to
- *					WMA
- * @mac_ctx: MAC context
- * @session_id: session id
- *
- * API called from IW to invoke neighbor report request to WMA then to FW
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS csr_invoke_neighbor_report_request(uint8_t session_id,
-				struct sRrmNeighborReq *neighbor_report_req,
-				bool send_resp_to_host);
 
 #endif /* CSR_NEIGHBOR_ROAM_H */

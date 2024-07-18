@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2014, 2016, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2014, 2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*
@@ -59,8 +68,7 @@ enum {
 	eLIM_PERIODIC_JOIN_PROBE_REQ_TIMER,
 	eLIM_INSERT_SINGLESHOT_NOA_TIMER,
 	eLIM_CONVERT_ACTIVE_CHANNEL_TO_PASSIVE,
-	eLIM_AUTH_RETRY_TIMER,
-	eLIM_AUTH_SAE_TIMER
+	eLIM_AUTH_RETRY_TIMER
 };
 
 #define LIM_DISASSOC_DEAUTH_ACK_TIMEOUT         500

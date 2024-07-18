@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2012-2014, 2016-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -17,6 +20,12 @@
  */
 
 /*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+/*
  *  The file is used to define structures that are shared between
  *  kernel space and user space pktlog application.
  */
@@ -25,7 +34,12 @@
 #define _PKTLOG_AC_API_
 #ifndef REMOVE_PKT_LOG
 
+/**
+ * @typedef ol_pktlog_dev_handle
+ * @brief opaque handle for pktlog device object
+ */
 struct ol_pktlog_dev_t;
+typedef struct ol_pktlog_dev_t *ol_pktlog_dev_handle;
 
 /**
  * @typedef hif_opaque_softc_handle

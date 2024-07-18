@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /**
  * DOC: qdf_event.c
  *
@@ -28,7 +37,6 @@
 /* Include Files */
 #include "qdf_event.h"
 #include <linux/export.h>
-#include <qdf_module.h>
 
 struct qdf_evt_node {
 	qdf_list_node_t node;
@@ -81,7 +89,7 @@ QDF_STATUS qdf_event_create(qdf_event_t *event)
 
 	return QDF_STATUS_SUCCESS;
 }
-qdf_export_symbol(qdf_event_create);
+EXPORT_SYMBOL(qdf_event_create);
 
 /**
  * qdf_event_set() - sets a QDF event
@@ -118,7 +126,7 @@ QDF_STATUS qdf_event_set(qdf_event_t *event)
 
 	return QDF_STATUS_SUCCESS;
 }
-qdf_export_symbol(qdf_event_set);
+EXPORT_SYMBOL(qdf_event_set);
 
 /**
  * qdf_event_reset() - resets a QDF event
@@ -157,7 +165,7 @@ QDF_STATUS qdf_event_reset(qdf_event_t *event)
 	INIT_COMPLETION(event->complete);
 	return QDF_STATUS_SUCCESS;
 }
-qdf_export_symbol(qdf_event_reset);
+EXPORT_SYMBOL(qdf_event_reset);
 
 /**
  * qdf_event_destroy() - Destroys a QDF event
@@ -205,7 +213,7 @@ QDF_STATUS qdf_event_destroy(qdf_event_t *event)
 
 	return QDF_STATUS_SUCCESS;
 }
-qdf_export_symbol(qdf_event_destroy);
+EXPORT_SYMBOL(qdf_event_destroy);
 
 /**
  * qdf_wait_single_event() - Waits for a single event to be set.
@@ -247,7 +255,6 @@ QDF_STATUS qdf_wait_single_event(qdf_event_t *event, uint32_t timeout)
 
 	if (timeout) {
 		long ret;
-
 		ret = wait_for_completion_timeout(&event->complete,
 						  msecs_to_jiffies(timeout));
 		if (0 >= ret)
@@ -260,7 +267,7 @@ QDF_STATUS qdf_wait_single_event(qdf_event_t *event, uint32_t timeout)
 	}
 	return QDF_STATUS_SUCCESS;
 }
-qdf_export_symbol(qdf_wait_single_event);
+EXPORT_SYMBOL(qdf_wait_single_event);
 
 /**
  * qdf_complete_wait_events() - Sets all the events which are in the list.
@@ -299,7 +306,7 @@ void qdf_complete_wait_events(void)
 	}
 	qdf_spin_unlock(&qdf_wait_event_lock);
 }
-qdf_export_symbol(qdf_complete_wait_events);
+EXPORT_SYMBOL(qdf_complete_wait_events);
 
 /**
  * qdf_wait_for_event_completion() - Waits for an event to be set.
@@ -360,7 +367,7 @@ QDF_STATUS qdf_wait_for_event_completion(qdf_event_t *event, uint32_t timeout)
 
 	if (QDF_STATUS_SUCCESS != status) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			"Failed to add event in the list in %s", __func__);
+			"Failed to add event in the list in %s", __func__),
 		status = QDF_STATUS_E_FAULT;
 		goto err_list_add;
 	}
@@ -399,7 +406,7 @@ err_list_add:
 	qdf_mem_free(event_node);
 	return status;
 }
-qdf_export_symbol(qdf_wait_for_event_completion);
+EXPORT_SYMBOL(qdf_wait_for_event_completion);
 
 /**
  * qdf_event_list_init() - Creates a list and spinlock for events.
@@ -415,7 +422,7 @@ void qdf_event_list_init(void)
 	qdf_list_create(&qdf_wait_event_list, MAX_WAIT_EVENTS);
 	qdf_spinlock_create(&qdf_wait_event_lock);
 }
-qdf_export_symbol(qdf_event_list_init);
+EXPORT_SYMBOL(qdf_event_list_init);
 
 /**
  * qdf_event_list_destroy() - Destroys list and spinlock created for events.
@@ -430,4 +437,4 @@ void qdf_event_list_destroy(void)
 	qdf_list_destroy(&qdf_wait_event_list);
 	qdf_spinlock_destroy(&qdf_wait_event_lock);
 }
-qdf_export_symbol(qdf_event_list_destroy);
+EXPORT_SYMBOL(qdf_event_list_destroy);

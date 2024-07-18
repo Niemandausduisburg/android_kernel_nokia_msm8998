@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*===========================================================================
@@ -133,7 +142,7 @@ uint32_t tx_timer_activate(TX_TIMER *timer_ptr)
 		return TX_SUCCESS;
 	} else if (QDF_STATUS_E_ALREADY == status) {
 		/* starting timer fails because timer is already started; this is okay */
-		QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_DEBUG,
+		QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_INFO,
 			  "Timer %s is already running\n", TIMER_NAME);
 		return TX_SUCCESS;
 	} else {
@@ -254,7 +263,6 @@ static void tx_main_timer_func(void *functionContext)
 	/* check if this needs to be rescheduled */
 	if (0 != timer_ptr->rescheduleTimeInMsecs) {
 		QDF_STATUS status;
-
 		status = qdf_mc_timer_start(&timer_ptr->qdf_timer,
 					    timer_ptr->rescheduleTimeInMsecs);
 		timer_ptr->rescheduleTimeInMsecs = 0;
@@ -328,7 +336,7 @@ uint32_t tx_timer_create_intern_debug(void *pMacGlobal,
 	}
 
 	if (0 != rescheduleTimeInTicks) {
-		QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_DEBUG,
+		QDF_TRACE(QDF_MODULE_ID_SYS, QDF_TRACE_LEVEL_INFO,
 			  "Creating periodic timer for %s\n", TIMER_NAME);
 	}
 	/* Activate this timer if required */

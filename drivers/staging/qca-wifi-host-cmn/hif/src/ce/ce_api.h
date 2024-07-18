@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifndef __COPY_ENGINE_API_H__
@@ -181,8 +190,7 @@ void ce_sendlist_init(struct ce_sendlist *sendlist);
 int ce_sendlist_buf_add(struct ce_sendlist *sendlist,
 		qdf_dma_addr_t buffer,
 		unsigned int nbytes,
-		/* OR-ed with internal flags */
-		uint32_t flags,
+		uint32_t flags, /* OR-ed with internal flags */
 		uint32_t user_flags);
 
 /*
@@ -391,23 +399,18 @@ bool ce_get_rx_pending(struct hif_softc *scn);
 #define CE_ATTR_DISABLE_INTR         0x08 /* no interrupt on copy completion */
 #define CE_ATTR_ENABLE_POLL          0x10 /* poll for residue descriptors */
 
-/**
- * stuct CE_attr - Attributes of an instance of a Copy Engine
- * @flags:         CE_ATTR_* values
- * @priority:      TBD
- * @src_nentries:  #entries in source ring - Must be a power of 2
- * @src_sz_max:    Max source send size for this CE. This is also the minimum
- *                 size of a destination buffer
- * @dest_nentries: #entries in destination ring - Must be a power of 2
- * @reserved:      Future Use
- */
+/* Attributes of an instance of a Copy Engine */
 struct CE_attr {
-	unsigned int flags;
-	unsigned int priority;
-	unsigned int src_nentries;
-	unsigned int src_sz_max;
-	unsigned int dest_nentries;
-	void *reserved;
+	unsigned int flags;         /* CE_ATTR_* values */
+	unsigned int priority;      /* TBD */
+	unsigned int src_nentries;  /* #entries in source ring -
+				     * Must be a power of 2 */
+	unsigned int src_sz_max;    /* Max source send size for this CE.
+				     * This is also the minimum size of
+				     * a destination buffer. */
+	unsigned int dest_nentries; /* #entries in destination ring -
+				     * Must be a power of 2 */
+	void *reserved;             /* Future use */
 };
 
 /*
@@ -436,14 +439,14 @@ struct ce_sendlist {
 
 #ifdef IPA_OFFLOAD
 void ce_ipa_get_resource(struct CE_handle *ce,
-			 qdf_shared_mem_t **ce_sr,
+			 qdf_dma_addr_t *ce_sr_base_paddr,
 			 uint32_t *ce_sr_ring_size,
 			 qdf_dma_addr_t *ce_reg_paddr);
 #else
 /**
  * ce_ipa_get_resource() - get uc resource on copyengine
  * @ce: copyengine context
- * @ce_sr: copyengine source ring resource info
+ * @ce_sr_base_paddr: copyengine source ring base physical address
  * @ce_sr_ring_size: copyengine source ring size
  * @ce_reg_paddr: copyengine register physical address
  *
@@ -456,10 +459,11 @@ void ce_ipa_get_resource(struct CE_handle *ce,
  * Return: None
  */
 static inline void ce_ipa_get_resource(struct CE_handle *ce,
-			 qdf_shared_mem_t **ce_sr,
+			 qdf_dma_addr_t *ce_sr_base_paddr,
 			 uint32_t *ce_sr_ring_size,
 			 qdf_dma_addr_t *ce_reg_paddr)
 {
+	return;
 }
 #endif /* IPA_OFFLOAD */
 
@@ -476,11 +480,13 @@ static inline void ce_pkt_error_count_incr(
 
 bool ce_check_rx_pending(struct CE_state *CE_state);
 void *hif_ce_get_lro_ctx(struct hif_opaque_softc *hif_hdl, int ctx_id);
+#if defined(FEATURE_LRO)
 int ce_lro_flush_cb_register(struct hif_opaque_softc *scn,
-			     void (handler)(void *arg),
+			     void (handler)(void *),
 			     void *(lro_init_handler)(void));
 int ce_lro_flush_cb_deregister(struct hif_opaque_softc *hif_hdl,
-			       void (lro_deinit_cb)(void *arg));
+			       void (lro_deinit_cb)(void *));
+#endif
 
 int hif_ce_bus_early_suspend(struct hif_softc *scn);
 int hif_ce_bus_late_resume(struct hif_softc *scn);

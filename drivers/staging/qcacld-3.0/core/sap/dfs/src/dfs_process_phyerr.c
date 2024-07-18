@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2002-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2002-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #include "dfs.h"
@@ -500,7 +509,7 @@ dfs_process_phyerr(struct ieee80211com *ic, void *buf, uint16_t datalen,
 		dump_phyerr_contents(buf, datalen);
 
 	if (chan == NULL) {
-		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
 			  "%s: chan is NULL", __func__);
 		return;
 	}
@@ -551,7 +560,7 @@ dfs_process_phyerr(struct ieee80211com *ic, void *buf, uint16_t datalen,
 					      r_fulltsf, &e,
 					      enable_log) == 0) {
 			dfs->dfs_phyerr_reject_count++;
-			QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+			QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
 				  "%s:Rejected phyerr count after parsing=%d",
 				  __func__, dfs->dfs_phyerr_reject_count);
 			return;
@@ -582,7 +591,7 @@ dfs_process_phyerr(struct ieee80211com *ic, void *buf, uint16_t datalen,
 		}
 	}
 
-	QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_DEBUG,
+	QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
 		  "%s: Frequency at which the phyerror was injected = %d",
 		  __func__, e.freq);
 	/*
@@ -807,7 +816,7 @@ dfs_process_phyerr(struct ieee80211com *ic, void *buf, uint16_t datalen,
 					e.dur > dfs->dfs_rinfo.rn_maxpulsedur) {
 
 				QDF_TRACE(QDF_MODULE_ID_SAP,
-					QDF_TRACE_LEVEL_DEBUG,
+					QDF_TRACE_LEVEL_INFO,
 					"%s [%d] : Rejecting: dur = %d maxpulsedur = %d, rssi = %d minrssithresh = %d",
 					__func__, __LINE__,
 					e.dur, dfs->dfs_rinfo.rn_maxpulsedur,
@@ -841,8 +850,6 @@ dfs_process_phyerr(struct ieee80211com *ic, void *buf, uint16_t datalen,
 			event->re_ts = (e.rs_tstamp) & DFS_TSMASK;
 			event->re_rssi = e.rssi;
 			event->sidx = e.sidx;
-			event->delta_diff = e.pulse_delta_diff;
-			event->delta_peak = e.pulse_delta_peak;
 			if (e.rsu_version ==
 				DFS_RADAR_SUMMARY_REPORT_VERSION_3) {
 				event->delta_peak = e.delta_peak;

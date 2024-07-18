@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /**
  * DOC: i_qdf_trace.h
  *
@@ -25,10 +34,6 @@
 
 #if !defined(__I_QDF_TRACE_H)
 #define __I_QDF_TRACE_H
-
-/* older kernels have a bug in kallsyms, so ensure module.h is included */
-#include <linux/module.h>
-#include <linux/kallsyms.h>
 
 #if !defined(__printf)
 #define __printf(a, b)
@@ -47,22 +52,10 @@
  */
 #if defined(WLAN_DEBUG) || defined(DEBUG)
 #define QDF_TRACE qdf_trace_msg
-#define QDF_VTRACE qdf_vtrace_msg
 #define QDF_TRACE_HEX_DUMP qdf_trace_hex_dump
-#define QDF_TRACE_RATE_LIMITED(rate, module, level, format, ...)\
-	do {\
-		static int rate_limit;\
-		rate_limit++;\
-		if (rate)\
-			if (0 == (rate_limit % rate))\
-				qdf_trace_msg(module, level, format,\
-						##__VA_ARGS__);\
-	} while (0)
 #else
 #define QDF_TRACE(arg ...)
-#define QDF_VTRACE(arg ...)
 #define QDF_TRACE_HEX_DUMP(arg ...)
-#define QDF_TRACE_RATE_LIMITED(arg ...)
 #endif
 #else
 
@@ -83,7 +76,6 @@
 
 #ifdef QDF_ENABLE_TRACING
 
-#ifdef WLAN_WARN_ON_ASSERT
 #define QDF_ASSERT(_condition) \
 	do { \
 		if (!(_condition)) { \
@@ -92,14 +84,6 @@
 			WARN_ON(1); \
 		} \
 	} while (0)
-#else
-#define QDF_ASSERT(_condition) \
-	do { \
-		if (!(_condition)) { \
-			/* no-op */ \
-		} \
-	} while (0)
-#endif /* WLAN_WARN_ON_ASSERT */
 
 #else
 
@@ -135,12 +119,6 @@ static inline void qdf_trace_msg(QDF_MODULE_ID module, ...)
 		} \
 	} while (0)
 
-#endif
-
-#ifdef KSYM_SYMBOL_LEN
-#define __QDF_SYMBOL_LEN KSYM_SYMBOL_LEN
-#else
-#define __QDF_SYMBOL_LEN 1
 #endif
 
 #endif /* __I_QDF_TRACE_H */

@@ -2,6 +2,8 @@
  * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -44,7 +46,6 @@ QDF_STATUS wma_handle_ndp_initiator_req(tp_wma_handle wma_handle, void *req)
 	int ret;
 	uint16_t len;
 	uint32_t vdev_id, ndp_cfg_len, ndp_app_info_len, pmk_len;
-	uint32_t passphrase_len, service_name_len;
 	struct ndp_initiator_rsp ndp_rsp = {0};
 	ol_txrx_vdev_handle vdev;
 	wmi_buf_t buf;
@@ -77,13 +78,9 @@ QDF_STATUS wma_handle_ndp_initiator_req(tp_wma_handle wma_handle, void *req)
 	ndp_cfg_len = qdf_roundup(ndp_req->ndp_config.ndp_cfg_len, 4);
 	ndp_app_info_len = qdf_roundup(ndp_req->ndp_info.ndp_app_info_len, 4);
 	pmk_len = qdf_roundup(ndp_req->pmk.pmk_len, 4);
-	passphrase_len = qdf_roundup(ndp_req->passphrase.passphrase_len, 4);
-	service_name_len =
-		qdf_roundup(ndp_req->service_name.service_name_len, 4);
 	/* allocated memory for fixed params as well as variable size data */
-	len = sizeof(*cmd) + sizeof(*ch_tlv) + (5 * WMI_TLV_HDR_SIZE)
-		+ ndp_cfg_len + ndp_app_info_len + pmk_len
-		+ passphrase_len + service_name_len;
+	len = sizeof(*cmd) + sizeof(*ch_tlv) + (3 * WMI_TLV_HDR_SIZE)
+		+ ndp_cfg_len + ndp_app_info_len + pmk_len;
 
 	buf = wmi_buf_alloc(wma_handle->wmi_handle, len);
 	if (!buf) {
@@ -106,8 +103,6 @@ QDF_STATUS wma_handle_ndp_initiator_req(tp_wma_handle wma_handle, void *req)
 	cmd->ndp_channel_cfg = ndp_req->channel_cfg;
 	cmd->nan_pmk_len = ndp_req->pmk.pmk_len;
 	cmd->nan_csid = ndp_req->ncs_sk_type;
-	cmd->nan_passphrase_len = ndp_req->passphrase.passphrase_len;
-	cmd->nan_servicename_len = ndp_req->service_name.service_name_len;
 
 	ch_tlv = (wmi_channel *)&cmd[1];
 	WMITLV_SET_HDR(ch_tlv, WMITLV_TAG_STRUC_wmi_channel,
@@ -132,17 +127,6 @@ QDF_STATUS wma_handle_ndp_initiator_req(tp_wma_handle wma_handle, void *req)
 		     cmd->nan_pmk_len);
 	tlv_ptr = tlv_ptr + WMI_TLV_HDR_SIZE + pmk_len;
 
-	WMITLV_SET_HDR(tlv_ptr, WMITLV_TAG_ARRAY_BYTE, passphrase_len);
-	qdf_mem_copy(&tlv_ptr[WMI_TLV_HDR_SIZE], ndp_req->passphrase.passphrase,
-		     cmd->nan_passphrase_len);
-	tlv_ptr = tlv_ptr + WMI_TLV_HDR_SIZE + passphrase_len;
-
-	WMITLV_SET_HDR(tlv_ptr, WMITLV_TAG_ARRAY_BYTE, service_name_len);
-	qdf_mem_copy(&tlv_ptr[WMI_TLV_HDR_SIZE],
-		     ndp_req->service_name.service_name,
-		     cmd->nan_servicename_len);
-	tlv_ptr = tlv_ptr + WMI_TLV_HDR_SIZE + service_name_len;
-
 	WMA_LOGE(FL("vdev_id = %d, transaction_id: %d, service_instance_id: %d, ch: %d, ch_cfg: %d, csid: %d"),
 		cmd->vdev_id, cmd->transaction_id, cmd->service_instance_id,
 		ch_tlv->mhz, cmd->ndp_channel_cfg, cmd->nan_csid);
@@ -163,14 +147,6 @@ QDF_STATUS wma_handle_ndp_initiator_req(tp_wma_handle wma_handle, void *req)
 	WMA_LOGE(FL("pmk len: %d"), cmd->nan_pmk_len);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
 			   ndp_req->pmk.pmk, cmd->nan_pmk_len);
-	WMA_LOGE(FL("pass phrase len: %d"), cmd->nan_passphrase_len);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
-			   ndp_req->passphrase.passphrase,
-			   cmd->nan_passphrase_len);
-	WMA_LOGE(FL("service name len: %d"), cmd->nan_servicename_len);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
-			   ndp_req->service_name.service_name,
-			   cmd->nan_servicename_len);
 	WMA_LOGE(FL("sending WMI_NDP_INITIATOR_REQ_CMDID(0x%X)"),
 		WMI_NDP_INITIATOR_REQ_CMDID);
 
@@ -216,7 +192,6 @@ QDF_STATUS wma_handle_ndp_responder_req(tp_wma_handle wma_handle,
 	wmi_buf_t buf;
 	ol_txrx_vdev_handle vdev;
 	uint32_t vdev_id = 0, ndp_cfg_len, ndp_app_info_len, pmk_len;
-	uint32_t passphrase_len, service_name_len;
 	uint8_t *tlv_ptr;
 	int ret;
 	wmi_ndp_responder_req_fixed_param *cmd;
@@ -251,15 +226,11 @@ QDF_STATUS wma_handle_ndp_responder_req(tp_wma_handle wma_handle,
 	 * round up ndp_cfg_len and ndp_app_info_len to 4 bytes
 	 */
 	ndp_cfg_len = qdf_roundup(req_params->ndp_config.ndp_cfg_len, 4);
-	ndp_app_info_len =
-		qdf_roundup(req_params->ndp_info.ndp_app_info_len, 4);
+	ndp_app_info_len = qdf_roundup(req_params->ndp_info.ndp_app_info_len, 4);
 	pmk_len = qdf_roundup(req_params->pmk.pmk_len, 4);
-	passphrase_len = qdf_roundup(req_params->passphrase.passphrase_len, 4);
-	service_name_len =
-		qdf_roundup(req_params->service_name.service_name_len, 4);
 	/* allocated memory for fixed params as well as variable size data */
-	len = sizeof(*cmd) + 5*WMI_TLV_HDR_SIZE + ndp_cfg_len + ndp_app_info_len
-		+ pmk_len + passphrase_len + service_name_len;
+	len = sizeof(*cmd) + 3*WMI_TLV_HDR_SIZE + ndp_cfg_len + ndp_app_info_len
+		+ pmk_len;
 
 	buf = wmi_buf_alloc(wma_handle->wmi_handle, len);
 	if (!buf) {
@@ -280,8 +251,6 @@ QDF_STATUS wma_handle_ndp_responder_req(tp_wma_handle wma_handle,
 	cmd->ndp_app_info_len = req_params->ndp_info.ndp_app_info_len;
 	cmd->nan_pmk_len = req_params->pmk.pmk_len;
 	cmd->nan_csid = req_params->ncs_sk_type;
-	cmd->nan_passphrase_len = req_params->passphrase.passphrase_len;
-	cmd->nan_servicename_len = req_params->service_name.service_name_len;
 
 	tlv_ptr = (uint8_t *)&cmd[1];
 
@@ -301,18 +270,6 @@ QDF_STATUS wma_handle_ndp_responder_req(tp_wma_handle wma_handle,
 		     cmd->nan_pmk_len);
 	tlv_ptr = tlv_ptr + WMI_TLV_HDR_SIZE + pmk_len;
 
-	WMITLV_SET_HDR(tlv_ptr, WMITLV_TAG_ARRAY_BYTE, passphrase_len);
-	qdf_mem_copy(&tlv_ptr[WMI_TLV_HDR_SIZE],
-		     req_params->passphrase.passphrase,
-		     cmd->nan_passphrase_len);
-	tlv_ptr = tlv_ptr + WMI_TLV_HDR_SIZE + passphrase_len;
-
-	WMITLV_SET_HDR(tlv_ptr, WMITLV_TAG_ARRAY_BYTE, service_name_len);
-	qdf_mem_copy(&tlv_ptr[WMI_TLV_HDR_SIZE],
-		     req_params->service_name.service_name,
-		     cmd->nan_servicename_len);
-	tlv_ptr = tlv_ptr + WMI_TLV_HDR_SIZE + service_name_len;
-
 	WMA_LOGE(FL("vdev_id = %d, transaction_id: %d, csid: %d"),
 		cmd->vdev_id, cmd->transaction_id, cmd->nan_csid);
 
@@ -331,16 +288,6 @@ QDF_STATUS wma_handle_ndp_responder_req(tp_wma_handle wma_handle,
 	WMA_LOGE(FL("pmk len: %d"), cmd->nan_pmk_len);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
 			   req_params->pmk.pmk, cmd->nan_pmk_len);
-
-	WMA_LOGE(FL("pass phrase len: %d"), cmd->nan_passphrase_len);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
-			   req_params->passphrase.passphrase,
-			   cmd->nan_passphrase_len);
-
-	WMA_LOGE(FL("service name len: %d"), cmd->nan_servicename_len);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
-			   req_params->service_name.service_name,
-			   cmd->nan_servicename_len);
 
 	WMA_LOGE(FL("sending WMI_NDP_RESPONDER_REQ_CMDID(0x%X)"),
 		WMI_NDP_RESPONDER_REQ_CMDID);
@@ -525,13 +472,13 @@ static int wma_ndp_indication_event_handler(void *handle, uint8_t *event_info,
 	WMI_MAC_ADDR_TO_CHAR_ARRAY(&fixed_params->peer_discovery_mac_addr,
 				ind_event.peer_discovery_mac_addr.bytes);
 
-	WMA_LOGD(FL("WMI_NDP_INDICATION_EVENTID(0x%X) received. vdev %d"),
-		 WMI_NDP_INDICATION_EVENTID, fixed_params->vdev_id);
-	WMA_LOGD(FL("service_instance %d, ndp_instance %d, role %d, policy %d"),
+	WMA_LOGD(FL("WMI_NDP_INDICATION_EVENTID(0x%X) received. vdev %d, \n"
+		"service_instance %d, ndp_instance %d, role %d, policy %d, \n"
+		"csid: %d, scid_len: %d, peer_mac_addr: %pM, peer_disc_mac_addr: %pM"),
+		 WMI_NDP_INDICATION_EVENTID, fixed_params->vdev_id,
 		 fixed_params->service_instance_id,
 		 fixed_params->ndp_instance_id, fixed_params->self_ndp_role,
-		 fixed_params->accept_policy);
-	WMA_LOGD(FL("csid: %d, scid_len: %d, peer_mac_addr: %pM, peer_disc_mac_addr: %pM"),
+		 fixed_params->accept_policy,
 		 fixed_params->nan_csid, fixed_params->nan_scid_len,
 		 ind_event.peer_mac_addr.bytes,
 		 ind_event.peer_discovery_mac_addr.bytes);
@@ -647,24 +594,19 @@ static int wma_ndp_responder_rsp_event_handler(void *handle,
 static int wma_ndp_confirm_event_handler(void *handle, uint8_t *event_info,
 					 uint32_t len)
 {
-	uint8_t i;
-	cds_msg_t msg = {0};
-	WLAN_PHY_MODE ch_mode;
-	tp_wma_handle wma_handle = handle;
 	struct ndp_confirm_event ndp_confirm = {0};
+	cds_msg_t msg = {0};
 	WMI_NDP_CONFIRM_EVENTID_param_tlvs *event;
 	wmi_ndp_confirm_event_fixed_param *fixed_params;
+	tp_wma_handle wma_handle = handle;
 
-	event = (WMI_NDP_CONFIRM_EVENTID_param_tlvs *)event_info;
+	event = (WMI_NDP_CONFIRM_EVENTID_param_tlvs *) event_info;
 	fixed_params = (wmi_ndp_confirm_event_fixed_param *)event->fixed_param;
-	WMA_LOGD(FL("WMI_NDP_CONFIRM_EVENTID(0x%X) recieved"),
-		 WMI_NDP_CONFIRM_EVENTID);
-	WMA_LOGD(FL("vdev %d, ndp_instance %d, rsp_code %d, reason_code: %d"),
-		 fixed_params->vdev_id, fixed_params->ndp_instance_id,
-		 fixed_params->rsp_code, fixed_params->reason_code);
-	WMA_LOGD(FL("num_active_ndps_on_peer: %d, num_ch: %d"),
-		 fixed_params->num_active_ndps_on_peer,
-		 fixed_params->num_ndp_channels);
+	WMA_LOGE(FL("WMI_NDP_CONFIRM_EVENTID(0x%X) recieved. vdev %d, ndp_instance %d, rsp_code %d, reason_code: %d, num_active_ndps_on_peer: %d"),
+		 WMI_NDP_CONFIRM_EVENTID, fixed_params->vdev_id,
+		 fixed_params->ndp_instance_id, fixed_params->rsp_code,
+		 fixed_params->reason_code,
+		 fixed_params->num_active_ndps_on_peer);
 
 	if (fixed_params->ndp_cfg_len > event->num_ndp_cfg) {
 		WMA_LOGE("FW message ndp cfg length %d larger than TLV hdr %d",
@@ -672,7 +614,7 @@ static int wma_ndp_confirm_event_handler(void *handle, uint8_t *event_info,
 		return -EINVAL;
 	}
 
-	WMA_LOGD(FL("ndp_cfg - %d bytes"), fixed_params->ndp_cfg_len);
+	WMA_LOGE(FL("ndp_cfg - %d bytes"), fixed_params->ndp_cfg_len);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
 		&event->ndp_cfg, fixed_params->ndp_cfg_len);
 
@@ -683,18 +625,9 @@ static int wma_ndp_confirm_event_handler(void *handle, uint8_t *event_info,
 		return -EINVAL;
 	}
 
-	WMA_LOGD(FL("ndp_app_info - %d bytes"), fixed_params->ndp_app_info_len);
+	WMA_LOGE(FL("ndp_app_info - %d bytes"), fixed_params->ndp_app_info_len);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
 		&event->ndp_app_info, fixed_params->ndp_app_info_len);
-
-	if (fixed_params->num_ndp_channels > event->num_ndp_channel_list ||
-	    fixed_params->num_ndp_channels > event->num_nss_list) {
-		WMI_LOGE(FL("NDP Ch count %d greater than NDP Ch TLV len (%d) or NSS TLV len (%d)"),
-			 fixed_params->num_ndp_channels,
-			 event->num_ndp_channel_list,
-			 event->num_nss_list);
-		return QDF_STATUS_E_INVAL;
-	}
 
 	ndp_confirm.vdev_id = fixed_params->vdev_id;
 	ndp_confirm.ndp_instance_id = fixed_params->ndp_instance_id;
@@ -702,7 +635,6 @@ static int wma_ndp_confirm_event_handler(void *handle, uint8_t *event_info,
 	ndp_confirm.reason_code = fixed_params->reason_code;
 	ndp_confirm.num_active_ndps_on_peer =
 				fixed_params->num_active_ndps_on_peer;
-	ndp_confirm.num_channels = fixed_params->num_ndp_channels;
 
 	WMI_MAC_ADDR_TO_CHAR_ARRAY(&fixed_params->peer_ndi_mac_addr,
 				   ndp_confirm.peer_ndi_mac_addr.bytes);
@@ -730,23 +662,6 @@ static int wma_ndp_confirm_event_handler(void *handle, uint8_t *event_info,
 			     event->ndp_app_info,
 			     ndp_confirm.ndp_info.ndp_app_info_len);
 	}
-
-	if (ndp_confirm.num_channels > SIR_NAN_CH_INFO_MAX_CHANNELS) {
-		WMA_LOGE(FL("too many channels"));
-		ndp_confirm.num_channels = SIR_NAN_CH_INFO_MAX_CHANNELS;
-	}
-
-	for (i = 0; i < ndp_confirm.num_channels; i++) {
-		ndp_confirm.ch[i].channel = event->ndp_channel_list[i].mhz;
-		ndp_confirm.ch[i].nss = event->nss_list[i];
-		ch_mode = WMI_GET_CHANNEL_MODE(&event->ndp_channel_list[i]);
-		ndp_confirm.ch[i].ch_width = chanmode_to_chanwidth(ch_mode);
-		WMA_LOGD(FL("ch: %d, ch_mode: %d, nss: %d"),
-			 ndp_confirm.ch[i].channel,
-			 ndp_confirm.ch[i].ch_width,
-			 ndp_confirm.ch[i].nss);
-	}
-
 	msg.type = SIR_HAL_NDP_CONFIRM;
 	msg.bodyptr = &ndp_confirm;
 	return wma_handle->pe_ndp_event_handler(wma_handle->mac_context, &msg);
@@ -920,92 +835,6 @@ static int wma_ndp_initiator_rsp_event_handler(void *handle,
 						&pe_msg);
 }
 
-static int wma_ndp_sch_update_event_handler(void *handle, uint8_t *evinfo,
-					    uint32_t len)
-{
-	uint8_t i;
-	uint32_t buff_len;
-	WLAN_PHY_MODE ch_mode;
-	struct cds_msg_s msg = {0};
-	tp_wma_handle wma_handle = handle;
-	struct ndp_sch_update_event sch_update_ev = {0};
-	WMI_NDL_SCHEDULE_UPDATE_EVENTID_param_tlvs *event;
-	wmi_ndl_schedule_update_fixed_param *fixed_params;
-
-	event = (WMI_NDL_SCHEDULE_UPDATE_EVENTID_param_tlvs *)evinfo;
-	fixed_params = event->fixed_param;
-	WMA_LOGD(FL("WMI_NDL_SCHEDULE_UPDATE_EVENTID(0x%X) recieved"),
-		 WMI_NDL_SCHEDULE_UPDATE_EVENTID);
-	WMA_LOGD(FL("flags: %d, num_ch: %d, num_ndp_instances: %d"),
-		 fixed_params->flags, fixed_params->num_channels,
-		 fixed_params->num_ndp_instances);
-
-	if (fixed_params->num_channels > event->num_ndl_channel_list ||
-	    fixed_params->num_channels > event->num_nss_list) {
-		WMI_LOGE(FL("Channel count %d greater than NDP Ch list TLV len (%d) or NSS list TLV len (%d)"),
-			 fixed_params->num_channels,
-			 event->num_ndl_channel_list,
-			 event->num_nss_list);
-		return QDF_STATUS_E_INVAL;
-	}
-	if (fixed_params->num_ndp_instances > event->num_ndp_instance_list) {
-		WMI_LOGE(FL("NDP Instance count %d greater than NDP Instancei TLV len %d"),
-			 fixed_params->num_ndp_instances,
-			 event->num_ndp_instance_list);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	if (fixed_params->vdev_id >= wma_handle->max_bssid) {
-		WMA_LOGE(FL("incorrect vdev_id: %d"), fixed_params->vdev_id);
-		return -EINVAL;
-	}
-
-	sch_update_ev.vdev_id = fixed_params->vdev_id;
-	sch_update_ev.flags = fixed_params->flags;
-	sch_update_ev.num_channels = fixed_params->num_channels;
-	sch_update_ev.num_ndp_instances = fixed_params->num_ndp_instances;
-	WMI_MAC_ADDR_TO_CHAR_ARRAY(&fixed_params->peer_macaddr,
-				   sch_update_ev.peer_addr.bytes);
-
-	if ((sch_update_ev.num_ndp_instances * sizeof(uint32_t)) >
-	    wmi_get_max_msg_len(wma_handle->wmi_handle)) {
-		WMA_LOGE(FL("ndp_instances overflows wmi packet size"));
-		return -EINVAL;
-	}
-
-	buff_len = sizeof(uint32_t) * sch_update_ev.num_ndp_instances;
-	sch_update_ev.ndp_instances = qdf_mem_malloc(buff_len);
-	if (!sch_update_ev.ndp_instances) {
-		WMA_LOGE(FL("malloc failed"));
-		return -ENOMEM;
-	}
-	qdf_mem_copy(sch_update_ev.ndp_instances, event->ndp_instance_list,
-		     buff_len);
-
-	if (sch_update_ev.num_channels > SIR_NAN_CH_INFO_MAX_CHANNELS) {
-		WMA_LOGE(FL("too many channels"));
-		sch_update_ev.num_channels = SIR_NAN_CH_INFO_MAX_CHANNELS;
-	}
-	for (i = 0; i < sch_update_ev.num_channels; i++) {
-		sch_update_ev.ch[i].channel = event->ndl_channel_list[i].mhz;
-		sch_update_ev.ch[i].nss = event->nss_list[i];
-		ch_mode = WMI_GET_CHANNEL_MODE(&event->ndl_channel_list[i]);
-		sch_update_ev.ch[i].ch_width = chanmode_to_chanwidth(ch_mode);
-		WMA_LOGD(FL("ch: %d, ch_mode: %d, nss: %d"),
-			 sch_update_ev.ch[i].channel,
-			 sch_update_ev.ch[i].ch_width,
-			 sch_update_ev.ch[i].nss);
-	}
-
-	for (i = 0; i < fixed_params->num_ndp_instances; i++)
-		WMA_LOGD(FL("instance_id[%d]: %d"),
-			 i, event->ndp_instance_list[i]);
-
-	msg.type = SIR_HAL_NDP_SCH_UPDATE_IND;
-	msg.bodyptr = &sch_update_ev;
-	return wma_handle->pe_ndp_event_handler(wma_handle->mac_context, &msg);
-}
-
 /**
  * wma_ndp_register_all_event_handlers() - Register all NDP event handlers
  * @wma_handle: WMA context
@@ -1018,45 +847,39 @@ void wma_ndp_register_all_event_handlers(tp_wma_handle wma_handle)
 {
 	WMA_LOGD(FL("Register WMI_NDP_INITIATOR_RSP_EVENTID"));
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   WMI_NDP_INITIATOR_RSP_EVENTID,
-					   wma_ndp_initiator_rsp_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
+		WMI_NDP_INITIATOR_RSP_EVENTID,
+		wma_ndp_initiator_rsp_event_handler,
+		WMA_RX_SERIALIZER_CTX);
 
 	WMA_LOGD(FL("Register WMI_NDP_RESPONDER_RSP_EVENTID"));
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   WMI_NDP_RESPONDER_RSP_EVENTID,
-					   wma_ndp_responder_rsp_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
+		WMI_NDP_RESPONDER_RSP_EVENTID,
+		wma_ndp_responder_rsp_event_handler,
+		WMA_RX_SERIALIZER_CTX);
 
 	WMA_LOGD(FL("Register WMI_NDP_END_RSP_EVENTID"));
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   WMI_NDP_END_RSP_EVENTID,
-					   wma_ndp_end_response_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
+		WMI_NDP_END_RSP_EVENTID,
+		wma_ndp_end_response_event_handler,
+		WMA_RX_SERIALIZER_CTX);
 
 	WMA_LOGD(FL("Register WMI_NDP_INDICATION_EVENTID"));
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   WMI_NDP_INDICATION_EVENTID,
-					   wma_ndp_indication_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
+		WMI_NDP_INDICATION_EVENTID,
+		wma_ndp_indication_event_handler,
+		WMA_RX_SERIALIZER_CTX);
 
 	WMA_LOGD(FL("Register WMI_NDP_CONFIRM_EVENTID"));
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   WMI_NDP_CONFIRM_EVENTID,
-					   wma_ndp_confirm_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
+		WMI_NDP_CONFIRM_EVENTID,
+		wma_ndp_confirm_event_handler,
+		WMA_RX_SERIALIZER_CTX);
 
 	WMA_LOGD(FL("Register WMI_NDP_END_INDICATION_EVENTID"));
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   WMI_NDP_END_INDICATION_EVENTID,
-					   wma_ndp_end_indication_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
-
-	WMA_LOGD(FL("Register WMI_NDL_SCHEDULE_UPDATE_EVENTID"));
-	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   WMI_NDL_SCHEDULE_UPDATE_EVENTID,
-					   wma_ndp_sch_update_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
+		WMI_NDP_END_INDICATION_EVENTID,
+		wma_ndp_end_indication_event_handler,
+		WMA_RX_SERIALIZER_CTX);
 }
 
 /**
@@ -1110,15 +933,9 @@ void wma_ndp_add_wow_wakeup_event(tp_wma_handle wma_handle,
 {
 	uint32_t event_bitmap[WMI_WOW_MAX_EVENT_BM_LEN] = {0};
 
-	/* This enables to wake up host when Nan Management Frame is received */
 	wma_set_wow_event_bitmap(WOW_NAN_DATA_EVENT, WMI_WOW_MAX_EVENT_BM_LEN,
 				 event_bitmap);
-
-	/* This enables to wake up host when NDP data packet is received */
-	wma_set_wow_event_bitmap(WOW_PATTERN_MATCH_EVENT,
-				 WMI_WOW_MAX_EVENT_BM_LEN, event_bitmap);
-
-	WMA_LOGD("NDI specific default wake up event 0x%x vdev id %d",
+	WMA_LOGI("NDI specific default wake up event 0x%x vdev id %d",
 		 event_bitmap[0], vdev_id);
 	wma_add_wow_wakeup_event(wma_handle, vdev_id, event_bitmap, true);
 }
@@ -1168,7 +985,7 @@ uint32_t wma_ndp_get_eventid_from_tlvtag(uint32_t tag)
 		break;
 	}
 
-	WMA_LOGD(FL("For tag %d WMI event 0x%x"), tag, event_id);
+	WMA_LOGI(FL("For tag %d WMI event 0x%x"), tag, event_id);
 	return event_id;
 }
 
@@ -1242,8 +1059,9 @@ void wma_add_bss_ndi_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 	struct wma_target_req *msg;
 	uint8_t vdev_id, peer_id;
 	QDF_STATUS status;
+	struct vdev_set_params param = {0};
 
-	WMA_LOGD("%s: enter", __func__);
+	WMA_LOGI("%s: enter", __func__);
 	if (NULL == wma_find_vdev_by_addr(wma, add_bss->bssId, &vdev_id)) {
 		WMA_LOGE("%s: Failed to find vdev", __func__);
 		goto send_fail_resp;
@@ -1294,17 +1112,20 @@ void wma_add_bss_ndi_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 			WMA_TARGET_REQ_TYPE_VDEV_START);
 		goto send_fail_resp;
 	}
-	WMA_LOGD("%s: vdev start request for NDI sent to target", __func__);
+	WMA_LOGI("%s: vdev start request for NDI sent to target", __func__);
 
 	/* Initialize protection mode to no protection */
-	wma_vdev_set_param(wma->wmi_handle, vdev_id,
-		WMI_VDEV_PARAM_PROTECTION_MODE, IEEE80211_PROT_NONE);
+	param.if_id = vdev_id;
+	param.param_id = WMI_VDEV_PARAM_PROTECTION_MODE;
+	param.param_value = WMI_VDEV_PARAM_PROTECTION_MODE;
+	if (wmi_unified_vdev_set_param_send(wma->wmi_handle, &param))
+		WMA_LOGE("Failed to initialize protection mode");
+
 
 	return;
-
 send_fail_resp:
 	add_bss->status = QDF_STATUS_E_FAILURE;
-	wma_send_msg_high_priority(wma, WMA_ADD_BSS_RSP, (void *)add_bss, 0);
+	wma_send_msg(wma, WMA_ADD_BSS_RSP, (void *)add_bss, 0);
 }
 
 /**
@@ -1349,8 +1170,8 @@ void wma_delete_all_nan_remote_peers(tp_wma_handle wma, uint32_t vdev_id)
 		if (peer == TAILQ_FIRST(&vdev->peer_list)) {
 			WMA_LOGE("%s: self peer removed", __func__);
 			break;
-		}
-		temp = peer;
+		} else
+			temp = peer;
 	}
 	qdf_spin_unlock_bh(&vdev->pdev->peer_ref_mutex);
 
@@ -1474,7 +1295,7 @@ void wma_add_sta_ndi_mode(tp_wma_handle wma, tpAddStaParams add_sta)
 send_rsp:
 	WMA_LOGD(FL("Sending add sta rsp to umac (mac:%pM, status:%d)"),
 		 add_sta->staMac, add_sta->status);
-	wma_send_msg_high_priority(wma, WMA_ADD_STA_RSP, (void *)add_sta, 0);
+	wma_send_msg(wma, WMA_ADD_STA_RSP, (void *)add_sta, 0);
 }
 
 /**
@@ -1516,7 +1337,7 @@ send_del_rsp:
 	if (del_sta->respReqd) {
 		WMA_LOGD(FL("Sending del rsp to umac (status: %d)"),
 				del_sta->status);
-		wma_send_msg_high_priority(wma, WMA_DELETE_STA_RSP, del_sta, 0);
+		wma_send_msg(wma, WMA_DELETE_STA_RSP, del_sta, 0);
 	} else {
 		WMA_LOGD(FL("NDI Del Sta resp not needed"));
 		qdf_mem_free(del_sta);

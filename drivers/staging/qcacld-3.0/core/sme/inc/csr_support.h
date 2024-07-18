@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -14,6 +17,12 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**
@@ -62,19 +71,12 @@
 
 #define CSR_DOT11_BASIC_RATE_MASK (0x80)
 
-/* NOTE these index are use as array index for csr_rsn_oui */
 #define CSR_OUI_USE_GROUP_CIPHER_INDEX 0x00
 #define CSR_OUI_WEP40_OR_1X_INDEX      0x01
 #define CSR_OUI_TKIP_OR_PSK_INDEX      0x02
 #define CSR_OUI_RESERVED_INDEX         0x03
 #define CSR_OUI_AES_INDEX              0x04
 #define CSR_OUI_WEP104_INDEX           0x05
-/* ENUM_FILS_SHA384 9 */
-/* ENUM_FILS_SHA384 10 */
-/* ENUM_FT_FILS_SHA256 11 */
-/* ENUM_FT_FILS_SHA384 12 */
-#define CSR_OUI_AES_GCMP_INDEX         0x0D
-#define CSR_OUI_AES_GCMP_256_INDEX     0x0E
 
 #ifdef FEATURE_WLAN_WAPI
 #define CSR_OUI_WAPI_RESERVED_INDEX    0x00
@@ -166,6 +168,16 @@ typedef struct tagCsrRSNAuthIe {
 	} qdf_packed AuthOui[1];
 } qdf_packed tCsrRSNAuthIe;
 
+typedef struct tagCsrRSNCapabilities {
+	uint16_t PreAuthSupported:1;
+	uint16_t NoPairwise:1;
+	uint16_t PTKSAReplayCounter:2;
+	uint16_t GTKSAReplayCounter:2;
+	uint16_t MFPRequired:1;
+	uint16_t MFPCapable:1;
+	uint16_t Reserved:8;
+} qdf_packed tCsrRSNCapabilities;
+
 typedef struct tagCsrRSNPMKIe {
 	uint16_t cPMKIDs;
 	struct {
@@ -200,7 +212,7 @@ typedef struct tagCsrWapiIe {
 
 typedef struct tagRoamingTimerInfo {
 	tpAniSirGlobal pMac;
-	uint8_t vdev_id;
+	uint8_t sessionId;
 } tCsrTimerInfo;
 
 #define CSR_IS_11A_BSS(pBssDesc)    (eSIR_11A_NW_TYPE == (pBssDesc)->nwType)
@@ -347,9 +359,8 @@ QDF_STATUS csr_reassoc(tpAniSirGlobal pMac, uint32_t sessionId,
 QDF_STATUS csr_validate_mcc_beacon_interval(tpAniSirGlobal pMac, uint8_t channelId,
 		uint16_t *beaconInterval, uint32_t cursessionId,
 		enum tQDF_ADAPTER_MODE currBssPersona);
-bool csr_is_profile11r(tpAniSirGlobal mac, tCsrRoamProfile *pProfile);
-bool csr_is_auth_type11r(tpAniSirGlobal mac, eCsrAuthType AuthType,
-			 uint8_t mdiePresent);
+bool csr_is_profile11r(tCsrRoamProfile *pProfile);
+bool csr_is_auth_type11r(eCsrAuthType AuthType, uint8_t mdiePresent);
 #ifdef FEATURE_WLAN_ESE
 bool csr_is_profile_ese(tCsrRoamProfile *pProfile);
 #endif
