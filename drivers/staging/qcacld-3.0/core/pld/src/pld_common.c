@@ -33,6 +33,7 @@
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/pm.h>
+#include <net/cnss_utils.h>
 
 #if defined(CONFIG_PLD_PCIE_CNSS) || defined(CONFIG_PLD_SDIO_CNSS)
 #include <net/cnss.h>
