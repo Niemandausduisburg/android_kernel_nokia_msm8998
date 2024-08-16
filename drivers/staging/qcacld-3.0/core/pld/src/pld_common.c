@@ -1679,16 +1679,16 @@ void pld_set_cc_source(struct device *dev,
 
 	switch (cc_source) {
 	case PLD_SOURCE_CORE:
-		cc = CNSS_UTILS_SOURCE_CORE;
+		cc = CNSS_SOURCE_CORE;
 		break;
 	case PLD_SOURCE_11D:
-		cc = CNSS_UTILS_SOURCE_11D;
+		cc = CNSS_SOURCE_11D;
 		break;
 	case PLD_SOURCE_USER:
-		cc = CNSS_UTILS_SOURCE_USER;
+		cc = CNSS_SOURCE_USER;
 		break;
 	default:
-		cc = CNSS_UTILS_SOURCE_CORE;
+		cc = CNSS_SOURCE_CORE;
 		break;
 	}
 
@@ -1707,13 +1707,13 @@ enum pld_cc_src pld_get_cc_source(struct device *dev)
 
 	cc = cnss_utils_get_cc_source(dev);
 	switch (cc) {
-	case CNSS_UTILS_SOURCE_CORE:
+	case CNSS_SOURCE_CORE:
 		cc_source = PLD_SOURCE_CORE;
 		break;
-	case CNSS_UTILS_SOURCE_11D:
+	case CNSS_SOURCE_11D:
 		cc_source = PLD_SOURCE_11D;
 		break;
-	case CNSS_UTILS_SOURCE_USER:
+	case CNSS_SOURCE_USER:
 		cc_source = PLD_SOURCE_USER;
 		break;
 	default:

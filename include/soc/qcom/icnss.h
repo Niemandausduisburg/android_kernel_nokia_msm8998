@@ -25,6 +25,7 @@
 enum icnss_uevent {
 	ICNSS_UEVENT_FW_CRASHED,
 	ICNSS_UEVENT_FW_DOWN,
+	ICNSS_UEVENT_FW_READY
 };
 
 enum cnss_cc_src {
