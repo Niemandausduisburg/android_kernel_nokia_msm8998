@@ -1638,12 +1638,17 @@ ifeq ($(call cc-option-yn, -Wheader-guard),y)
 EXTRA_CFLAGS += -Wheader-guard
 endif
 
-# Disable certain flags for Clang as they are spammy and I'm not fixing them :^)
+# Disable certain flags for Clang as they are spammy and I'm to stupid and lazy to fixing them :^)
 ifeq ($(cc-name),clang)
 EXTRA_CFLAGS += -Wno-enum-conversion
 EXTRA_CFLAGS += -Wno-typedef-redefinition
 EXTRA_CFLAGS += -Wno-macro-redefined
 EXTRA_CFLAGS += -Wno-incompatible-function-pointer-types
+EXTRA_CFLAGS += -Wno-pointer-bool-conversion
+EXTRA_CFLAGS += -Wno-parentheses-equality
+EXTRA_CFLAGS += -Wno-logical-not-parentheses
+EXTRA_CFLAGS += -Wno-sizeof-pointer-div
+EXTRA_CFLAGS += -Wno-implicit-function-declaration
 endif 
 
 # If the module name is not "wlan", then the define MULTI_IF_NAME to be the
