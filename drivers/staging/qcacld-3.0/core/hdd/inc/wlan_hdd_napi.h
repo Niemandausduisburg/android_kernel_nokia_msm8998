@@ -46,7 +46,7 @@ struct hdd_context_s;
 #define HDD_NAPI_ANY (-1)
 
 int hdd_napi_enabled(int id);
-int hdd_napi_create(void);
+int hdd_napi_create(struct device *dev);
 int hdd_napi_destroy(int force);
 int hdd_display_napi_stats(void);
 

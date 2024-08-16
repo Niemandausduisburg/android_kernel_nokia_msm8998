@@ -367,7 +367,7 @@ void hif_snoc_irq_disable(struct hif_softc *scn, int ce_id)
  * Return: 0 for success
  */
 static
-QDF_STATUS hif_snoc_setup_wakeup_sources(struct hif_softc *scn, bool enable)
+QDF_STATUS hif_snoc_setup_wakeup_sources(struct device *dev, struct hif_softc *scn, bool enable)
 {
 	struct hif_opaque_softc *hif_hdl = GET_HIF_OPAQUE_HDL(scn);
 	uint8_t ul_pipe, dl_pipe;
@@ -385,7 +385,7 @@ QDF_STATUS hif_snoc_setup_wakeup_sources(struct hif_softc *scn, bool enable)
 		return status;
 	}
 
-	irq_to_wake_on = icnss_get_irq(dl_pipe);
+	irq_to_wake_on = icnss_get_irq(dev, dl_pipe);
 	if (irq_to_wake_on < 0) {
 		HIF_ERROR("%s: failed to map ce to irq", __func__);
 		return QDF_STATUS_E_RESOURCES;
@@ -417,9 +417,9 @@ QDF_STATUS hif_snoc_setup_wakeup_sources(struct hif_softc *scn, bool enable)
  *
  * Return: 0 on success.
  */
-int hif_snoc_bus_suspend(struct hif_softc *scn)
+int hif_snoc_bus_suspend(struct device *dev, struct hif_softc *scn)
 {
-	if (hif_snoc_setup_wakeup_sources(scn, true) != QDF_STATUS_SUCCESS)
+	if (hif_snoc_setup_wakeup_sources(dev, scn, true) != QDF_STATUS_SUCCESS)
 		return -EFAULT;
 	return 0;
 }
@@ -433,9 +433,9 @@ int hif_snoc_bus_suspend(struct hif_softc *scn)
  *
  * Return: 0 on success
  */
-int hif_snoc_bus_resume(struct hif_softc *scn)
+int hif_snoc_bus_resume(struct device *dev, struct hif_softc *scn)
 {
-	if (hif_snoc_setup_wakeup_sources(scn, false) != QDF_STATUS_SUCCESS)
+	if (hif_snoc_setup_wakeup_sources(dev, scn, false) != QDF_STATUS_SUCCESS)
 		QDF_BUG(0);
 
 	return 0;

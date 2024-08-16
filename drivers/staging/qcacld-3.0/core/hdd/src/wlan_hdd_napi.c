@@ -101,7 +101,7 @@ static uint32_t hdd_napi_get_map(void)
  *   single-queue: <0: err, >0=id, 0 (should not happen)
  *   multi-queue: bitmap of created instances (0: none)
  */
-int hdd_napi_create(void)
+int hdd_napi_create(struct device *dev)
 {
 	struct  hif_opaque_softc *hif_ctx;
 	int     rc = 0;
@@ -120,7 +120,7 @@ int hdd_napi_create(void)
 				QCA_NAPI_FEATURE_IRQ_BLACKLISTING |
 				QCA_NAPI_FEATURE_CORE_CTL_BOOST;
 
-		rc = hif_napi_create(hif_ctx, hdd_napi_poll,
+		rc = hif_napi_create(dev, hif_ctx, hdd_napi_poll,
 				     QCA_NAPI_BUDGET,
 				     QCA_NAPI_DEF_SCALE,
 				     feature_flags);

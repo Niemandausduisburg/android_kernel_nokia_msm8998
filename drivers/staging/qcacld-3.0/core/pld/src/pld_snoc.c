@@ -321,7 +321,7 @@ void pld_snoc_unregister_driver(void)
  * Return: 0 for success
  *         Non zero failure code for errors
  */
-int pld_snoc_wlan_enable(struct pld_wlan_enable_cfg *config,
+int pld_snoc_wlan_enable(struct device *dev, struct pld_wlan_enable_cfg *config,
 			 enum pld_driver_mode mode, const char *host_version)
 {
 	struct icnss_wlan_enable_cfg cfg;
@@ -348,7 +348,7 @@ int pld_snoc_wlan_enable(struct pld_wlan_enable_cfg *config,
 		icnss_mode = ICNSS_MISSION;
 		break;
 	}
-	return icnss_wlan_enable(&cfg, icnss_mode, host_version);
+	return icnss_wlan_enable(dev, &cfg, icnss_mode, host_version);
 }
 
 /**
@@ -360,9 +360,9 @@ int pld_snoc_wlan_enable(struct pld_wlan_enable_cfg *config,
  * Return: 0 for success
  *         Non zero failure code for errors
  */
-int pld_snoc_wlan_disable(enum pld_driver_mode mode)
+int pld_snoc_wlan_disable(struct device *dev, enum pld_driver_mode mode)
 {
-	return icnss_wlan_disable(ICNSS_OFF);
+	return icnss_wlan_disable(dev, ICNSS_OFF);
 }
 
 /**
@@ -374,7 +374,7 @@ int pld_snoc_wlan_disable(enum pld_driver_mode mode)
  * Return: 0 for success
  *         Non zero failure code for errors
  */
-int pld_snoc_get_soc_info(struct pld_soc_info *info)
+int pld_snoc_get_soc_info(struct device *dev, struct pld_soc_info *info)
 {
 	int ret = 0;
 	struct icnss_soc_info icnss_info;
@@ -382,7 +382,7 @@ int pld_snoc_get_soc_info(struct pld_soc_info *info)
 	if (info == NULL)
 		return -ENODEV;
 
-	ret = icnss_get_soc_info(&icnss_info);
+	ret = icnss_get_soc_info(dev, &icnss_info);
 	if (0 != ret)
 		return ret;
 

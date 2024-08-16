@@ -264,7 +264,7 @@ int hdd_hif_open(struct device *dev, void *bdev, const hif_bus_id *bid,
 		ret = qdf_status_to_os_return(status);
 		goto err_hif_close;
 	} else {
-		ret = hdd_napi_create();
+		ret = hdd_napi_create(dev);
 		hdd_info("hdd_napi_create returned: %d", ret);
 		if (ret == 0)
 			hdd_warn("NAPI: no instances are created");

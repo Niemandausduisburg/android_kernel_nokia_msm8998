@@ -55,7 +55,7 @@ int pld_pcie_get_ce_id(int irq);
 #endif
 
 #if (!defined(CONFIG_PLD_PCIE_CNSS)) || (!defined(QCA_WIFI_3_0_ADRASTEA))
-static inline int pld_pcie_wlan_enable(struct pld_wlan_enable_cfg *config,
+static inline int pld_pcie_wlan_enable(struct device *dev, struct pld_wlan_enable_cfg *config,
 		    enum pld_driver_mode mode, const char *host_version)
 {
 	return 0;

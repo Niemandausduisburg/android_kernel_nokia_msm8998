@@ -113,7 +113,7 @@ void *hif_napi_get_lro_info(struct hif_opaque_softc *hif_hdl, int napi_id);
  * where FEATURE_NAPI is defined
  */
 
-int hif_napi_create(struct hif_opaque_softc   *hif,
+int hif_napi_create(struct device *dev, struct hif_opaque_softc   *hif,
 		    int (*poll)(struct napi_struct *, int),
 		    int                budget,
 		    int                scale,

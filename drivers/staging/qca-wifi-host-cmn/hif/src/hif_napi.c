@@ -62,9 +62,9 @@ enum napi_decision_vector {
 #define ENABLE_NAPI_MASK (HIF_NAPI_INITED | HIF_NAPI_CONF_UP)
 
 #ifdef HELIUMPLUS
-static inline int hif_get_irq_for_ce(int ce_id)
+static inline int hif_get_irq_for_ce(struct device *dev, int ce_id)
 {
-	return pld_snoc_get_irq(ce_id);
+	return pld_snoc_get_irq(dev, ce_id);
 }
 #else /* HELIUMPLUS */
 static inline int hif_get_irq_for_ce(int ce_id)
@@ -105,7 +105,7 @@ int hif_napi_cpu_blacklist(struct qca_napi_data *napid,
  * = 0: <should never happen>
  * > 0: id of the created object (for multi-NAPI, number of objects created)
  */
-int hif_napi_create(struct hif_opaque_softc   *hif_ctx,
+int hif_napi_create(struct device *dev, struct hif_opaque_softc   *hif_ctx,
 		    int (*poll)(struct napi_struct *, int),
 		    int                budget,
 		    int                scale,
@@ -172,7 +172,7 @@ int hif_napi_create(struct hif_opaque_softc   *hif_ctx,
 		napii->scale = scale;
 		napii->id    = NAPI_PIPE2ID(i);
 		napii->hif_ctx = hif_ctx;
-		napii->irq   = hif_get_irq_for_ce(i);
+		napii->irq   = hif_get_irq_for_ce(dev, i);
 
 		if (napii->irq < 0)
 			HIF_WARN("%s: bad IRQ value for CE %d: %d",
