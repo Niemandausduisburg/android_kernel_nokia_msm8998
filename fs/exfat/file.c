@@ -219,7 +219,7 @@ void exfat_truncate(struct inode *inode)
 	loff_t aligned_size;
 	int err;
 
-	mutex_lock(&sbi->s_lock);
+	inode_lock(&sbi->s_lock);
 	if (ei->start_clu == 0) {
 		/*
 		 * Empty start_clu != ~0 (not allocated)
@@ -245,7 +245,7 @@ write_size:
 
 	if (ei->i_size_aligned > i_size_read(inode))
 		ei->i_size_aligned = aligned_size;
-	mutex_unlock(&sbi->s_lock);
+	inode_unlock(&sbi->s_lock);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
@@ -429,13 +429,13 @@ static int exfat_ioctl_get_attributes(struct inode *inode, u32 __user *user_attr
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
 	inode_lock_shared(inode);
 #else
-	mutex_lock(&inode->i_mutex);
+	inode_lock(&inode);
 #endif
 	attr = exfat_make_attr(inode);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
 	inode_unlock_shared(inode);
 #else
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(&inode);
 #endif
 
 	return put_user(attr, user_attr);
@@ -461,7 +461,7 @@ static int exfat_ioctl_set_attributes(struct file *file, u32 __user *user_attr)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 	inode_lock(inode);
 #else
-	mutex_lock(&inode->i_mutex);
+	inode_lock(&inode);
 #endif
 
 	oldattr = exfat_make_attr(inode);
@@ -537,7 +537,7 @@ out_unlock_inode:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 	inode_unlock(inode);
 #else
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(&inode);
 #endif
 	mnt_drop_write_file(file);
 out:
