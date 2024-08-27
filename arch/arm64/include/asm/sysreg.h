@@ -253,14 +253,14 @@ asm(
 "	.endm\n"
 );
 
-static inline void config_sctlr_el1(u32 clear, u32 set)
+static inline void config_sctlr_el1(u64 clear, u64 set)
 {
-	u32 val;
+    u64 val;
 
-	asm volatile("mrs %0, sctlr_el1" : "=r" (val));
-	val &= ~clear;
-	val |= set;
-	asm volatile("msr sctlr_el1, %0" : : "r" (val));
+    asm volatile("mrs %0, sctlr_el1" : "=r" (val));
+    val &= ~clear;
+    val |= set;
+    asm volatile("msr sctlr_el1, %0" : : "r" (val));
 }
 
 /*
