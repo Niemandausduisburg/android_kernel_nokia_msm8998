@@ -1655,6 +1655,8 @@ OBJS +=		$(DP_OBJS)
 endif
 
 ccflags-y += $(INCS)
+# Disable unused variable flags
+ccflags-y += -Wno-address-of-packed-member
 
 cppflags-y +=	-DANI_OS_TYPE_ANDROID=6 \
 		-Wall\
