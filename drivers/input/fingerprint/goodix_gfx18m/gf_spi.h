@@ -87,4 +87,7 @@ int gf_power_off(struct gf_dev *gf_dev);
 int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms);
 int gf_irq_num(struct gf_dev *gf_dev);
 
+extern struct class *keydisabler_class;
+extern struct class_attribute class_attr_key_disable;
+
 #endif /*__GF_SPI_H*/

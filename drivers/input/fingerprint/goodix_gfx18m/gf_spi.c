@@ -109,6 +109,29 @@ static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
 static struct gf_dev gf;
 
+static bool keys_enabled = true;
+struct class *keydisabler_class;
+
+static ssize_t key_disable_show(struct class *class,
+                                struct class_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d\n", keys_enabled ? 0 : 1);
+}
+
+static ssize_t key_disable_store(struct class *class,
+                                 struct class_attribute *attr,
+                                 const char *buf, size_t count)
+{
+    int val;
+    if (kstrtoint(buf, 10, &val) == 0) {
+        keys_enabled = (val == 0);
+        pr_info("Goodix KeyDisabler: keys_enabled = %d\n", keys_enabled);
+    }
+    return count;
+}
+
+CLASS_ATTR_RW(key_disable);
+
 static void gf_enable_irq(struct gf_dev *gf_dev)
 {
 	if (gf_dev->irq_enabled) {
@@ -340,21 +363,28 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		}
 
-    for(i = 0; i< ARRAY_SIZE(key_map); i++) {
-        if(key_map[i].val == gf_key.key){
-            if(gf_dev->key_customer_define == 1){
-              input_report_key(gf_dev->input, key_map[i].key_customer1, gf_key.value); //rerfer from FihtdcCode@AlanHZ, Add for key define by customer
-              pr_debug("key_map[i].key_customer1=[%d].\n",key_map[i].key_customer1);
-            }else if(gf_dev->key_customer_define == 2){
-              input_report_key(gf_dev->input, key_map[i].key_customer2, gf_key.value); //rerfer from FihtdcCode@AlanHZ, Add for key define by customer
-              pr_debug("key_map[i].key_customer2=[%d].\n",key_map[i].key_customer2);
-            }else{
-              input_report_key(gf_dev->input, gf_key.key, gf_key.value);
+    for(i = 0; i < ARRAY_SIZE(key_map); i++) {
+    if (key_map[i].val == gf_key.key) {
+        if (!keys_enabled) {
+            if (gf_key.key == KEY_BACK || gf_key.key == KEY_HOMEPAGE || gf_key.key == KEY_APPSELECT) {
+                pr_debug("Key %d blocked because keys are disabled.\n", gf_key.key);
+                break;
             }
-            input_sync(gf_dev->input);
-            break;
         }
+
+        if (gf_dev->key_customer_define == 1) {
+            input_report_key(gf_dev->input, key_map[i].key_customer1, gf_key.value);
+            pr_debug("key_map[i].key_customer1=[%d].\n", key_map[i].key_customer1);
+        } else if (gf_dev->key_customer_define == 2) {
+            input_report_key(gf_dev->input, key_map[i].key_customer2, gf_key.value);
+            pr_debug("key_map[i].key_customer2=[%d].\n", key_map[i].key_customer2);
+        } else {
+            input_report_key(gf_dev->input, gf_key.key, gf_key.value);
+        }
+        input_sync(gf_dev->input);
+        break;
     }
+}
     
     if(i == ARRAY_SIZE(key_map)) {
         pr_warn("key %d not support yet \n", gf_key.key);
@@ -412,15 +442,16 @@ gf_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 static irqreturn_t gf_irq(int irq, void *handle)
 {
-	struct gf_dev *gf_dev = &gf;
+    struct gf_dev *gf_dev = &gf;
+
 #ifdef GF_FASYNC
-	if (gf_dev->async)
-		kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
+    if (gf_dev->async)
+        kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
 #endif
 
-		wake_lock_timeout(&gf_dev->ttw_wl, msecs_to_jiffies(GF_TTW_HOLD_TIME));//Alan, add wakelock
+    wake_lock_timeout(&gf_dev->ttw_wl, msecs_to_jiffies(GF_TTW_HOLD_TIME)); //Alan, add wakelock
 
-	return IRQ_HANDLED;
+    return IRQ_HANDLED;
 }
 
 static int gf_open(struct inode *inode, struct file *filp)
@@ -690,6 +721,21 @@ static int gf_probe(struct platform_device *pdev)
 	}
 
 gf_dbg("%s gf_dev->irq_enabled =%d",__func__,gf_dev->irq_enabled);
+
+if (status == 0) {
+    keydisabler_class = class_create(THIS_MODULE, "keydisabler");
+    if (IS_ERR(keydisabler_class)) {
+        pr_err("KeyDisabler: failed to create class\n");
+        return PTR_ERR(keydisabler_class);
+    }
+
+    if (class_create_file(keydisabler_class, &class_attr_key_disable)) {
+        pr_err("KeyDisabler: failed to create sysfs file\n");
+        class_destroy(keydisabler_class);
+        return -EINVAL;
+    }
+}
+
 	return status;
 
 error:
@@ -742,6 +788,12 @@ static int gf_remove(struct platform_device *pdev)
 		kfree(gf_dev);
 
         mutex_unlock(&device_list_lock);
+        
+        if (keydisabler_class) {
+        class_remove_file(keydisabler_class, &class_attr_key_disable);
+        class_destroy(keydisabler_class);
+        keydisabler_class = NULL;
+    }
 
 	FUNC_EXIT();
 	return 0;
